@@ -6,9 +6,12 @@
     'author':  'Xtendoo',
     'website': 'http://www.xtendoo.es',
     'license': 'AGPL-3',
-    'depends': ['sale_management'],
+    'depends': [
+        'sale_management'
+    ],
     'data': [
         'views/sale_views.xml',
+        'report/sale_report_views.xml',
     ],
     'installable': True,
     'application': False,

@@ -7,7 +7,4 @@ class SaleOrder(models.Model):
         string='Probabilidad',
         default=0.0,
         help='Probabilidad de confirmación del pedido',
-        tracking=True,
-        copy=True,
-        group_operator="avg"
     )
