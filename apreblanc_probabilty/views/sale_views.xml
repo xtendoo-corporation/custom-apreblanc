@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Añadir el campo probability a la vista de formulario -->
+    <record id="view_order_form_inherit_probability" model="ir.ui.view">
+        <field name="name">sale.order.form.inherit.probability</field>
+        <field name="model">sale.order</field>
+        <field name="inherit_id" ref="sale.view_order_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='payment_term_id']" position="after">
+                <field name="probability" widget="percentage"/>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- Añadir el campo probability a la vista de árbol (presupuestos) -->
+    <record id="view_order_tree_inherit_probability" model="ir.ui.view">
+        <field name="name">sale.order.tree.inherit.probability</field>
+        <field name="model">sale.order</field>
+        <field name="inherit_id" ref="sale.view_quotation_tree"/>
+        <field name="arch" type="xml">
+            <field name="state" position="before">
+                <field name="probability" widget="percentage" optional="show"/>
+            </field>
+        </field>
+    </record>
+
+    <!-- Añadir a la vista de árbol de pedidos confirmados -->
+    <record id="view_order_tree_inherit_probability_confirmed" model="ir.ui.view">
+        <field name="name">sale.order.tree.inherit.probability.confirmed</field>
+        <field name="model">sale.order</field>
+        <field name="inherit_id" ref="sale.view_order_tree"/>
+        <field name="arch" type="xml">
+            <field name="state" position="before">
+                <field name="probability" widget="percentage" optional="show"/>
+            </field>
+        </field>
+    </record>
+</odoo>
