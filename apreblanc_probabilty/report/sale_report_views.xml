@@ -5,7 +5,9 @@
         <field name="inherit_id" ref="sale.view_order_product_pivot"/>
         <field name="arch" type="xml">
             <xpath expr="//pivot" position="inside">
-                <field name="probability" type="measure"/>
+                <!-- Ambos campos definidos como medida -->
+                <field name="probability"  type="measure" widget="percentage"/>
+                <!--<field name="margin_percent" type="measure" widget="percentage"/> -->
             </xpath>
         </field>
     </record>
