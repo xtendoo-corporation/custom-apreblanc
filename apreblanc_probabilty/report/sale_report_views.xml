@@ -1,3 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <record id="view_order_product_pivot_inherit" model="ir.ui.view">
         <field name="name">sale.report.pivot.inherit</field>
@@ -6,8 +7,8 @@
         <field name="arch" type="xml">
             <xpath expr="//pivot" position="inside">
                 <!-- Ambos campos definidos como medida -->
-                <field name="probability"  type="measure" widget="percentage"/>
-                <!--<field name="margin_percent" type="measure" widget="percentage"/> -->
+                <field name="probability" type="measure" widget="percentage"/>
+                <field name="margin_percent" type="measure" widget="percentage"/>
             </xpath>
         </field>
     </record>
