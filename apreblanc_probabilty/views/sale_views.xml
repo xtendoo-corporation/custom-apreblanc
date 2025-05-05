@@ -8,11 +8,12 @@
         <field name="arch" type="xml">
             <xpath expr="//field[@name='payment_term_id']" position="after">
                 <field name="probability" widget="percentage"/>
+                <field name="margin_percent" widget="percentage"/>
             </xpath>
         </field>
     </record>
 
-    <!-- Añadir el campo probability a la vista de árbol (presupuestos) -->
+    <!-- Añadir los campos a la vista de árbol (presupuestos) -->
     <record id="view_order_tree_inherit_probability" model="ir.ui.view">
         <field name="name">sale.order.tree.inherit.probability</field>
         <field name="model">sale.order</field>
@@ -20,6 +21,7 @@
         <field name="arch" type="xml">
             <field name="state" position="before">
                 <field name="probability" widget="percentage" optional="show"/>
+                <field name="margin_percent" widget="percentage" optional="show"/>
             </field>
         </field>
     </record>
@@ -32,6 +34,7 @@
         <field name="arch" type="xml">
             <field name="state" position="before">
                 <field name="probability" widget="percentage" optional="show"/>
+                <field name="margin_percent" widget="percentage" optional="show"/>
             </field>
         </field>
     </record>

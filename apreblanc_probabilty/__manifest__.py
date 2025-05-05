@@ -7,6 +7,8 @@
     'website': 'http://www.xtendoo.es',
     'license': 'AGPL-3',
     'depends': [
+        'sale',
+        'sale_margin',
         'sale_management'
     ],
     'data': [
