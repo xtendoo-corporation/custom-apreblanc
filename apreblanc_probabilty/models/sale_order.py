@@ -4,7 +4,7 @@ class SaleOrder(models.Model):
     _inherit = 'sale.order'
 
     probability = fields.Float(
-        string='Probabilidad',
+        string='% Probability',
         default=0.0,
-        help='Probabilidad de confirmación del pedido',
+        help='Probability of closing the sale order',
     )
