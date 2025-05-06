@@ -4,7 +4,7 @@ class SaleReport(models.Model):
     _inherit = 'sale.report'
 
     probability = fields.Float(
-        string='% Probability',
+        string='Probability (%)',
         readonly=True,
         group_operator='avg',
         widget='percentage',
