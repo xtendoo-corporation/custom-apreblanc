@@ -1,0 +1,5 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_apreblanc_expedient_user,apreblanc.expedient.user,model_apreblanc_expedient,base.group_user,1,1,1,0
+access_apreblanc_expedient_manager,apreblanc.expedient.manager,model_apreblanc_expedient,base.group_system,1,1,1,1
+access_apreblanc_expedient_return_user,apreblanc.expedient.return.user,model_apreblanc_expedient_return,base.group_user,1,1,1,0
+access_apreblanc_expedient_return_manager,apreblanc.expedient.return.manager,model_apreblanc_expedient_return,base.group_system,1,1,1,1

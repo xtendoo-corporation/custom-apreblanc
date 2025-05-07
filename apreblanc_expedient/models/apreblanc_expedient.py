@@ -1,11 +1,12 @@
 from odoo import api, fields, models, _
 
 
-class AppreblancExpedient(models.Model):
+class ApreblancExpedient(models.Model):
     _name = 'apreblanc.expedient'
     _description = 'Expedient'
     _inherit = ['mail.thread', 'mail.activity.mixin']
     _order = 'reception_date desc'
+
 
     name = fields.Char(string='Reference', required=True, copy=False, default=lambda self: _('New'))
     partner_id = fields.Many2one(

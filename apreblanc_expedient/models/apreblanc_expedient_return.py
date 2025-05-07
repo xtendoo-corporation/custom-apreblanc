@@ -1,10 +1,11 @@
 from odoo import fields, models
 
 
-class AppreblancExpedientReturn(models.Model):
+class ApreblancExpedientReturn(models.Model):
     _name = 'apreblanc.expedient.return'
     _description = 'Expedient Return'
     _order = 'return_date desc'
+
 
     expedient_id = fields.Many2one(
         'apreblanc.expedient',

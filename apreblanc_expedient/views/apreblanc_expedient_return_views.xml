@@ -5,7 +5,7 @@
         <field name="name">apreblanc.expedient.return.tree</field>
         <field name="model">apreblanc.expedient.return</field>
         <field name="arch" type="xml">
-            <tree string="Expedient Returns">
+            <tree>
                 <field name="expedient_id"/>
                 <field name="return_date"/>
                 <field name="reason"/>
@@ -18,7 +18,7 @@
         <field name="name">apreblanc.expedient.return.form</field>
         <field name="model">apreblanc.expedient.return</field>
         <field name="arch" type="xml">
-            <form string="Expedient Return">
+            <form>
                 <sheet>
                     <group>
                         <field name="expedient_id"/>
