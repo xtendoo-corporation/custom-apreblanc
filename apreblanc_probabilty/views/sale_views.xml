@@ -38,4 +38,26 @@
             </field>
         </field>
     </record>
+
+    <!-- Crear vista pivot para presupuestos (sale.order) -->
+    <record id="view_sale_order_pivot_inherit" model="ir.ui.view">
+        <field name="name">sale.order.pivot.inherit</field>
+        <field name="model">sale.order</field>
+        <field name="inherit_id" ref="sale.view_sale_order_pivot"/>
+        <field name="arch" type="xml">
+            <xpath expr="//pivot" position="inside">
+                <field name="probability" type="measure" widget="percentage"/>
+                <field name="margin_percent" type="measure" widget="percentage"/>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- Asegurar que las acciones incluyan la vista pivot -->
+    <record id="sale.action_quotations" model="ir.actions.act_window">
+        <field name="view_mode">tree,kanban,form,calendar,pivot,graph,activity</field>
+    </record>
+
+    <record id="sale.action_orders" model="ir.actions.act_window">
+        <field name="view_mode">tree,kanban,form,calendar,pivot,graph,activity</field>
+    </record>
 </odoo>
