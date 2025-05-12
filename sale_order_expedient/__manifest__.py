@@ -8,6 +8,7 @@
     'license': 'AGPL-3',
     'depends': ['sale'],
     'data': [
+        'data/ir_sequence_data.xml',
         'views/sale_order_views.xml',
     ],
     'installable': True,

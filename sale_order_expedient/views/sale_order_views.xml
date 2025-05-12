@@ -8,11 +8,19 @@
         <field name="arch" type="xml">
             <field name="state" position="after">
                 <field name="is_expedient" optional="show"/>
+                <field name="expedient_number" optional="show"/>
+                <field name="expedient_state" optional="show"
+                       decoration-info="expedient_state == 'draft'"
+                       decoration-warning="expedient_state == 'pending'"
+                       decoration-success="expedient_state == 'done'"
+                       decoration-danger="expedient_state == 'cancelled'"/>
+                <field name="expedient_deadline" optional="show"/>
+                <field name="expedient_return_date" optional="hide"/>
             </field>
         </field>
     </record>
 
-    <!-- Añadir campo is_expedient a la vista form -->
+    <!-- Añadir campos de expediente a la vista form -->
     <record id="view_order_form_expedient" model="ir.ui.view">
         <field name="name">sale.order.form.expedient</field>
         <field name="model">sale.order</field>
@@ -21,6 +29,62 @@
             <field name="partner_id" position="after">
                 <field name="is_expedient"/>
             </field>
+
+            <notebook position="inside">
+                <page string="Información del Expediente" invisible="not is_expedient">
+                    <header>
+                        <button name="action_expedient_draft" type="object" string="Borrador"
+                                class="btn btn-secondary" invisible="expedient_state == 'draft'"/>
+                        <button name="action_expedient_in_progress" type="object" string="En Progreso"
+                                class="btn btn-primary" invisible="expedient_state == 'in_progress'"/>
+                        <button name="action_expedient_pending" type="object" string="Pendiente"
+                                class="btn btn-warning" invisible="expedient_state == 'pending'"/>
+                        <button name="action_expedient_done" type="object" string="Completado"
+                                class="btn btn-success" invisible="expedient_state == 'done'"/>
+                        <button name="action_expedient_cancelled" type="object" string="Cancelado"
+                                class="btn btn-danger" invisible="expedient_state == 'cancelled'"/>
+                        <field name="expedient_state" widget="statusbar" statusbar_visible="draft,in_progress,pending,done,cancelled"/>
+                    </header>
+                    <group>
+                        <group>
+                            <field name="expedient_number" readonly="1"/>
+                            <field name="expedient_date"/>
+                            <field name="expedient_deadline"/>
+                        </group>
+                        <group>
+                            <field name="expedient_manager_id"/>
+                        </group>
+                    </group>
+                    <group string="Notas">
+                        <field name="expedient_notes" nolabel="1" placeholder="Añadir notas sobre este expediente..."/>
+                    </group>
+                </page>
+                <page string="Devolución de Expediente" invisible="not is_expedient">
+                    <header>
+                        <button name="action_return_pending" type="object" string="Pendiente"
+                                class="btn btn-secondary" invisible="expedient_return_state != 'pending'"/>
+                        <button name="action_return_accepted" type="object" string="Aceptada"
+                                class="btn btn-success" invisible="expedient_return_state == 'accepted'"/>
+                        <button name="action_return_rejected" type="object" string="Rechazada"
+                                class="btn btn-danger" invisible="expedient_return_state == 'rejected'"/>
+                        <field name="expedient_return_state" widget="statusbar" statusbar_visible="pending,accepted,rejected"/>
+                    </header>
+                    <button name="register_expedient_return" string="Registrar Devolución" type="object"
+                            class="oe_highlight" invisible="expedient_return_date != False"/>
+                    <group>
+                        <group>
+                            <field name="expedient_return_date"/>
+                            <field name="expedient_return_user_id"/>
+                        </group>
+                        <group>
+                            <field name="expedient_return_reason"/>
+                        </group>
+                    </group>
+                    <group string="Notas de Devolución">
+                        <field name="expedient_return_notes" nolabel="1" placeholder="Añadir notas sobre la devolución..."/>
+                    </group>
+                </page>
+            </notebook>
         </field>
     </record>
 
@@ -32,6 +96,7 @@
         <field name="view_id" ref="view_sale_order_expedient_tree"/>
         <field name="view_mode">tree,kanban,form,calendar,pivot,graph,activity</field>
         <field name="domain">[('is_expedient', '=', True)]</field>
+        <field name="context">{'default_is_expedient': True}</field>
         <field name="help" type="html">
             <p class="o_view_nocontent_smiling_face">
                 Crea un nuevo expediente

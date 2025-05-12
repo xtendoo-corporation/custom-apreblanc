@@ -15,6 +15,12 @@ class ApreblancExpedient(models.Model):
         required=True,
         tracking=True,
     )
+    is_expedient = fields.Boolean(
+        string='Is Expedient',
+        default=False,
+        tracking=True,
+        help='Check if this record is an expedient that can be returned',
+    )
     reception_date = fields.Date(
         string='Reception Date',
         tracking=True,
