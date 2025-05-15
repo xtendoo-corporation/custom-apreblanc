@@ -16,6 +16,7 @@
     "assets": {
         "web.assets_backend": [
             "sale_order_expedient/static/src/js/sale_order_create_hook.js",
+            "sale_order_expedient/static/src/js/expedient_statusbar_fix.js",
         ],
     },
     'installable': True,

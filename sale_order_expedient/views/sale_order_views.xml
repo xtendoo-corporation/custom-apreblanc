@@ -10,10 +10,10 @@
                 <field name="is_expedient" optional="show"/>
                 <field name="expedient_number" optional="show"/>
                 <field name="expedient_state" optional="show"
-                       decoration-info="expedient_state == 'draft'"
-                       decoration-warning="expedient_state == 'pending'"
-                       decoration-success="expedient_state == 'done'"
-                       decoration-danger="expedient_state == 'cancelled'"/>
+                       decoration-success="expedient_state == 'aprobada'"
+                       decoration-danger="expedient_state == 'rechazada'"
+                       decoration-muted="expedient_state == 'cancelada'"
+                       decoration-warning="expedient_state == 'pendiente_documentacion'"/>
                 <field name="expedient_deadline" optional="show"/>
                 <field name="expedient_return_date" optional="hide"/>
             </field>
@@ -26,39 +26,45 @@
         <field name="model">sale.order</field>
         <field name="inherit_id" ref="sale.view_order_form"/>
         <field name="arch" type="xml">
+            <!-- Make is_expedient invisible -->
             <field name="partner_id" position="after">
-                <field name="is_expedient"/>
+                <field name="is_expedient" invisible="1"/>
             </field>
 
-            <notebook position="inside">
-                <page string="Información del Expediente" invisible="not is_expedient">
-                    <header>
-                        <button name="action_expedient_draft" type="object" string="Borrador"
-                                class="btn btn-secondary" invisible="expedient_state == 'draft'"/>
-                        <button name="action_expedient_in_progress" type="object" string="En Progreso"
-                                class="btn btn-primary" invisible="expedient_state == 'in_progress'"/>
-                        <button name="action_expedient_pending" type="object" string="Pendiente"
-                                class="btn btn-warning" invisible="expedient_state == 'pending'"/>
-                        <button name="action_expedient_done" type="object" string="Completado"
-                                class="btn btn-success" invisible="expedient_state == 'done'"/>
-                        <button name="action_expedient_cancelled" type="object" string="Cancelado"
-                                class="btn btn-danger" invisible="expedient_state == 'cancelled'"/>
-                        <field name="expedient_state" widget="statusbar" statusbar_visible="draft,in_progress,pending,done,cancelled"/>
-                    </header>
+            <!-- Posicionar la barra de estado a la derecha -->
+            <xpath expr="//sheet" position="attributes">
+                <attribute name="class">position-relative</attribute>
+            </xpath>
+
+            <xpath expr="//sheet" position="inside">
+                <div class="position-absolute top-0 end-0 mt-3 me-3" invisible="not is_expedient">
+                    <field name="expedient_state"
+                           widget="statusbar"
+                           statusbar_visible="pendiente_documentacion,aprobada,rechazada,cancelada"
+                           clickable="True"
+                           options="{'clickable': '1'}"
+                           class="expedient_statusbar"
+                           nolabel="1"/>
+                </div>
+            </xpath>
+
+            <!-- Mover información de expediente al formulario principal -->
+            <xpath expr="//group[1]" position="after">
+                <group string="Información del Expediente" invisible="not is_expedient">
                     <group>
-                        <group>
-                            <field name="expedient_number" readonly="1"/>
-                            <field name="expedient_date"/>
-                            <field name="expedient_deadline"/>
-                        </group>
-                        <group>
-                            <field name="expedient_manager_id"/>
-                        </group>
+                        <field name="expedient_number"/>
+                        <field name="expedient_date"/>
+                        <field name="expedient_deadline"/>
                     </group>
-                    <group string="Notas">
-                        <field name="expedient_notes" nolabel="1" placeholder="Añadir notas sobre este expediente..."/>
+                    <group>
+                        <field name="expedient_manager_id"/>
+                        <field name="expedient_notes" placeholder="Añadir notas sobre este expediente..."/>
                     </group>
-                </page>
+                </group>
+            </xpath>
+
+            <!-- Mantener solo la página de devolución -->
+            <notebook position="inside">
                 <page string="Devolución de Expediente" invisible="not is_expedient">
                     <header>
                         <button name="action_return_pending" type="object" string="Pendiente"
@@ -71,6 +77,8 @@
                     </header>
                     <button name="register_expedient_return" string="Registrar Devolución" type="object"
                             class="oe_highlight" invisible="expedient_return_date != False"/>
+
+                    <!-- Current return information -->
                     <group>
                         <group>
                             <field name="expedient_return_date"/>
@@ -78,10 +86,23 @@
                         </group>
                         <group>
                             <field name="expedient_return_reason"/>
+                            <field name="expedient_return_notes" placeholder="Añadir notas sobre la devolución..."/>
                         </group>
                     </group>
-                    <group string="Notas de Devolución">
-                        <field name="expedient_return_notes" nolabel="1" placeholder="Añadir notas sobre la devolución..."/>
+
+                    <!-- History table for returns -->
+                    <group string="Historial de Devoluciones" invisible="expedient_return_history_ids == []">
+                        <field name="expedient_return_history_ids" nolabel="1" readonly="1">
+                            <tree>
+                                <field name="return_date"/>
+                                <field name="user_id"/>
+                                <field name="reason"/>
+                                <field name="return_state" decoration-success="return_state == 'accepted'"
+                                       decoration-danger="return_state == 'rejected'"
+                                       decoration-info="return_state == 'pending'"/>
+                                <field name="notes"/>
+                            </tree>
+                        </field>
                     </group>
                 </page>
             </notebook>
@@ -108,10 +129,10 @@
                 <field name="partner_id"/>
                 <field name="date_order"/>
                 <field name="expedient_number"/>
-                <field name="expedient_state" decoration-info="expedient_state == 'draft'"
-                       decoration-warning="expedient_state == 'pending'"
-                       decoration-success="expedient_state == 'done'"
-                       decoration-danger="expedient_state == 'cancelled'"/>
+                <field name="expedient_state" decoration-success="expedient_state == 'aprobada'"
+                       decoration-danger="expedient_state == 'rechazada'"
+                       decoration-muted="expedient_state == 'cancelada'"
+                       decoration-warning="expedient_state == 'pendiente_documentacion'"/>
                 <field name="expedient_deadline"/>
                 <field name="amount_total" sum="Total"/>
                 <field name="state"/>
