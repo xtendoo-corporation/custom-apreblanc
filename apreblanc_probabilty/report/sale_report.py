@@ -1,4 +1,4 @@
-from odoo import models, fields
+from odoo import models, fields, api
 
 class SaleReport(models.Model):
     _inherit = 'sale.report'
@@ -13,15 +13,16 @@ class SaleReport(models.Model):
         string='% Margin',
         readonly=True,
         group_operator='avg',
-        digits=(5, 2),
+        digits=(4, 2),  # Changed from (5, 2) to (4, 2) - 2 integers and 2 decimals
         widget='percentage'
     )
 
     def _select_sale(self):
         select_str = super()._select_sale()
+        # Use proper SQL syntax to add fields
         select_str += """
-            , s.probability AS probability
-            , s.margin_percent AS margin_percent
+            , s.probability as probability
+            , s.margin_percent as margin_percent
         """
         return select_str
 

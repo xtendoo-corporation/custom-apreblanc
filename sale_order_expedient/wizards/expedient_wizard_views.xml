@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_expedient_create_wizard_form" model="ir.ui.view">
+        <field name="name">expedient.create.wizard.form</field>
+        <field name="model">expedient.create.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Crear Expediente">
+                <group>
+                    <field name="partner_id" options="{'no_create': True}"/>
+                    <field name="sale_order_template_id" options="{'no_create': True}"/>
+                </group>
+                <footer>
+                    <button name="action_create_expedient"
+                            string="Crear"
+                            type="object"
+                            class="btn-primary"
+                            data-hotkey="q"/>
+                    <button string="Cancelar"
+                            class="btn-secondary"
+                            special="cancel"
+                            data-hotkey="z"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_create_new_expedient" model="ir.actions.act_window">
+        <field name="name">Crear Expediente</field>
+        <field name="type">ir.actions.act_window</field>
+        <field name="res_model">expedient.create.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+</odoo>

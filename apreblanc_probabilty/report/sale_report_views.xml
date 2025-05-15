@@ -5,11 +5,13 @@
         <field name="model">sale.report</field>
         <field name="inherit_id" ref="sale.view_order_product_pivot"/>
         <field name="arch" type="xml">
-            <xpath expr="//pivot" position="inside">
-                <!-- Ambos campos definidos como medida -->
+            <pivot position="attributes">
+                <attribute name="disable_linking">0</attribute>
+            </pivot>
+            <field name="price_subtotal" position="after">
                 <field name="probability" type="measure" widget="percentage"/>
                 <field name="margin_percent" type="measure" widget="percentage"/>
-            </xpath>
+            </field>
         </field>
     </record>
 </odoo>

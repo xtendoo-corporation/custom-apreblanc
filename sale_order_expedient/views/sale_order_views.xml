@@ -88,26 +88,121 @@
         </field>
     </record>
 
-    <!-- Acción para expedientes -->
+    <!-- Acción específica para crear expedientes con wizard -->
+    <record id="action_create_new_expedient" model="ir.actions.act_window">
+        <field name="name">Crear Expediente</field>
+        <field name="res_model">expedient.create.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+
+    <!-- Vista específica para expedientes con botón al lado de la barra de búsqueda -->
+    <record id="view_expedient_tree_custom" model="ir.ui.view">
+        <field name="name">sale.order.expedient.tree.custom</field>
+        <field name="model">sale.order</field>
+        <field name="mode">primary</field>
+        <field name="priority">99</field>
+        <field name="arch" type="xml">
+            <tree string="Expedientes" create="1" delete="1" edit="1">
+                <field name="name"/>
+                <field name="partner_id"/>
+                <field name="date_order"/>
+                <field name="expedient_number"/>
+                <field name="expedient_state" decoration-info="expedient_state == 'draft'"
+                       decoration-warning="expedient_state == 'pending'"
+                       decoration-success="expedient_state == 'done'"
+                       decoration-danger="expedient_state == 'cancelled'"/>
+                <field name="expedient_deadline"/>
+                <field name="amount_total" sum="Total"/>
+                <field name="state"/>
+                <field name="is_expedient" invisible="1"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- Agregar botón de acción directo en el menu de acción -->
+    <record id="sale_order_expedient_action_wizard" model="ir.actions.act_window">
+        <field name="name">Wizard Expediente</field>
+        <field name="res_model">expedient.create.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+        <field name="binding_model_id" ref="sale.model_sale_order"/>
+        <field name="binding_type">action</field>
+        <field name="binding_view_types">list,form</field>
+    </record>
+
+    <!-- Actualizar la acción para expedientes -->
     <record id="action_sale_order_expedient" model="ir.actions.act_window">
         <field name="name">Expedientes</field>
         <field name="type">ir.actions.act_window</field>
         <field name="res_model">sale.order</field>
-        <field name="view_id" ref="view_sale_order_expedient_tree"/>
-        <field name="view_mode">tree,kanban,form,calendar,pivot,graph,activity</field>
+        <field name="view_mode">tree,form</field>
+        <field name="view_id" ref="view_expedient_tree_custom"/>
         <field name="domain">[('is_expedient', '=', True)]</field>
-        <field name="context">{'default_is_expedient': True}</field>
+        <field name="context">{
+            'default_is_expedient': True,
+            'show_wizard_button': True
+        }</field>
+        <field name="search_view_id" ref="sale.sale_order_view_search_inherit_quotation"/>
         <field name="help" type="html">
             <p class="o_view_nocontent_smiling_face">
                 Crea un nuevo expediente
             </p>
         </field>
+        <field name="binding_model_id" ref="model_sale_order"/>
+        <field name="binding_type">action</field>
     </record>
 
-    <!-- Menú para expedientes -->
+    <!-- Add action button for wizard -->
+    <record id="action_button_create_expedient_wizard" model="ir.actions.server">
+        <field name="name">Wizard</field>
+        <field name="model_id" ref="sale.model_sale_order"/>
+        <field name="binding_model_id" ref="sale.model_sale_order"/>
+        <field name="binding_view_types">list</field>
+        <field name="state">code</field>
+        <field name="code">
+            action = {
+                'type': 'ir.actions.act_window',
+                'name': 'Crear Expediente',
+                'res_model': 'expedient.create.wizard',
+                'view_mode': 'form',
+                'target': 'new',
+                'context': env.context,
+            }
+        </field>
+        <field name="binding_model_id" ref="sale.model_sale_order"/>
+        <field name="binding_view_types">list</field>
+        <field name="binding_type">action</field>
+        <field name="groups_id" eval="[(4, ref('base.group_user'))]"/>
+    </record>
+
+    <!-- Vista tree para expedientes (asegurar que se utiliza esta vista) -->
+    <record id="action_expedient_tree_view" model="ir.actions.act_window.view">
+        <field name="sequence" eval="1"/>
+        <field name="view_mode">tree</field>
+        <field name="view_id" ref="view_expedient_tree_custom"/>
+        <field name="act_window_id" ref="action_sale_order_expedient"/>
+    </record>
+
+    <!-- Vista form para expedientes (secuencia mayor para que se muestre después) -->
+    <record id="action_expedient_form_view" model="ir.actions.act_window.view">
+        <field name="sequence" eval="2"/>
+        <field name="view_mode">form</field>
+        <field name="view_id" ref="view_order_form_expedient"/>
+        <field name="act_window_id" ref="action_sale_order_expedient"/>
+    </record>
+
+    <!-- Menú para expedientes con la acción configurada -->
     <menuitem id="menu_sale_order_expedient"
               name="Expedientes"
               parent="sale.sale_order_menu"
               action="action_sale_order_expedient"
               sequence="25"/>
+
+    <!-- Acción para crear directamente desde el menú -->
+    <menuitem id="menu_create_expedient"
+              name="Nuevo Expediente"
+              parent="sale.sale_order_menu"
+              action="action_create_new_expedient"
+              sequence="26"/>
 </odoo>

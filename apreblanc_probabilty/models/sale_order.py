@@ -13,7 +13,7 @@ class SaleOrder(models.Model):
         string='% Margin',
         compute='_compute_margin_percent',
         store=True,
-        digits=(5, 2),
+        digits=(4, 2),  # Changed from (5, 2) to (4, 2) - 2 integers and 2 decimals
     )
 
     @api.depends('margin', 'amount_untaxed')
