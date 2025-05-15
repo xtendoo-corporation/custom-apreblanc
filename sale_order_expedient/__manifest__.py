@@ -13,6 +13,11 @@
         'wizards/expedient_wizard_views.xml',
         'views/sale_order_views.xml',
     ],
+    "assets": {
+        "web.assets_backend": [
+            "sale_order_expedient/static/src/js/sale_order_create_hook.js",
+        ],
+    },
     'installable': True,
     'application': False,
 }
