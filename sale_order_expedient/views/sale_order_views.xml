@@ -117,7 +117,8 @@
                 <field name="partner_id"/>
                 <field name="date_order"/>
                 <field name="expedient_number"/>
-                <field name="expedient_state" decoration-success="expedient_state == 'aprobada'"
+                <field name="expedient_state" widget="badge"
+                       decoration-success="expedient_state == 'aprobada'"
                        decoration-danger="expedient_state == 'rechazada'"
                        decoration-muted="expedient_state == 'cancelada'"
                        decoration-warning="expedient_state == 'pendiente_documentacion'"/>
