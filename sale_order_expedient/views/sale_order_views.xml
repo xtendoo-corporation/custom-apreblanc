@@ -80,7 +80,7 @@
                 </page>
             </xpath>
 
-        
+
         </field>
     </record>
 
@@ -124,7 +124,6 @@
                 <field name="expedient_deadline"/>
                 <field name="amount_total" sum="Total"/>
                 <field name="state"/>
-                <field name="is_expedient" invisible="1"/>
             </tree>
         </field>
     </record>
