@@ -1,130 +1,103 @@
 from odoo import models, fields, api
 
 
+class ExpedientReturnReason(models.Model):
+    _name = 'expedient.return.reason'
+    _description = 'Expedient Return Reason'
+
+    name = fields.Char(
+        string='Reason',
+        required=True,
+        help='Predefined reason for expedient return'
+    )
+
+
 class SaleOrderExpedientReturnHistory(models.Model):
     _name = 'sale.order.expedient.return.history'
-    _description = 'Historial de Devoluciones de Expedientes'
-    _order = 'return_date desc'
+    _description = 'Expedient Return History'
+    _order = 'return_datetime desc'
 
     sale_order_id = fields.Many2one(
         'sale.order',
-        string='Expediente',
+        string='Expedient',
         required=True,
         ondelete='cascade'
     )
-    return_date = fields.Date(
-        string='Fecha de Devolución',
-        default=fields.Date.today,
+    return_datetime = fields.Datetime(
+        string='Date and Time',
+        default=fields.Datetime.now,
         required=True
     )
-    user_id = fields.Many2one(
-        'res.users',
-        string='Registrado por',
-        default=lambda self: self.env.user,
+    reason_id = fields.Many2one(
+        'expedient.return.reason',
+        string='Return Reason',
         required=True
     )
-    reason = fields.Selection([
-        ('completed', 'Completado'),
-        ('rejected', 'Rechazado'),
-        ('canceled', 'Cancelado'),
-        ('error', 'Error en documentación'),
-        ('other', 'Otro motivo')
-    ], string='Motivo de Devolución',
-       required=True)
     notes = fields.Text(
-        string='Notas',
-        help='Observaciones sobre esta devolución'
+        string='Additional Notes'
     )
-    return_state = fields.Selection([
-        ('pending', 'Pendiente'),
-        ('accepted', 'Aceptada'),
-        ('rejected', 'Rechazada')
-    ], string='Estado', default='pending', required=True)
 
 
 class SaleOrder(models.Model):
     _inherit = 'sale.order'
 
     is_expedient = fields.Boolean(
-        string='Es Expediente',
-        help='Marcar si esta orden de venta es un expediente',
+        string='Is Expedient',
+        help='Check if this sale order is an expedient',
         default=False,
     )
 
-    # Nuevos campos para expedientes
+    # Expedient fields
     expedient_number = fields.Char(
-        string='Número de Expediente',
+        string='Expedient Number',
         copy=False,
-        help="Número único asignado al expediente"
+        help="Unique number assigned to the expedient"
     )
 
     expedient_date = fields.Date(
-        string='Fecha de Inicio',
-        help='Fecha de inicio del expediente',
+        string='Start Date',
+        help='Start date of the expedient',
     )
 
     expedient_deadline = fields.Date(
-        string='Fecha Límite',
-        help='Fecha límite para completar el expediente',
+        string='Deadline',
+        help='Deadline to complete the expedient',
     )
 
     expedient_manager_id = fields.Many2one(
         'res.users',
-        string='Responsable',
-        help='Usuario responsable de gestionar este expediente',
+        string='Manager',
+        help='User responsible for managing this expedient',
     )
 
     expedient_state = fields.Selection([
-        ('aprobada', 'Aprobada'),
-        ('rechazada', 'Rechazada'),
-        ('cancelada', 'Cancelada'),
-        ('pendiente_documentacion', 'Pendiente documentación adicional')
-    ], string='Estado del Expediente', default='pendiente_documentacion',
-       help="Estado actual del expediente")
+        ('aprobada', 'Approved'),
+        ('rechazada', 'Rejected'),
+        ('cancelada', 'Cancelled'),
+        ('pendiente_documentacion', 'Pending Additional Documentation')
+    ], string='Expedient Status', default='pendiente_documentacion',
+       help="Current status of the expedient", tracking=True)
 
     expedient_notes = fields.Text(
-        string='Notas del Expediente',
-        help='Notas adicionales sobre el expediente'
+        string='Expedient Notes',
+        help='Additional notes about the expedient'
     )
 
-    # Nuevos campos para devolución de expedientes
-    expedient_return_date = fields.Date(
-        string='Fecha de Devolución',
-        help='Fecha en la que se devuelve el expediente',
+    # Current return fields
+    return_reason_id = fields.Many2one(
+        'expedient.return.reason',
+        string='Return Reason'
+    )
+    return_notes = fields.Text(
+        string='Additional Notes',
+        help='Additional notes for the return'
     )
 
-    expedient_return_user_id = fields.Many2one(
-        'res.users',
-        string='Devuelto por',
-        help='Usuario que registra la devolución del expediente',
-    )
-
-    expedient_return_reason = fields.Selection([
-        ('completed', 'Completado'),
-        ('rejected', 'Rechazado'),
-        ('canceled', 'Cancelado'),
-        ('error', 'Error en documentación'),
-        ('other', 'Otro motivo')
-    ], string='Motivo de Devolución',
-       help="Motivo por el cual se devuelve el expediente")
-
-    expedient_return_notes = fields.Text(
-        string='Notas de Devolución',
-        help='Notas adicionales sobre la devolución del expediente'
-    )
-
-    expedient_return_state = fields.Selection([
-        ('pending', 'Pendiente'),
-        ('accepted', 'Aceptada'),
-        ('rejected', 'Rechazada')
-    ], string='Estado de Devolución', default='pending',
-       help="Estado actual de la devolución del expediente")
-
-    # Add the one2many relationship to the history
+    # Return history
     expedient_return_history_ids = fields.One2many(
         'sale.order.expedient.return.history',
         'sale_order_id',
-        string='Historial de Devoluciones'
+        string='Return History'
     )
 
     @api.model_create_multi
@@ -135,12 +108,12 @@ class SaleOrder(models.Model):
         return super().create(vals_list)
 
     def write(self, vals):
-        # Si se está marcando como expediente y no tiene número de expediente
+        # If marking as expedient and has no expedient number
         if vals.get('is_expedient') and not self.expedient_number:
             vals['expedient_number'] = self.env['ir.sequence'].next_by_code('sale.order.expedient')
         return super().write(vals)
 
-    # Métodos para estados clickables del statusbar
+    # Methods for clickable statusbar
     def expedient_state_aprobada(self):
         self.write({'expedient_state': 'aprobada'})
         return True
@@ -157,7 +130,7 @@ class SaleOrder(models.Model):
         self.write({'expedient_state': 'pendiente_documentacion'})
         return True
 
-    # Métodos para cambiar el estado del expediente (mantener para compatibilidad)
+    # Methods for changing expedient state (maintain for compatibility)
     def action_expedient_aprobada(self):
         return self.expedient_state_aprobada()
 
@@ -170,46 +143,19 @@ class SaleOrder(models.Model):
     def action_expedient_pendiente_documentacion(self):
         return self.expedient_state_pendiente_documentacion()
 
-    # Métodos para cambiar el estado de devolución
-    def action_return_pending(self):
-        self.write({'expedient_return_state': 'pending'})
-        # Update the latest history record if it exists
-        if self.expedient_return_history_ids:
-            self.expedient_return_history_ids[0].write({'return_state': 'pending'})
-        return True
-
-    def action_return_accepted(self):
-        self.write({'expedient_return_state': 'accepted'})
-        # Update the latest history record if it exists
-        if self.expedient_return_history_ids:
-            self.expedient_return_history_ids[0].write({'return_state': 'accepted'})
-        return True
-
-    def action_return_rejected(self):
-        self.write({'expedient_return_state': 'rejected'})
-        # Update the latest history record if it exists
-        if self.expedient_return_history_ids:
-            self.expedient_return_history_ids[0].write({'return_state': 'rejected'})
-        return True
-
-    # Método para registrar la devolución de un expediente
+    # Simplified method to register a return
     def register_expedient_return(self):
         self.ensure_one()
-        if self.is_expedient:
+        if self.is_expedient and self.return_reason_id:
             # Create a history record when registering a return
             history_vals = {
                 'sale_order_id': self.id,
-                'return_date': fields.Date.today(),
-                'user_id': self.env.user.id,
-                'reason': self.expedient_return_reason or 'other',
-                'notes': self.expedient_return_notes,
-                'return_state': self.expedient_return_state,
+                'return_datetime': fields.Datetime.now(),
+                'reason_id': self.return_reason_id.id,
+                'notes': self.return_notes,
             }
             self.env['sale.order.expedient.return.history'].create(history_vals)
-
-            # Update the main expedient records
-            if not self.expedient_return_date:
-                self.expedient_return_date = fields.Date.today()
-            if not self.expedient_return_user_id:
-                self.expedient_return_user_id = self.env.user.id
+            # Clear the input fields after saving
+            self.return_reason_id = False
+            self.return_notes = False
         return True
