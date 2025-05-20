@@ -11,14 +11,14 @@ class ExpedientReturnReason(models.Model):
     )
     description = fields.Text(
         string='Description',
-        help='Detailed description of this return reason'
+        help='Detailed description of this return reason',
     )
     active = fields.Boolean(
         string='Active',
-        default=True
+        default=True,
     )
     sequence = fields.Integer(
         string='Sequence',
         default=10,
-        help='Used to order reasons'
+        help='Used to order reasons',
     )

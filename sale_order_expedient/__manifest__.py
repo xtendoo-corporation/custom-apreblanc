@@ -11,8 +11,8 @@
         'security/ir.model.access.csv',
         'data/ir_sequence_data.xml',
         'views/expedient_return_reason_views.xml',
-        'wizards/expedient_wizard_views.xml',
         'views/sale_order_views.xml',
+        'wizards/expedient_wizard_views.xml',
     ],
     "assets": {
         "web.assets_backend": [
