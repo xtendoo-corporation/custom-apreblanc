@@ -10,36 +10,48 @@
                 <field name="is_expedient" invisible="1"/>
                 <field name="expedient_number" optional="show"/>
                 <field name="expedient_state" optional="show"
+                       decoration-info="expedient_state == 'nueva'"
                        decoration-success="expedient_state == 'aprobada'"
                        decoration-danger="expedient_state == 'rechazada'"
                        decoration-muted="expedient_state == 'cancelada'"
                        decoration-warning="expedient_state == 'pendiente_documentacion'"/>
                 <field name="expedient_deadline" optional="show"/>
+                <field name="return_count" optional="show" sum="Total Returns"/>
             </field>
         </field>
     </record>
 
-    <!-- Añadir campos de expediente a la vista form -->
+    <!-- Update the form view to make closed expedients readonly -->
     <record id="view_order_form_expedient" model="ir.ui.view">
         <field name="name">sale.order.form.expedient</field>
         <field name="model">sale.order</field>
         <field name="inherit_id" ref="sale.view_order_form"/>
         <field name="arch" type="xml">
-            <!-- Make is_expedient invisible -->
+            <!-- Add is_expedient and is_expedient_closed fields -->
             <field name="partner_id" position="after">
                 <field name="is_expedient" invisible="1"/>
+                <field name="is_expedient_closed" invisible="1"/>
             </field>
 
-            <!-- Posicionar la barra de estado a la derecha -->
-            <xpath expr="//sheet" position="attributes">
-                <attribute name="class">position-relative</attribute>
+            <!-- Fix for Odoo 17.0 - Target individual buttons instead of entire header -->
+            <xpath expr="//header/button" position="attributes">
+                <attribute name="invisible">is_expedient and is_expedient_closed</attribute>
             </xpath>
 
+            <!-- Add a warning banner for closed expedients -->
+            <xpath expr="//sheet" position="before">
+                <div class="alert alert-warning text-center" role="alert"
+                     invisible="not is_expedient or not is_expedient_closed">
+                    This expedient is closed and cannot be modified.
+                </div>
+            </xpath>
+
+            <!-- Statusbar remains clickable to allow state changes -->
             <xpath expr="//sheet" position="inside">
                 <div class="position-absolute top-0 end-0 mt-3 me-3" invisible="not is_expedient">
                     <field name="expedient_state"
                            widget="statusbar"
-                           statusbar_visible="pendiente_documentacion,aprobada,rechazada,cancelada"
+                           statusbar_visible="nueva,pendiente_documentacion,aprobada,rechazada,cancelada"
                            clickable="True"
                            options="{'clickable': '1'}"
                            class="expedient_statusbar"
@@ -49,7 +61,10 @@
 
             <!-- Mover información de expediente al formulario principal -->
             <xpath expr="//group[1]" position="after">
-                <group string="Expedient Information" invisible="not is_expedient">
+                <!-- Add the attributes directly to the group when defining it -->
+                <group name="expedient_info" string="Expedient Information"
+                       invisible="not is_expedient"
+                       readonly="is_expedient_closed">
                     <group>
                         <field name="expedient_number"/>
                         <field name="expedient_date"/>
@@ -62,24 +77,22 @@
                 </group>
             </xpath>
 
-            <!-- Return page - placed as first tab -->
+            <!-- Update Returns page -->
             <xpath expr="//notebook/page[1]" position="before">
-                <page string="Returns" invisible="not is_expedient">
-                    <!-- Remove the input field groups that were here -->
-
-                    <!-- Return history - now directly editable -->
+                <page name="returns" string="Returns" invisible="not is_expedient">
                     <field name="expedient_return_history_ids"
-                           context="{'tree_view_ref': 'sale_order_expedient.view_expedient_return_history_tree'}"
+                           context="{'default_user_id': uid, 'form_view_ref': 'sale_order_expedient.view_expedient_return_history_form', 'is_expedient_closed': is_expedient_closed}"
+                           readonly="is_expedient_closed"
                            style="min-height: 400px; width: 100%;">
-                        <tree editable="bottom" create="1">
-                            <field name="return_datetime"/>
-                            <field name="reason_id" options="{'no_create': True}"/>
+                        <tree editable="bottom" create="context.get('is_expedient_closed') != True" delete="context.get('is_expedient_closed') != True">
+                            <field name="return_date" readonly="0"/>
+                            <field name="return_reason_id" options="{'no_create': True}" required="1"/>
                             <field name="notes"/>
+                            <field name="user_id" widget="many2one_avatar" force_save="1" readonly="1"/>
                         </tree>
                     </field>
                 </page>
             </xpath>
-
         </field>
     </record>
 
@@ -89,10 +102,39 @@
         <field name="model">sale.order.expedient.return.history</field>
         <field name="arch" type="xml">
             <tree decoration-info="1" editable="bottom" create="true">
-                <field name="return_datetime"/>
-                <field name="reason_id" options="{'no_create': True}"/>
+                <field name="return_date"/>
+                <field name="return_reason_id" options="{'no_create': True}"/>
                 <field name="notes"/>
+                <field name="user_id" widget="many2one_avatar" readonly="1"/>
             </tree>
+        </field>
+    </record>
+
+    <!-- Form view for return history with chatter -->
+    <record id="view_expedient_return_history_form" model="ir.ui.view">
+        <field name="name">sale.order.expedient.return.history.form</field>
+        <field name="model">sale.order.expedient.return.history</field>
+        <field name="arch" type="xml">
+            <form>
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="return_date"/>
+                            <field name="return_reason_id" options="{'no_create': True}"/>
+                            <field name="user_id" widget="many2one_avatar" readonly="1"/>
+                        </group>
+                        <group>
+                            <field name="sale_order_id" readonly="1"/>
+                        </group>
+                    </group>
+                    <field name="notes"/>
+                </sheet>
+                <div class="oe_chatter">
+                    <field name="message_follower_ids" widget="mail_followers"/>
+                    <field name="activity_ids" widget="mail_activity"/>
+                    <field name="message_ids" widget="mail_thread"/>
+                </div>
+            </form>
         </field>
     </record>
 
@@ -117,11 +159,13 @@
                 <field name="date_order"/>
                 <field name="expedient_number"/>
                 <field name="expedient_state" widget="badge"
+                       decoration-info="expedient_state == 'nueva'"
                        decoration-success="expedient_state == 'aprobada'"
                        decoration-danger="expedient_state == 'rechazada'"
                        decoration-muted="expedient_state == 'cancelada'"
                        decoration-warning="expedient_state == 'pendiente_documentacion'"/>
                 <field name="expedient_deadline"/>
+                <field name="return_count" sum="Total Returns"/>
                 <field name="amount_total" sum="Total"/>
                 <field name="state"/>
             </tree>
@@ -203,7 +247,6 @@
               parent="sale.sale_order_menu"
               action="action_sale_order_expedient"
               sequence="25"/>
-
     <!-- Acción para crear directamente desde el menú -->
     <menuitem id="menu_create_expedient"
               name="Nuevo Expediente"

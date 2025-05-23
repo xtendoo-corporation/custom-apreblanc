@@ -1,4 +1,4 @@
-from odoo import models, fields, api
+from odoo import api, fields, models, _, exceptions
 
 
 class SaleOrder(models.Model):
@@ -29,20 +29,29 @@ class SaleOrder(models.Model):
         help='User responsible for managing this expedient',
     )
     expedient_state = fields.Selection([
-            ('pendiente_documentacion', 'Pending Additional Documentation'),
-            ('cancelada', 'Cancelled'),
-            ('aprobada', 'Approved'),
-            ('rechazada', 'Rejected'),
-        ],
-        string='Expedient Status',
-        default='pendiente_documentacion',
-        help="Current status of the expedient",
-        tracking=True,
+        ('nueva', 'Nueva'),
+        ('pendiente_documentacion', 'Pending Documentation'),
+        ('aprobada', 'Approved'),
+        ('rechazada', 'Rejected'),
+        ('cancelada', 'Canceled'),
+    ], string='Expedient State', default='nueva', tracking=True)
+
+    is_expedient_closed = fields.Boolean(
+        string='Expedient Closed',
+        compute='_compute_is_expedient_closed',
+        store=True
     )
+
     expedient_notes = fields.Text(
-        string='Expedient Notes',
-        help='Additional notes about the expedient',
+        string='Notes',
+        help='Additional notes about this expedient',
     )
+
+    @api.depends('expedient_state')
+    def _compute_is_expedient_closed(self):
+        for order in self:
+            order.is_expedient_closed = order.expedient_state in ['rechazada', 'cancelada', 'aprobada']
+
     # Current return fields
     return_reason_id = fields.Many2one(
         'expedient.return.reason',
@@ -58,6 +67,17 @@ class SaleOrder(models.Model):
         'sale_order_id',
         string='Return History',
     )
+    # Add computed field to count returns
+    return_count = fields.Integer(
+        string='Return Count',
+        compute='_compute_return_count',
+        store=False
+    )
+
+    @api.depends('expedient_return_history_ids')
+    def _compute_return_count(self):
+        for order in self:
+            order.return_count = len(order.expedient_return_history_ids)
 
     @api.model_create_multi
     def create(self, vals_list):
@@ -70,6 +90,20 @@ class SaleOrder(models.Model):
         # If marking as expedient and has no expedient number
         if vals.get('is_expedient') and not self.expedient_number:
             vals['expedient_number'] = self.env['ir.sequence'].next_by_code('sale.order.expedient')
+        # Check if we're trying to modify a closed expedient
+        for record in self:
+            if record.is_expedient and record.is_expedient_closed:
+                # Always allow changes to these specific fields
+                allowed_fields = {'message_ids', 'message_follower_ids', 'message_main_attachment_id',
+                                  'activity_ids', 'activity_state', 'activity_user_id', 'activity_type_id',
+                                  'activity_date_deadline', 'expedient_state'}
+
+                # If trying to modify fields other than allowed ones
+                if set(vals.keys()) - allowed_fields:
+                    # Check if we're just changing the state to a closed state
+                    if set(vals.keys()) - allowed_fields != {'is_expedient_closed'} or not vals.get('is_expedient_closed', False):
+                        raise exceptions.UserError(_("This expedient is closed and cannot be modified."))
+
         return super().write(vals)
 
     # # Methods for changing expedient state (maintain for compatibility)

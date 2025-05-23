@@ -6,7 +6,7 @@
     'author': 'Xtendoo Software SLU',
     'website': 'https://www.xtendoo.es',
     'license': 'AGPL-3',
-    'depends': ['sale', 'sale_management'],
+    'depends': ['sale', 'sale_management','mail'],
     'data': [
         'security/ir.model.access.csv',
         'data/ir_sequence_data.xml',
