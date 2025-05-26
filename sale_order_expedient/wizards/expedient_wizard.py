@@ -1,4 +1,5 @@
-from odoo import api, fields, models
+from odoo import api, fields, models, _
+from odoo.exceptions import ValidationError
 
 
 class ExpedientCreateWizard(models.TransientModel):
@@ -36,8 +37,29 @@ class ExpedientCreateWizard(models.TransientModel):
         if self.sale_order_template_id and self.sale_order_template_id.partner_id:
             self.partner_id = self.sale_order_template_id.partner_id
 
+    @api.onchange('expedient_number')
+    def _onchange_expedient_number(self):
+        """Check if expedient number already exists"""
+        if self.expedient_number:
+            existing = self.env['sale.order'].search([
+                ('expedient_number', '=', self.expedient_number)
+            ], limit=1)
+            if existing:
+                return {'warning': {
+                    'title': _('Duplicate Expedient Number'),
+                    'message': _('This expedient number is already used. Please choose another one.')
+                }}
+
     def action_create_expedient(self):
         self.ensure_one()
+
+        # Check for duplicates before creation
+        existing = self.env['sale.order'].search([
+            ('expedient_number', '=', self.expedient_number)
+        ], limit=1)
+
+        if existing:
+            raise ValidationError(_("This expedient number already exists. Please choose another one."))
 
         # Always create as expedient from the wizard
         values = {

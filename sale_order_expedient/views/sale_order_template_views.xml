@@ -14,7 +14,8 @@
                 <!-- Fix for Odoo 17: Use xpath to find sheet and add button at the top -->
                 <xpath expr="//sheet" position="inside">
                     <div class="oe_button_box" name="button_box" style="margin-top: 10px;" invisible="id == False">
-                        <button name="%(sale_order_expedient.action_sale_order_template_wizard)d"
+                        <!-- Fix: Reference the existing action instead of the missing one -->
+                        <button name="%(sale_order_expedient.action_create_new_expedient)d"
                                 type="action"
                                 string="Create Expedient"
                                 class="btn-primary"

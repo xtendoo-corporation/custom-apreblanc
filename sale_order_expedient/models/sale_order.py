@@ -4,6 +4,9 @@ from odoo import api, fields, models, _, exceptions
 class SaleOrder(models.Model):
     _inherit = 'sale.order'
     _sql_constraints = [
+        ('expedient_number_unique',
+         'unique(expedient_number)',
+         'The Expedient Number must be unique!'),
         ('client_expedient_unique',
          'unique(client_id, expedient_number)',
          'The combination of Client ID and Expedient Number must be unique!')

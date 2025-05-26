@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
+    <!-- Form view for expedient creation wizard -->
     <record id="view_expedient_create_wizard_form" model="ir.ui.view">
         <field name="name">expedient.create.wizard.form</field>
         <field name="model">expedient.create.wizard</field>
@@ -26,9 +27,9 @@
         </field>
     </record>
 
+    <!-- Action to open the expedient creation wizard -->
     <record id="action_create_new_expedient" model="ir.actions.act_window">
         <field name="name">Create Expedient</field>
-        <field name="type">ir.actions.act_window</field>
         <field name="res_model">expedient.create.wizard</field>
         <field name="view_mode">form</field>
         <field name="target">new</field>

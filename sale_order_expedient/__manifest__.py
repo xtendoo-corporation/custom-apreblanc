@@ -6,13 +6,12 @@
     'author': 'Xtendoo Software SLU',
     'website': 'https://www.xtendoo.es',
     'license': 'AGPL-3',
-    'depends': ['sale', 'sale_management','mail'],
+    'depends': ['sale', 'sale_management', 'mail'],
     'data': [
         'security/ir.model.access.csv',
         'data/ir_sequence_data.xml',
         'wizards/expedient_wizard_views.xml',
         'views/expedient_return_reason_views.xml',
-        'views/sale_order_template_wizard_views.xml',  # Load this before template views
         'views/sale_order_template_views.xml',
         'views/sale_order_views.xml',
     ],
