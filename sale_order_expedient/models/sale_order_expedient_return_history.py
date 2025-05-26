@@ -7,16 +7,14 @@ _logger = logging.getLogger(__name__)
 class SaleOrderExpedientReturnHistory(models.Model):
     _name = 'sale.order.expedient.return.history'
     _description = 'Expedient Return History'
-    _order = 'return_datetime desc'  # Ordenar por fecha y hora
+    _order = 'return_date desc'
     _inherit = ['mail.thread', 'mail.activity.mixin']
 
     # Campos básicos
-    sale_order_id = fields.Many2one('sale.order', string='Expedient', required=True, ondelete='cascade')
-    return_date = fields.Date(string='Return Date', required=True)
-    return_datetime = fields.Datetime(string='Return Date & Time', required=True, tracking=True)
-    return_time = fields.Float(string='Return Time', default=0.0)
-    return_reason_id = fields.Many2one('expedient.return.reason', string='Return Reason', required=True)
-    notes = fields.Text(string='Notes')
+    sale_order_id = fields.Many2one('sale.order', string='Expedient', required=True, ondelete='cascade', tracking=True)
+    return_date = fields.Datetime(string='Return Date & Time', required=True, tracking=True)
+    return_reason_id = fields.Many2one('expedient.return.reason', string='Return Reason', required=True, tracking=True)
+    notes = fields.Text(string='Notes', tracking=True)
     user_id = fields.Many2one('res.users', string='User', tracking=True)
 
     # Método para proporcionar valores predeterminados de forma segura
@@ -29,35 +27,52 @@ class SaleOrderExpedientReturnHistory(models.Model):
         now = fields.Datetime.now()
 
         if 'return_date' in fields_list and 'return_date' not in defaults:
-            defaults['return_date'] = now.date()
-
-        if 'return_datetime' in fields_list and 'return_datetime' not in defaults:
-            defaults['return_datetime'] = now
+            defaults['return_date'] = now
 
         if 'user_id' in fields_list and 'user_id' not in defaults:
             defaults['user_id'] = self.env.user.id
 
         return defaults
 
-    # Sincronizar fecha cuando cambia datetime
-    @api.onchange('return_datetime')
-    def _onchange_return_datetime(self):
-        """Sincronizar fecha cuando se cambia datetime"""
-        if self.return_datetime:
-            self.return_date = self.return_datetime.date()
-
-    # Método create simple para registrar información
+    # Método create mejorado para tracking completo
     @api.model
     def create(self, vals):
-        # Sincronizar fecha con datetime si solo se proporciona uno
-        if 'return_datetime' in vals and 'return_date' not in vals:
-            datetime_val = fields.Datetime.to_datetime(vals['return_datetime'])
-            vals['return_date'] = datetime_val.date()
-        elif 'return_date' in vals and 'return_datetime' not in vals:
-            # Si solo se proporciona fecha, crear datetime con hora actual
-            date_val = fields.Date.to_date(vals['return_date'])
-            current_time = fields.Datetime.now().time()
-            vals['return_datetime'] = fields.Datetime.combine(date_val, current_time)
-
         _logger.info("Creando registro con valores: %s", vals)
-        return super(SaleOrderExpedientReturnHistory, self).create(vals)
+        record = super(SaleOrderExpedientReturnHistory, self).create(vals)
+
+        # Post a message in the return history chatter
+        if record.return_reason_id and record.sale_order_id:
+            message = _("Return history entry created: %s") % record.return_reason_id.name
+            if record.notes:
+                message += _("\nNotes: %s") % record.notes
+            record.message_post(body=message, message_type='notification')
+
+            # Also post a message in the sale order chatter
+            record.sale_order_id.message_post(
+                body=_("New return entry added to expedient: %s") % record.return_reason_id.name,
+                message_type='notification'
+            )
+
+        return record
+
+    def write(self, vals):
+        """Override write to add tracking message when return history is updated."""
+        result = super(SaleOrderExpedientReturnHistory, self).write(vals)
+
+        # Track significant changes
+        if any(field in vals for field in ['return_reason_id', 'return_date', 'notes']):
+            for record in self:
+                message = _("Return history entry updated")
+                record.message_post(body=message, message_type='notification')
+
+        return result
+
+    def unlink(self):
+        """Override unlink to add tracking message when return history is deleted."""
+        for record in self:
+            if record.sale_order_id:
+                record.sale_order_id.message_post(
+                    body=_("Return history entry deleted: %s") % (record.return_reason_id.name or _("Unknown reason")),
+                    message_type='notification'
+                )
+        return super(SaleOrderExpedientReturnHistory, self).unlink()

@@ -10,7 +10,7 @@
                 <field name="is_expedient" invisible="1"/>
                 <field name="expedient_number" optional="show"/>
                 <field name="expedient_state" optional="show"
-                       decoration-info="expedient_state == 'nueva'"
+                       decoration-info="expedient_state == 'creada'"
                        decoration-success="expedient_state == 'aprobada'"
                        decoration-danger="expedient_state == 'rechazada'"
                        decoration-muted="expedient_state == 'cancelada'"
@@ -27,21 +27,54 @@
         <field name="model">sale.order</field>
         <field name="inherit_id" ref="sale.view_order_form"/>
         <field name="arch" type="xml">
-            <!-- Add is_expedient and is_expedient_closed fields -->
+            <!-- Add is_expedient and expedient_state fields -->
             <field name="partner_id" position="after">
                 <field name="is_expedient" invisible="1"/>
-                <field name="is_expedient_closed" invisible="1"/>
+                <field name="expedient_state" invisible="1"/>
             </field>
 
-            <!-- Fix for Odoo 17.0 - Target individual buttons instead of entire header -->
-            <xpath expr="//header/button" position="attributes">
-                <attribute name="invisible">is_expedient and is_expedient_closed</attribute>
+            <!-- Make standard fields readonly when expedient is closed -->
+            <field name="partner_id" position="attributes">
+                <attribute name="readonly">is_expedient and expedient_state in ('aprobada', 'rechazada', 'cancelada')</attribute>
+            </field>
+
+            <field name="validity_date" position="attributes">
+                <attribute name="readonly">is_expedient and expedient_state in ('aprobada', 'rechazada', 'cancelada')</attribute>
+            </field>
+
+            <field name="date_order" position="attributes">
+                <attribute name="readonly">is_expedient and expedient_state in ('aprobada', 'rechazada', 'cancelada')</attribute>
+            </field>
+
+            <field name="payment_term_id" position="attributes">
+                <attribute name="readonly">is_expedient and expedient_state in ('aprobada', 'rechazada', 'cancelada')</attribute>
+            </field>
+
+            <field name="pricelist_id" position="attributes">
+                <attribute name="readonly">is_expedient and expedient_state in ('aprobada', 'rechazada', 'cancelada')</attribute>
+            </field>
+
+            <field name="fiscal_position_id" position="attributes">
+                <attribute name="readonly">is_expedient and expedient_state in ('aprobada', 'rechazada', 'cancelada')</attribute>
+            </field>
+
+            <!-- Fix for Odoo 17.0 - Targeting header buttons with proper attributes -->
+            <xpath expr="//header/button[@name='action_confirm']" position="attributes">
+                <attribute name="invisible" add="is_expedient and expedient_state in ('aprobada', 'rechazada', 'cancelada')" separator=" or "/>
+            </xpath>
+
+            <xpath expr="//header/button[@name='action_quotation_send']" position="attributes">
+                <attribute name="invisible" add="is_expedient and expedient_state in ('aprobada', 'rechazada', 'cancelada')" separator=" or "/>
+            </xpath>
+
+            <xpath expr="//header/button[@name='action_cancel']" position="attributes">
+                <attribute name="invisible" add="is_expedient and expedient_state in ('aprobada', 'rechazada', 'cancelada')" separator=" or "/>
             </xpath>
 
             <!-- Add a warning banner for closed expedients -->
             <xpath expr="//sheet" position="before">
                 <div class="alert alert-warning text-center" role="alert"
-                     invisible="not is_expedient or not is_expedient_closed">
+                     invisible="not is_expedient or expedient_state not in ('aprobada', 'rechazada', 'cancelada')">
                     This expedient is closed and cannot be modified.
                 </div>
             </xpath>
@@ -51,7 +84,7 @@
                 <div class="position-absolute top-0 end-0 mt-3 me-3" invisible="not is_expedient">
                     <field name="expedient_state"
                            widget="statusbar"
-                           statusbar_visible="nueva,pendiente_documentacion,aprobada,rechazada,cancelada"
+                           statusbar_visible="creada,pendiente_documentacion,aprobada,rechazada,cancelada"
                            clickable="True"
                            options="{'clickable': '1'}"
                            class="expedient_statusbar"
@@ -61,18 +94,18 @@
 
             <!-- Mover información de expediente al formulario principal -->
             <xpath expr="//group[1]" position="after">
-                <!-- Add the attributes directly to the group when defining it -->
+                <!-- Use standard Odoo attributes for readonly states -->
                 <group name="expedient_info" string="Expedient Information"
-                       invisible="not is_expedient"
-                       readonly="is_expedient_closed">
+                       invisible="not is_expedient">
                     <group>
-                        <field name="expedient_number"/>
-                        <field name="expedient_date"/>
-                        <field name="expedient_deadline"/>
+                        <!-- In Odoo 17, readonly is a direct attribute in field tags -->
+                        <field name="expedient_number" readonly="expedient_state in ('aprobada', 'rechazada', 'cancelada')"/>
+                        <field name="expedient_date" readonly="expedient_state in ('aprobada', 'rechazada', 'cancelada')"/>
+                        <field name="expedient_deadline" readonly="expedient_state in ('aprobada', 'rechazada', 'cancelada')"/>
                     </group>
                     <group>
-                        <field name="expedient_manager_id"/>
-                        <field name="expedient_notes" placeholder="Add notes about this expedient..."/>
+                        <field name="expedient_manager_id" readonly="expedient_state in ('aprobada', 'rechazada', 'cancelada')"/>
+                        <field name="expedient_notes" placeholder="Add notes about this expedient..." readonly="expedient_state in ('aprobada', 'rechazada', 'cancelada')"/>
                     </group>
                 </group>
             </xpath>
@@ -81,10 +114,12 @@
             <xpath expr="//notebook/page[1]" position="before">
                 <page name="returns" string="Returns" invisible="not is_expedient">
                     <field name="expedient_return_history_ids"
-                           context="{'default_user_id': uid, 'form_view_ref': 'sale_order_expedient.view_expedient_return_history_form', 'is_expedient_closed': is_expedient_closed}"
-                           readonly="is_expedient_closed"
+                           context="{'default_user_id': uid, 'form_view_ref': 'sale_order_expedient.view_expedient_return_history_form'}"
+                           readonly="expedient_state in ('aprobada', 'rechazada', 'cancelada')"
                            style="min-height: 400px; width: 100%;">
-                        <tree editable="bottom" create="context.get('is_expedient_closed') != True" delete="context.get('is_expedient_closed') != True">
+                        <tree editable="bottom"
+                              create="expedient_state not in ('aprobada', 'rechazada', 'cancelada')"
+                              delete="expedient_state not in ('aprobada', 'rechazada', 'cancelada')">
                             <field name="return_date" readonly="0"/>
                             <field name="return_reason_id" options="{'no_create': True}" required="1"/>
                             <field name="notes"/>
@@ -92,6 +127,30 @@
                         </tree>
                     </field>
                 </page>
+            </xpath>
+
+            <!-- Make order lines readonly when expedient is closed -->
+            <xpath expr="//field[@name='order_line']" position="attributes">
+                <attribute name="readonly">is_expedient and expedient_state in ('aprobada', 'rechazada', 'cancelada')</attribute>
+            </xpath>
+
+            <!-- Disable create/delete in order lines tree view when expedient is closed -->
+            <xpath expr="//field[@name='order_line']/tree" position="attributes">
+                <attribute name="create">not is_expedient or expedient_state not in ('aprobada', 'rechazada', 'cancelada')</attribute>
+                <attribute name="delete">not is_expedient or expedient_state not in ('aprobada', 'rechazada', 'cancelada')</attribute>
+            </xpath>
+
+            <!-- Make individual fields in order line form view readonly when expedient is closed -->
+            <xpath expr="//field[@name='order_line']/form//field[@name='product_id']" position="attributes">
+                <attribute name="readonly">parent.is_expedient and parent.expedient_state in ('aprobada', 'rechazada', 'cancelada')</attribute>
+            </xpath>
+
+            <xpath expr="//field[@name='order_line']/form//field[@name='product_uom_qty']" position="attributes">
+                <attribute name="readonly">parent.is_expedient and parent.expedient_state in ('aprobada', 'rechazada', 'cancelada')</attribute>
+            </xpath>
+
+            <xpath expr="//field[@name='order_line']/form//field[@name='price_unit']" position="attributes">
+                <attribute name="readonly">parent.is_expedient and parent.expedient_state in ('aprobada', 'rechazada', 'cancelada')</attribute>
             </xpath>
         </field>
     </record>
@@ -138,14 +197,6 @@
         </field>
     </record>
 
-    <!-- Acción específica para crear expedientes con wizard -->
-    <record id="action_create_new_expedient" model="ir.actions.act_window">
-        <field name="name">Create Expedient</field>
-        <field name="res_model">expedient.create.wizard</field>
-        <field name="view_mode">form</field>
-        <field name="target">new</field>
-    </record>
-
     <!-- Vista específica para expedientes con botón al lado de la barra de búsqueda -->
     <record id="view_expedient_tree_custom" model="ir.ui.view">
         <field name="name">sale.order.expedient.tree.custom</field>
@@ -159,7 +210,7 @@
                 <field name="date_order"/>
                 <field name="expedient_number"/>
                 <field name="expedient_state" widget="badge"
-                       decoration-info="expedient_state == 'nueva'"
+                       decoration-info="expedient_state == 'creada'"
                        decoration-success="expedient_state == 'aprobada'"
                        decoration-danger="expedient_state == 'rechazada'"
                        decoration-muted="expedient_state == 'cancelada'"
@@ -172,7 +223,8 @@
         </field>
     </record>
 
-    <!-- Agregar botón de acción directo en el menu de acción -->
+    <!-- REMOVE OR COMMENT OUT this action definition - we'll use the one from wizards/expedient_wizard_views.xml -->
+    <!--
     <record id="sale_order_expedient_action_wizard" model="ir.actions.act_window">
         <field name="name">Wizard Expediente</field>
         <field name="res_model">expedient.create.wizard</field>
@@ -182,6 +234,7 @@
         <field name="binding_type">action</field>
         <field name="binding_view_types">list,form</field>
     </record>
+    -->
 
     <!-- Actualizar la acción para expedientes -->
     <record id="action_sale_order_expedient" model="ir.actions.act_window">
@@ -219,9 +272,6 @@
                 'context': env.context,
             }
         </field>
-        <field name="binding_model_id" ref="sale.model_sale_order"/>
-        <field name="binding_view_types">list</field>
-        <field name="binding_type">action</field>
         <field name="groups_id" eval="[(4, ref('base.group_user'))]"/>
     </record>
 
@@ -247,7 +297,8 @@
               parent="sale.sale_order_menu"
               action="action_sale_order_expedient"
               sequence="25"/>
-    <!-- Acción para crear directamente desde el menú -->
+
+    <!-- Update to use the action from the wizard views -->
     <menuitem id="menu_create_expedient"
               name="Nuevo Expediente"
               parent="sale.sale_order_menu"

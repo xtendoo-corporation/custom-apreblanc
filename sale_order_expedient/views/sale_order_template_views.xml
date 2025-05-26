@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Inherit from sale.order.template form view to add partner_id field -->
+    <record id="view_sale_order_template_form_inherit" model="ir.ui.view">
+        <field name="name">sale.order.template.form.inherit</field>
+        <field name="model">sale.order.template</field>
+        <field name="inherit_id" ref="sale_management.sale_order_template_view_form"/>
+        <field name="arch" type="xml">
+            <data>
+                <field name="company_id" position="after">
+                    <field name="partner_id" options="{'no_create': True}" string="Default Customer"/>
+                </field>
+
+                <!-- Fix for Odoo 17: Use xpath to find sheet and add button at the top -->
+                <xpath expr="//sheet" position="inside">
+                    <div class="oe_button_box" name="button_box" style="margin-top: 10px;" invisible="id == False">
+                        <button name="%(sale_order_expedient.action_sale_order_template_wizard)d"
+                                type="action"
+                                string="Create Expedient"
+                                class="btn-primary"
+                                context="{'default_sale_order_template_id': active_id}"/>
+                    </div>
+                </xpath>
+            </data>
+        </field>
+    </record>
+</odoo>

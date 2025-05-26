@@ -18,6 +18,24 @@ class ExpedientCreateWizard(models.TransientModel):
         domain=[('active', '=', True)]
     )
 
+    expedient_number = fields.Char(
+        string='Expedient Number',
+        required=True,
+        help="Expedient number - Unique identifier for this expedient"
+    )
+
+    client_id = fields.Char(
+        string='Client ID',
+        required=True,
+        help="Client identifier - primary key field",
+    )
+
+    @api.onchange('sale_order_template_id')
+    def _onchange_sale_order_template_id(self):
+        """Auto-fill the customer based on the selected template configuration"""
+        if self.sale_order_template_id and self.sale_order_template_id.partner_id:
+            self.partner_id = self.sale_order_template_id.partner_id
+
     def action_create_expedient(self):
         self.ensure_one()
 
@@ -27,6 +45,8 @@ class ExpedientCreateWizard(models.TransientModel):
             'is_expedient': True,
             'expedient_date': fields.Date.today(),
             'expedient_manager_id': self.env.user.id,
+            'client_id': self.client_id,
+            'expedient_number': self.expedient_number,
         }
 
         # Apply template if selected

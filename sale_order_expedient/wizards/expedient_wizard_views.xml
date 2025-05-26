@@ -8,6 +8,8 @@
                 <group>
                     <field name="partner_id" options="{'no_create': True}"/>
                     <field name="sale_order_template_id" options="{'no_create': True}"/>
+                    <field name="expedient_number" required="1"/>
+                    <field name="client_id" required="1"/>
                 </group>
                 <footer>
                     <button name="action_create_expedient"

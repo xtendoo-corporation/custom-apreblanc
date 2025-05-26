@@ -41,8 +41,7 @@
                 <sheet>
                     <group>
                         <group>
-                            <field name="return_date"/>
-                            <field name="return_datetime"/>
+                            <field name="return_date" widget="datetime"/>
                             <field name="return_reason_id"/>
                             <field name="user_id"/>
                         </group>
@@ -70,8 +69,7 @@
         <field name="model">sale.order.expedient.return.history</field>
         <field name="arch" type="xml">
             <tree>
-                <field name="return_datetime"/>
-                <field name="return_date" optional="hide"/>
+                <field name="return_date" widget="datetime"/>
                 <field name="return_reason_id"/>
                 <field name="sale_order_id"/>
                 <field name="user_id"/>

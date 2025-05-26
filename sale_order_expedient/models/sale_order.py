@@ -3,6 +3,11 @@ from odoo import api, fields, models, _, exceptions
 
 class SaleOrder(models.Model):
     _inherit = 'sale.order'
+    _sql_constraints = [
+        ('client_expedient_unique',
+         'unique(client_id, expedient_number)',
+         'The combination of Client ID and Expedient Number must be unique!')
+    ]
 
     is_expedient = fields.Boolean(
         string='Is Expedient',
@@ -13,8 +18,16 @@ class SaleOrder(models.Model):
     expedient_number = fields.Char(
         string='Expedient Number',
         copy=False,
-        help="Unique number assigned to the expedient"
+        index=True,
+        help="Unique identifier for the expedient"
     )
+    client_id = fields.Char(
+        string='Client ID',
+        copy=False,
+        index=True,
+        help="Client identifier - primary key field"
+    )
+    # El campo expedient_id se ha eliminado, expedient_number es ahora el identificador único
     expedient_date = fields.Date(
         string='Start Date',
         help='Start date of the expedient',
@@ -29,28 +42,17 @@ class SaleOrder(models.Model):
         help='User responsible for managing this expedient',
     )
     expedient_state = fields.Selection([
-        ('nueva', 'Nueva'),
+        ('creada', 'Creada'),
         ('pendiente_documentacion', 'Pending Documentation'),
         ('aprobada', 'Approved'),
         ('rechazada', 'Rejected'),
         ('cancelada', 'Canceled'),
-    ], string='Expedient State', default='nueva', tracking=True)
-
-    is_expedient_closed = fields.Boolean(
-        string='Expedient Closed',
-        compute='_compute_is_expedient_closed',
-        store=True
-    )
+    ], string='Expedient State', default='creada', tracking=True)
 
     expedient_notes = fields.Text(
         string='Notes',
         help='Additional notes about this expedient',
     )
-
-    @api.depends('expedient_state')
-    def _compute_is_expedient_closed(self):
-        for order in self:
-            order.is_expedient_closed = order.expedient_state in ['rechazada', 'cancelada', 'aprobada']
 
     # Current return fields
     return_reason_id = fields.Many2one(
@@ -84,15 +86,23 @@ class SaleOrder(models.Model):
         for vals in vals_list:
             if vals.get('is_expedient') and not vals.get('expedient_number'):
                 vals['expedient_number'] = self.env['ir.sequence'].next_by_code('sale.order.expedient')
+
+            # Ensure client_id and expedient_number are set as primary key fields
+            if vals.get('is_expedient') and not vals.get('client_id'):
+                raise exceptions.ValidationError(_("Client ID is required for expedients."))
+            if vals.get('is_expedient') and not vals.get('expedient_number'):
+                raise exceptions.ValidationError(_("Expedient Number is required for expedients."))
+
         return super().create(vals_list)
 
     def write(self, vals):
         # If marking as expedient and has no expedient number
         if vals.get('is_expedient') and not self.expedient_number:
             vals['expedient_number'] = self.env['ir.sequence'].next_by_code('sale.order.expedient')
+
         # Check if we're trying to modify a closed expedient
         for record in self:
-            if record.is_expedient and record.is_expedient_closed:
+            if record.is_expedient and record.expedient_state in ['aprobada', 'rechazada', 'cancelada']:
                 # Always allow changes to these specific fields
                 allowed_fields = {'message_ids', 'message_follower_ids', 'message_main_attachment_id',
                                   'activity_ids', 'activity_state', 'activity_user_id', 'activity_type_id',
@@ -100,38 +110,77 @@ class SaleOrder(models.Model):
 
                 # If trying to modify fields other than allowed ones
                 if set(vals.keys()) - allowed_fields:
-                    # Check if we're just changing the state to a closed state
-                    if set(vals.keys()) - allowed_fields != {'is_expedient_closed'} or not vals.get('is_expedient_closed', False):
-                        raise exceptions.UserError(_("This expedient is closed and cannot be modified."))
+                    raise exceptions.UserError(_("This expedient is closed and cannot be modified."))
 
         return super().write(vals)
 
-    # # Methods for changing expedient state (maintain for compatibility)
-    # def action_expedient_aprobada(self):
-    #     self.write({'expedient_state': 'aprobada'})
-    #
-    # def action_expedient_rechazada(self):
-    #     self.write({'expedient_state': 'rechazada'})
-    #
-    # def action_expedient_cancelada(self):
-    #     self.write({'expedient_state': 'cancelada'})
-    #
-    # def action_expedient_pendiente_documentacion(self):
-    #     self.write({'expedient_state': 'pendiente_documentacion'})
-    #
-    # # Simplified method to register a return
-    # def register_expedient_return(self):
-    #     self.ensure_one()
-    #     if self.is_expedient and self.return_reason_id:
-    #         # Create a history record when registering a return
-    #         history_vals = {
-    #             'sale_order_id': self.id,
-    #             'return_datetime': fields.Datetime.now(),
-    #             'reason_id': self.return_reason_id.id,
-    #             'notes': self.return_notes,
-    #         }
-    #         self.env['sale.order.expedient.return.history'].create(history_vals)
-    #         # Clear the input fields after saving
-    #         self.return_reason_id = False
-    #         self.return_notes = False
-    #     return True
+    # Methods for changing expedient state
+    def action_expedient_aprobada(self):
+        """Approve the expedient and track the change"""
+        self.write({'expedient_state': 'aprobada'})
+        for record in self:
+            record.message_post(
+                body=_("Expedient approved"),
+                message_type='notification'
+            )
+
+    def action_expedient_rechazada(self):
+        """Reject the expedient and track the change"""
+        self.write({'expedient_state': 'rechazada'})
+        for record in self:
+            record.message_post(
+                body=_("Expedient rejected"),
+                message_type='notification'
+            )
+
+    def action_expedient_cancelada(self):
+        """Cancel the expedient and track the change"""
+        self.write({'expedient_state': 'cancelada'})
+        for record in self:
+            record.message_post(
+                body=_("Expedient cancelled"),
+                message_type='notification'
+            )
+
+    def action_expedient_pendiente_documentacion(self):
+        """Set expedient as pending documentation and track the change"""
+        self.write({'expedient_state': 'pendiente_documentacion'})
+        for record in self:
+            record.message_post(
+                body=_("Expedient set to pending documentation"),
+                message_type='notification'
+            )
+
+    def register_expedient_return(self):
+        """Simplified method to register a return with full tracking"""
+        self.ensure_one()
+        if self.is_expedient and self.return_reason_id:
+            # Create a history record when registering a return
+            history_vals = {
+                'sale_order_id': self.id,
+                'return_datetime': fields.Datetime.now(),
+                'return_reason_id': self.return_reason_id.id,
+                'notes': self.return_notes,
+                'user_id': self.env.user.id,
+            }
+            history_record = self.env['sale.order.expedient.return.history'].create(history_vals)
+
+            # Post message in the sale order chatter
+            self.message_post(
+                body=_("Return registered: %s") % self.return_reason_id.name,
+                message_type='notification'
+            )
+
+            # Clear the input fields after saving
+            self.return_reason_id = False
+            self.return_notes = False
+
+            return {
+                'type': 'ir.actions.act_window',
+                'res_model': 'sale.order.expedient.return.history',
+                'res_id': history_record.id,
+                'view_mode': 'form',
+                'target': 'new',
+                'context': {'default_sale_order_id': self.id}
+            }
+        return True
