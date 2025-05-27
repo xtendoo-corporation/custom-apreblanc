@@ -41,14 +41,20 @@
             <xpath expr="//field[@name='validity_date']" position="replace"/>
             <xpath expr="//field[@name='payment_term_id']" position="replace"/>
             <xpath expr="//field[@name='pricelist_id']" position="replace"/>
+            <!-- Also replace type_id and payment_mode_id if they exist -->
+            <xpath expr="//field[@name='type_id']" position="replace"/>
+            <xpath expr="//field[@name='payment_mode_id']" position="replace"/>
 
             <!-- Find the "Other Information" tab and add only the specific fields there -->
             <xpath expr="//page[@name='other_information']//group" position="inside">
+                <!-- Remove the payment fields from here as they'll be moved -->
+                <!--
                 <group name="payment_fields" string="Payment Information">
                     <field name="validity_date" readonly="is_expedient and expedient_state in ('aprobada', 'rechazada', 'cancelada')"/>
                     <field name="payment_term_id" readonly="is_expedient and expedient_state in ('aprobada', 'rechazada', 'cancelada')"/>
                     <field name="pricelist_id" readonly="is_expedient and expedient_state in ('aprobada', 'rechazada', 'cancelada')"/>
                 </group>
+                -->
             </xpath>
 
             <!-- Move the expedient_info group to the top position -->
@@ -68,8 +74,17 @@
                     <field name="expedient_notes"
                            placeholder="Add detailed notes about this expedient..."
                            readonly="expedient_state in ('aprobada', 'rechazada', 'cancelada')"
-                           widget="html"
+                           widget="text"
                            style="min-height: 200px; width: 100%;" />
+
+                    <!-- Add payment fields at the bottom of expedient_info section -->
+                    <group name="payment_fields" string="Payment Information">
+                        <field name="validity_date" readonly="expedient_state in ('aprobada', 'rechazada', 'cancelada')"/>
+                        <field name="payment_term_id" readonly="expedient_state in ('aprobada', 'rechazada', 'cancelada')"/>
+                        <field name="pricelist_id" readonly="expedient_state in ('aprobada', 'rechazada', 'cancelada')"/>
+                        <field name="type_id" readonly="expedient_state in ('aprobada', 'rechazada', 'cancelada')"/>
+                        <field name="payment_mode_id" readonly="expedient_state in ('aprobada', 'rechazada', 'cancelada')"/>
+                    </group>
                 </group>
 
                 <!-- Remove the standalone notes section -->
