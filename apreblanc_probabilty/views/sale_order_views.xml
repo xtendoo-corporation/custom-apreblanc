@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Inherit the sale order form to add probability and margin fields -->
+    <record id="view_order_form_probability_inherit" model="ir.ui.view">
+        <field name="name">sale.order.form.probability.inherit</field>
+        <field name="model">sale.order</field>
+        <field name="inherit_id" ref="sale.view_order_form"/>
+        <field name="arch" type="xml">
+            <!-- Place probability and margin_percent fields after date_order -->
+            <field name="date_order" position="after">
+                <field name="probability" widget="percentage"/>
+                <field name="margin_percent" widget="percentage"/>
+            </field>
+        </field>
+    </record>
+</odoo>

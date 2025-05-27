@@ -35,12 +35,14 @@
                 <field name="locked" invisible="1"/>
             </field>
 
-            <!-- Move validity_date, payment_term_id, and pricelist_id to "Other Information" tab -->
+            <!-- Remove problematic XPath expressions that target non-existent fields -->
+
+            <!-- Only move specific fields that we know exist -->
             <xpath expr="//field[@name='validity_date']" position="replace"/>
             <xpath expr="//field[@name='payment_term_id']" position="replace"/>
             <xpath expr="//field[@name='pricelist_id']" position="replace"/>
 
-            <!-- Find the "Other Information" tab and add the fields there -->
+            <!-- Find the "Other Information" tab and add only the specific fields there -->
             <xpath expr="//page[@name='other_information']//group" position="inside">
                 <group name="payment_fields" string="Payment Information">
                     <field name="validity_date" readonly="is_expedient and expedient_state in ('aprobada', 'rechazada', 'cancelada')"/>
@@ -58,15 +60,16 @@
                         <field name="client_id" readonly="expedient_state in ('aprobada', 'rechazada', 'cancelada')"/>
                         <field name="expedient_date" readonly="expedient_state in ('aprobada', 'rechazada', 'cancelada')"/>
                         <field name="expedient_deadline" readonly="expedient_state in ('aprobada', 'rechazada', 'cancelada')"/>
-                        <field name="expedient_notes"
-                               placeholder="Add detailed notes about this expedient..."
-                               readonly="expedient_state in ('aprobada', 'rechazada', 'cancelada')"
-                               widget="text"
-                               style="min-height: 150px; width: 100%;" />
                     </group>
                     <group>
                         <field name="expedient_manager_id" readonly="expedient_state in ('aprobada', 'rechazada', 'cancelada')"/>
                     </group>
+                    <!-- Move notes field below both groups but still inside expedient_info -->
+                    <field name="expedient_notes"
+                           placeholder="Add detailed notes about this expedient..."
+                           readonly="expedient_state in ('aprobada', 'rechazada', 'cancelada')"
+                           widget="html"
+                           style="min-height: 200px; width: 100%;" />
                 </group>
 
                 <!-- Remove the standalone notes section -->
