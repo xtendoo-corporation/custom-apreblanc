@@ -9,6 +9,7 @@
             <field name="state" position="after">
                 <field name="is_expedient" invisible="1"/>
                 <field name="expedient_number" optional="show"/>
+                <field name="client_id" optional="show"/>
                 <field name="expedient_state" optional="show"
                        decoration-info="expedient_state == 'creada'"
                        decoration-success="expedient_state == 'aprobada'"
@@ -31,6 +32,7 @@
             <field name="partner_id" position="after">
                 <field name="is_expedient" invisible="1"/>
                 <field name="expedient_state" invisible="1"/>
+                <field name="locked" invisible="1"/>
             </field>
 
             <!-- Make standard fields readonly when expedient is closed -->
@@ -100,6 +102,7 @@
                     <group>
                         <!-- In Odoo 17, readonly is a direct attribute in field tags -->
                         <field name="expedient_number" readonly="expedient_state in ('aprobada', 'rechazada', 'cancelada')"/>
+                        <field name="client_id" readonly="expedient_state in ('aprobada', 'rechazada', 'cancelada')"/>
                         <field name="expedient_date" readonly="expedient_state in ('aprobada', 'rechazada', 'cancelada')"/>
                         <field name="expedient_deadline" readonly="expedient_state in ('aprobada', 'rechazada', 'cancelada')"/>
                     </group>
@@ -209,6 +212,7 @@
                 <field name="partner_id"/>
                 <field name="date_order"/>
                 <field name="expedient_number"/>
+                <field name="client_id"/>
                 <field name="expedient_state" widget="badge"
                        decoration-info="expedient_state == 'creada'"
                        decoration-success="expedient_state == 'aprobada'"

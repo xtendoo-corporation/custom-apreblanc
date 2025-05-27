@@ -4,9 +4,8 @@ from odoo import api, fields, models, _, exceptions
 class SaleOrder(models.Model):
     _inherit = 'sale.order'
     _sql_constraints = [
-        ('expedient_number_unique',
-         'unique(expedient_number)',
-         'The Expedient Number must be unique!'),
+        # Remove any constraints that enforce uniqueness on expedient_number alone
+        # Keep only the composite constraint for both fields
         ('client_expedient_unique',
          'unique(client_id, expedient_number)',
          'The combination of Client ID and Expedient Number must be unique!')
@@ -22,13 +21,13 @@ class SaleOrder(models.Model):
         string='Expedient Number',
         copy=False,
         index=True,
-        help="Unique identifier for the expedient"
+        help="Identifier for the expedient - must be unique when combined with Client ID"
     )
     client_id = fields.Char(
         string='Client ID',
         copy=False,
         index=True,
-        help="Client identifier - primary key field"
+        help="Client identifier - part of the primary key along with Expedient Number"
     )
     # El campo expedient_id se ha eliminado, expedient_number es ahora el identificador único
     expedient_date = fields.Date(
@@ -79,6 +78,13 @@ class SaleOrder(models.Model):
         store=False
     )
 
+    # Add a locked field to fix the view error
+    locked = fields.Boolean(
+        string='Locked',
+        default=False,
+        help='Technical field used in views',
+    )
+
     @api.depends('expedient_return_history_ids')
     def _compute_return_count(self):
         for order in self:
@@ -96,9 +102,36 @@ class SaleOrder(models.Model):
             if vals.get('is_expedient') and not vals.get('expedient_number'):
                 raise exceptions.ValidationError(_("Expedient Number is required for expedients."))
 
+            # Check if the combination already exists
+            if vals.get('is_expedient') and vals.get('client_id') and vals.get('expedient_number'):
+                existing = self.env['sale.order'].search([
+                    ('client_id', '=', vals.get('client_id')),
+                    ('expedient_number', '=', vals.get('expedient_number'))
+                ], limit=1)
+
+                if existing:
+                    raise exceptions.ValidationError(_(
+                        "An expedient with Client ID '%s' and Expedient Number '%s' already exists."
+                    ) % (vals.get('client_id'), vals.get('expedient_number')))
+
         return super().create(vals_list)
 
     def write(self, vals):
+        # Handle expedient state change to 'cancelada' from status bar
+        if 'expedient_state' in vals and vals['expedient_state'] == 'cancelada':
+            for record in self:
+                # Only process if this is a state change to canceled
+                if record.expedient_state != 'cancelada':
+                    # Cancel the sale order if needed
+                    if record.state != 'cancel':
+                        record.action_cancel()
+
+                    # Log both actions
+                    record.message_post(
+                        body=_("Expedient and sale order have been cancelled"),
+                        message_type='notification'
+                    )
+
         # If marking as expedient and has no expedient number
         if vals.get('is_expedient') and not self.expedient_number:
             vals['expedient_number'] = self.env['ir.sequence'].next_by_code('sale.order.expedient')
@@ -137,11 +170,22 @@ class SaleOrder(models.Model):
             )
 
     def action_expedient_cancelada(self):
-        """Cancel the expedient and track the change"""
-        self.write({'expedient_state': 'cancelada'})
+        """
+        Cancel the expedient and the linked sale order.
+        This method sets the expedient state to 'cancelada' and also
+        cancels the underlying sale order.
+        """
         for record in self:
+            # First cancel the sale order itself using standard method
+            if record.state != 'cancel':
+                record.action_cancel()
+
+            # Then update the expedient state
+            record.expedient_state = 'cancelada'
+
+            # Log both actions
             record.message_post(
-                body=_("Expedient cancelled"),
+                body=_("Expedient and sale order have been cancelled"),
                 message_type='notification'
             )
 

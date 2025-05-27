@@ -37,17 +37,18 @@ class ExpedientCreateWizard(models.TransientModel):
         if self.sale_order_template_id and self.sale_order_template_id.partner_id:
             self.partner_id = self.sale_order_template_id.partner_id
 
-    @api.onchange('expedient_number')
-    def _onchange_expedient_number(self):
-        """Check if expedient number already exists"""
-        if self.expedient_number:
+    @api.onchange('expedient_number', 'client_id')
+    def _onchange_expedient_client(self):
+        """Check if combination of client_id and expedient_number already exists"""
+        if self.expedient_number and self.client_id:
             existing = self.env['sale.order'].search([
+                ('client_id', '=', self.client_id),
                 ('expedient_number', '=', self.expedient_number)
             ], limit=1)
             if existing:
                 return {'warning': {
-                    'title': _('Duplicate Expedient Number'),
-                    'message': _('This expedient number is already used. Please choose another one.')
+                    'title': _('Duplicate Expedient'),
+                    'message': _('An expedient with this Client ID and Expedient Number combination already exists.')
                 }}
 
     def action_create_expedient(self):
@@ -55,11 +56,12 @@ class ExpedientCreateWizard(models.TransientModel):
 
         # Check for duplicates before creation
         existing = self.env['sale.order'].search([
+            ('client_id', '=', self.client_id),
             ('expedient_number', '=', self.expedient_number)
         ], limit=1)
 
         if existing:
-            raise ValidationError(_("This expedient number already exists. Please choose another one."))
+            raise ValidationError(_("An expedient with this Client ID and Expedient Number combination already exists."))
 
         # Always create as expedient from the wizard
         values = {
