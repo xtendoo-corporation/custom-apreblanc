@@ -1,315 +1,163 @@
-# Translation of Odoo Server.
-# This file contains the translation of the following modules:
-# 	* sale_order_expedient
-#
+#. module: sale_order_expedient
+#. odoo-python
+#: code:addons/sale_order_expedient/models/sale_order_expedient_return_history.py:0
+#, python-format
 msgid ""
+"\n"
+"Notes: %s"
 msgstr ""
-"Project-Id-Version: Odoo Server 17.0\n"
-"Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-05-19 10:37+0000\n"
-"PO-Revision-Date: 2025-05-19 10:37+0000\n"
-"Last-Translator: \n"
-"Language-Team: \n"
-"MIME-Version: 1.0\n"
-"Content-Type: text/plain; charset=UTF-8\n"
-"Content-Transfer-Encoding: \n"
-"Plural-Forms: \n"
+"\n"
+"Notas: %s"
 
 #. module: sale_order_expedient
-#: model:ir.model.fields,field_description:sale_order_expedient.field_expedient_return_reason__active
-msgid "Active"
-msgstr "Activo"
+#: model:ir.model.fields,field_description:sale_order_expedient.field_expedient_return_reason__message_needaction
+#: model:ir.model.fields,field_description:sale_order_expedient.field_sale_order_expedient_return_history__message_needaction
+msgid "Action Needed"
+msgstr "Acción Requerida"
+
+#. module: sale_order_expedient
+#: model:ir.model.fields,field_description:sale_order_expedient.field_expedient_return_reason__activity_ids
+#: model:ir.model.fields,field_description:sale_order_expedient.field_sale_order_expedient_return_history__activity_ids
+msgid "Activities"
+msgstr "Actividades"
+
+#. module: sale_order_expedient
+#: model:ir.model.fields,field_description:sale_order_expedient.field_expedient_return_reason__activity_exception_decoration
+#: model:ir.model.fields,field_description:sale_order_expedient.field_sale_order_expedient_return_history__activity_exception_decoration
+msgid "Activity Exception Decoration"
+msgstr "Decoración de Excepción de Actividad"
+
+#. module: sale_order_expedient
+#: model:ir.model.fields,field_description:sale_order_expedient.field_expedient_return_reason__activity_state
+#: model:ir.model.fields,field_description:sale_order_expedient.field_sale_order_expedient_return_history__activity_state
+msgid "Activity State"
+msgstr "Estado de Actividad"
+
+#. module: sale_order_expedient
+#: model:ir.model.fields,field_description:sale_order_expedient.field_expedient_return_reason__activity_type_icon
+#: model:ir.model.fields,field_description:sale_order_expedient.field_sale_order_expedient_return_history__activity_type_icon
+msgid "Activity Type Icon"
+msgstr "Icono de Tipo de Actividad"
 
 #. module: sale_order_expedient
 #: model_terms:ir.ui.view,arch_db:sale_order_expedient.view_order_form_expedient
-msgid "Add notes about this expedient..."
-msgstr "Añadir notas sobre este expediente..."
+msgid "Add detailed notes about this expedient..."
+msgstr "Añadir notas detalladas sobre este expediente..."
 
 #. module: sale_order_expedient
-#: model:ir.model.fields,field_description:sale_order_expedient.field_sale_order__return_notes
-#: model:ir.model.fields,field_description:sale_order_expedient.field_sale_order_expedient_return_history__notes
-msgid "Additional Notes"
-msgstr "Notas adicionales"
+#. odoo-python
+#: code:addons/sale_order_expedient/models/sale_order.py:0
+#, python-format
+msgid ""
+"An expedient with Client ID '%s' and Expedient Number '%s' already exists."
+msgstr "Ya existe un expediente con ID de Cliente '%s' y Número de Expediente '%s'."
 
 #. module: sale_order_expedient
-#: model:ir.model.fields,help:sale_order_expedient.field_sale_order__expedient_notes
-msgid "Additional notes about the expedient"
-msgstr "Notas adicionales sobre el expediente"
+#. odoo-python
+#: code:addons/sale_order_expedient/wizards/expedient_wizard.py:0
+#: code:addons/sale_order_expedient/wizards/expedient_wizard.py:0
+#, python-format
+msgid "An expedient with this Client ID and Expedient Number combination already exists."
+msgstr "Ya existe un expediente con esta combinación de ID de Cliente y Número de Expediente."
 
 #. module: sale_order_expedient
-#: model:ir.model.fields,help:sale_order_expedient.field_sale_order__return_notes
-msgid "Additional notes for the return"
-msgstr "Notas adicionales para la devolución"
+#: model:ir.model.fields,field_description:sale_order_expedient.field_expedient_return_reason__message_attachment_count
+#: model:ir.model.fields,field_description:sale_order_expedient.field_sale_order_expedient_return_history__message_attachment_count
+msgid "Attachment Count"
+msgstr "Número de Adjuntos"
 
 #. module: sale_order_expedient
-#: model:ir.model.fields.selection,name:sale_order_expedient.selection__sale_order__expedient_state__aprobada
-msgid "Approved"
-msgstr "Aprobada"
-
-#. module: sale_order_expedient
-#: model_terms:ir.ui.view,arch_db:sale_order_expedient.view_expedient_create_wizard_form
-msgid "Cancel"
-msgstr "Cancelar"
-
-#. module: sale_order_expedient
-#: model:ir.model.fields.selection,name:sale_order_expedient.selection__sale_order__expedient_state__cancelada
-msgid "Cancelled"
-msgstr "Cancelada"
-
-#. module: sale_order_expedient
-#: model:ir.model.fields,help:sale_order_expedient.field_sale_order__is_expedient
-msgid "Check if this sale order is an expedient"
-msgstr "Marcar si este pedido de venta es un expediente"
-
-#. module: sale_order_expedient
-#: model_terms:ir.actions.act_window,help:sale_order_expedient.action_sale_order_expedient
-msgid "Crea un nuevo expediente"
-msgstr "Crea un nuevo expediente"
-
-#. module: sale_order_expedient
-#: model_terms:ir.ui.view,arch_db:sale_order_expedient.view_expedient_create_wizard_form
-msgid "Create"
-msgstr "Crear"
-
-#. module: sale_order_expedient
-#: model:ir.actions.act_window,name:sale_order_expedient.action_create_new_expedient
-#: model_terms:ir.ui.view,arch_db:sale_order_expedient.view_expedient_create_wizard_form
-msgid "Create Expedient"
-msgstr "Crear Expediente"
-
-#. module: sale_order_expedient
-#: model_terms:ir.actions.act_window,help:sale_order_expedient.action_expedient_return_reason
-msgid "Create a new return reason"
-msgstr "Crear una nueva razón de devolución"
-
-#. module: sale_order_expedient
-#: model:ir.model.fields,field_description:sale_order_expedient.field_expedient_create_wizard__create_uid
-#: model:ir.model.fields,field_description:sale_order_expedient.field_expedient_return_reason__create_uid
-#: model:ir.model.fields,field_description:sale_order_expedient.field_sale_order_expedient_return_history__create_uid
-msgid "Created by"
-msgstr "Creado por"
-
-#. module: sale_order_expedient
-#: model:ir.model.fields,field_description:sale_order_expedient.field_expedient_create_wizard__create_date
-#: model:ir.model.fields,field_description:sale_order_expedient.field_expedient_return_reason__create_date
-#: model:ir.model.fields,field_description:sale_order_expedient.field_sale_order_expedient_return_history__create_date
-msgid "Created on"
-msgstr "Creado el"
-
-#. module: sale_order_expedient
-#: model:ir.model.fields,help:sale_order_expedient.field_sale_order__expedient_state
-msgid "Current status of the expedient"
-msgstr "Estado actual del expediente"
-
-#. module: sale_order_expedient
-#: model:ir.model.fields,field_description:sale_order_expedient.field_expedient_create_wizard__partner_id
-msgid "Customer"
+#: model_terms:ir.ui.view,arch_db:sale_order_expedient.view_sale_order_expedient_search
+msgid "Client"
 msgstr "Cliente"
 
 #. module: sale_order_expedient
-#: model:ir.model.fields,field_description:sale_order_expedient.field_sale_order_expedient_return_history__return_datetime
-msgid "Date and Time"
-msgstr "Fecha y Hora"
+#: model:ir.model.fields,field_description:sale_order_expedient.field_expedient_create_wizard__client_id
+#: model:ir.model.fields,field_description:sale_order_expedient.field_sale_order__client_id
+msgid "Client ID"
+msgstr "ID de Cliente"
 
 #. module: sale_order_expedient
-#: model:ir.model.fields,field_description:sale_order_expedient.field_sale_order__expedient_deadline
-msgid "Deadline"
-msgstr "Fecha límite"
+#. odoo-python
+#: code:addons/sale_order_expedient/models/sale_order.py:0
+#, python-format
+msgid "Client ID is required for expedients."
+msgstr "El ID de Cliente es obligatorio para los expedientes."
 
 #. module: sale_order_expedient
-#: model:ir.model.fields,help:sale_order_expedient.field_sale_order__expedient_deadline
-msgid "Deadline to complete the expedient"
-msgstr "Fecha límite para completar el expediente"
+#: model:ir.model.fields,help:sale_order_expedient.field_sale_order__client_id
+msgid "Client identifier - part of the primary key along with Expedient Number"
+msgstr "Identificador de Cliente - parte de la clave primaria junto con el Número de Expediente"
 
 #. module: sale_order_expedient
-#: model:ir.model.fields,field_description:sale_order_expedient.field_expedient_return_reason__description
-msgid "Description"
-msgstr "Descripción"
+#: model:ir.model.fields,help:sale_order_expedient.field_expedient_create_wizard__client_id
+msgid "Client identifier - primary key field"
+msgstr "Identificador de Cliente - campo de clave primaria"
 
 #. module: sale_order_expedient
-#: model:ir.model.fields,help:sale_order_expedient.field_expedient_return_reason__description
-msgid "Detailed description of this return reason"
-msgstr "Descripción detallada de esta razón de devolución"
+#: model_terms:ir.ui.view,arch_db:sale_order_expedient.view_sale_order_expedient_search
+msgid "Created"
+msgstr "Creado"
 
 #. module: sale_order_expedient
-#: model:ir.model.fields,field_description:sale_order_expedient.field_expedient_create_wizard__display_name
-#: model:ir.model.fields,field_description:sale_order_expedient.field_expedient_return_reason__display_name
-#: model:ir.model.fields,field_description:sale_order_expedient.field_sale_order_expedient_return_history__display_name
-msgid "Display Name"
-msgstr "Nombre mostrado"
+#: model_terms:ir.ui.view,arch_db:sale_order_expedient.view_sale_order_expedient_search
+msgid "Created or Pending"
+msgstr "Creado o Pendiente"
 
 #. module: sale_order_expedient
-#: model:ir.model.fields,field_description:sale_order_expedient.field_sale_order_expedient_return_history__sale_order_id
-msgid "Expedient"
-msgstr "Expediente"
+#: model:ir.model.fields,help:sale_order_expedient.field_sale_order_template__partner_id
+msgid "Default customer for this quotation template"
+msgstr "Cliente predeterminado para esta plantilla de presupuesto"
 
 #. module: sale_order_expedient
-#: model_terms:ir.ui.view,arch_db:sale_order_expedient.view_order_form_expedient
-msgid "Expedient Information"
-msgstr "Información del Expediente"
+#. odoo-python
+#: code:addons/sale_order_expedient/wizards/expedient_wizard.py:0
+#, python-format
+msgid "Duplicate Expedient"
+msgstr "Expediente Duplicado"
 
 #. module: sale_order_expedient
-#: model:ir.model.fields,field_description:sale_order_expedient.field_sale_order__expedient_notes
-msgid "Expedient Notes"
-msgstr "Notas del Expediente"
+#. odoo-python
+#: code:addons/sale_order_expedient/models/sale_order.py:0
+#, python-format
+msgid "Expedient Number is required for expedients."
+msgstr "El Número de Expediente es obligatorio para los expedientes."
 
 #. module: sale_order_expedient
-#: model:ir.model.fields,field_description:sale_order_expedient.field_sale_order__expedient_number
-msgid "Expedient Number"
-msgstr "Número de Expediente"
+#. odoo-python
+#: code:addons/sale_order_expedient/models/sale_order.py:0
+#: code:addons/sale_order_expedient/models/sale_order.py:0
+#, python-format
+msgid "Expedient and sale order have been cancelled"
+msgstr "El expediente y pedido de venta han sido cancelados"
 
 #. module: sale_order_expedient
-#: model:ir.model,name:sale_order_expedient.model_sale_order_expedient_return_history
-msgid "Expedient Return History"
-msgstr "Historial de Devoluciones de Expediente"
+#. odoo-python
+#: code:addons/sale_order_expedient/models/sale_order.py:0
+#, python-format
+msgid "Expedient approved"
+msgstr "Expediente aprobado"
 
 #. module: sale_order_expedient
-#: model:ir.model,name:sale_order_expedient.model_expedient_return_reason
-msgid "Expedient Return Reason"
-msgstr "Motivo de Devolución de Expediente"
+#: model:ir.model.fields,help:sale_order_expedient.field_expedient_create_wizard__expedient_number
+msgid "Expedient number - Unique identifier for this expedient"
+msgstr "Número de Expediente - Identificador único para este expediente"
 
 #. module: sale_order_expedient
-#: model:ir.model.fields,field_description:sale_order_expedient.field_sale_order__expedient_state
-msgid "Expedient Status"
-msgstr "Estado del Expediente"
+#. odoo-python
+#: code:addons/sale_order_expedient/models/sale_order.py:0
+#, python-format
+msgid "Expedient rejected"
+msgstr "Expediente rechazado"
 
 #. module: sale_order_expedient
-#: model:ir.actions.act_window,name:sale_order_expedient.action_sale_order_expedient
-#: model:ir.ui.menu,name:sale_order_expedient.menu_sale_order_expedient
-#: model_terms:ir.ui.view,arch_db:sale_order_expedient.view_expedient_tree_custom
-msgid "Expedientes"
+#. odoo-python
+#: code:addons/sale_order_expedient/models/sale_order.py:0
+#, python-format
+msgid "Expedient set to pending documentation"
+msgstr "Expediente establecido como pendiente de documentación"
+
+#. module: sale_order_expedient
+#: model_terms:ir.ui.view,arch_db:sale_order_expedient.view_sale_order_expedient_search
+msgid "Expedients"
 msgstr "Expedientes"
-
-#. module: sale_order_expedient
-#: model:ir.model.fields,field_description:sale_order_expedient.field_expedient_create_wizard__id
-#: model:ir.model.fields,field_description:sale_order_expedient.field_expedient_return_reason__id
-#: model:ir.model.fields,field_description:sale_order_expedient.field_sale_order_expedient_return_history__id
-msgid "ID"
-msgstr "ID"
-
-#. module: sale_order_expedient
-#: model:ir.model.fields,field_description:sale_order_expedient.field_sale_order__is_expedient
-msgid "Is Expedient"
-msgstr "Es Expediente"
-
-#. module: sale_order_expedient
-#: model:ir.model.fields,field_description:sale_order_expedient.field_expedient_create_wizard__write_uid
-#: model:ir.model.fields,field_description:sale_order_expedient.field_expedient_return_reason__write_uid
-#: model:ir.model.fields,field_description:sale_order_expedient.field_sale_order_expedient_return_history__write_uid
-msgid "Last Updated by"
-msgstr "Última actualización por"
-
-#. module: sale_order_expedient
-#: model:ir.model.fields,field_description:sale_order_expedient.field_expedient_create_wizard__write_date
-#: model:ir.model.fields,field_description:sale_order_expedient.field_expedient_return_reason__write_date
-#: model:ir.model.fields,field_description:sale_order_expedient.field_sale_order_expedient_return_history__write_date
-msgid "Last Updated on"
-msgstr "Última actualización el"
-
-#. module: sale_order_expedient
-#: model:ir.model.fields,field_description:sale_order_expedient.field_sale_order__expedient_manager_id
-msgid "Manager"
-msgstr "Responsable"
-
-#. module: sale_order_expedient
-#: model:ir.ui.menu,name:sale_order_expedient.menu_create_expedient
-msgid "Nuevo Expediente"
-msgstr "Nuevo Expediente"
-
-#. module: sale_order_expedient
-#: model:ir.model.fields.selection,name:sale_order_expedient.selection__sale_order__expedient_state__pendiente_documentacion
-msgid "Pending Additional Documentation"
-msgstr "Pendiente de documentación adicional"
-
-#. module: sale_order_expedient
-#: model:ir.model.fields,field_description:sale_order_expedient.field_expedient_create_wizard__sale_order_template_id
-msgid "Quotation Template"
-msgstr "Plantilla de Presupuesto"
-
-#. module: sale_order_expedient
-#: model:ir.model.fields,field_description:sale_order_expedient.field_expedient_return_reason__name
-msgid "Reason"
-msgstr "Motivo"
-
-#. module: sale_order_expedient
-#: model:ir.model.fields.selection,name:sale_order_expedient.selection__sale_order__expedient_state__rechazada
-msgid "Rejected"
-msgstr "Rechazada"
-
-#. module: sale_order_expedient
-#: model:ir.model.fields,field_description:sale_order_expedient.field_sale_order__expedient_return_history_ids
-msgid "Return History"
-msgstr "Historial de Devoluciones"
-
-#. module: sale_order_expedient
-#: model:ir.model.fields,field_description:sale_order_expedient.field_sale_order__return_reason_id
-#: model:ir.model.fields,field_description:sale_order_expedient.field_sale_order_expedient_return_history__reason_id
-msgid "Return Reason"
-msgstr "Motivo de Devolución"
-
-#. module: sale_order_expedient
-#: model:ir.actions.act_window,name:sale_order_expedient.action_expedient_return_reason
-#: model:ir.ui.menu,name:sale_order_expedient.menu_expedient_return_reason
-#: model_terms:ir.ui.view,arch_db:sale_order_expedient.view_expedient_return_reason_tree
-msgid "Return Reasons"
-msgstr "Motivos de Devolución"
-
-#. module: sale_order_expedient
-#: model_terms:ir.ui.view,arch_db:sale_order_expedient.view_order_form_expedient
-msgid "Returns"
-msgstr "Devoluciones"
-
-#. module: sale_order_expedient
-#: model:ir.model,name:sale_order_expedient.model_sale_order
-msgid "Sales Order"
-msgstr "Pedido de venta"
-
-#. module: sale_order_expedient
-#: model:ir.model.fields,field_description:sale_order_expedient.field_expedient_return_reason__sequence
-msgid "Sequence"
-msgstr "Secuencia"
-
-#. module: sale_order_expedient
-#: model:ir.model.fields,field_description:sale_order_expedient.field_sale_order__expedient_date
-msgid "Start Date"
-msgstr "Fecha de inicio"
-
-#. module: sale_order_expedient
-#: model:ir.model.fields,help:sale_order_expedient.field_sale_order__expedient_date
-msgid "Start date of the expedient"
-msgstr "Fecha de inicio del expediente"
-
-#. module: sale_order_expedient
-#: model_terms:ir.ui.view,arch_db:sale_order_expedient.view_expedient_tree_custom
-msgid "Total"
-msgstr "Total"
-
-#. module: sale_order_expedient
-#: model:ir.model.fields,help:sale_order_expedient.field_sale_order__expedient_number
-msgid "Unique number assigned to the expedient"
-msgstr "Número único asignado al expediente"
-
-#. module: sale_order_expedient
-#: model:ir.model.fields,help:sale_order_expedient.field_expedient_return_reason__sequence
-msgid "Used to order reasons"
-msgstr "Usado para ordenar los motivos"
-
-#. module: sale_order_expedient
-#: model:ir.model.fields,help:sale_order_expedient.field_sale_order__expedient_manager_id
-msgid "User responsible for managing this expedient"
-msgstr "Usuario responsable de gestionar este expediente"
-
-#. module: sale_order_expedient
-#: model:ir.actions.server,name:sale_order_expedient.action_button_create_expedient_wizard
-msgid "Wizard"
-msgstr "Asistente"
-
-#. module: sale_order_expedient
-#: model:ir.actions.act_window,name:sale_order_expedient.sale_order_expedient_action_wizard
-msgid "Wizard Expediente"
-msgstr "Asistente de Expediente"
-
-#. module: sale_order_expedient
-#: model:ir.model,name:sale_order_expedient.model_expedient_create_wizard
-msgid "Wizard to create expedients"
-msgstr "Asistente para crear expedientes"

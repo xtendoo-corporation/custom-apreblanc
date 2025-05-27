@@ -35,24 +35,52 @@
                 <field name="locked" invisible="1"/>
             </field>
 
-            <!-- Make standard fields readonly when expedient is closed -->
+            <!-- Move validity_date, payment_term_id, and pricelist_id to "Other Information" tab -->
+            <xpath expr="//field[@name='validity_date']" position="replace"/>
+            <xpath expr="//field[@name='payment_term_id']" position="replace"/>
+            <xpath expr="//field[@name='pricelist_id']" position="replace"/>
+
+            <!-- Find the "Other Information" tab and add the fields there -->
+            <xpath expr="//page[@name='other_information']//group" position="inside">
+                <group name="payment_fields" string="Payment Information">
+                    <field name="validity_date" readonly="is_expedient and expedient_state in ('aprobada', 'rechazada', 'cancelada')"/>
+                    <field name="payment_term_id" readonly="is_expedient and expedient_state in ('aprobada', 'rechazada', 'cancelada')"/>
+                    <field name="pricelist_id" readonly="is_expedient and expedient_state in ('aprobada', 'rechazada', 'cancelada')"/>
+                </group>
+            </xpath>
+
+            <!-- Move the expedient_info group to the top position -->
+            <xpath expr="//group[1]" position="before">
+                <group name="expedient_info" string="Expedient Information"
+                       invisible="not is_expedient">
+                    <group>
+                        <field name="expedient_number" readonly="expedient_state in ('aprobada', 'rechazada', 'cancelada')"/>
+                        <field name="client_id" readonly="expedient_state in ('aprobada', 'rechazada', 'cancelada')"/>
+                        <field name="expedient_date" readonly="expedient_state in ('aprobada', 'rechazada', 'cancelada')"/>
+                        <field name="expedient_deadline" readonly="expedient_state in ('aprobada', 'rechazada', 'cancelada')"/>
+                        <field name="expedient_notes"
+                               placeholder="Add detailed notes about this expedient..."
+                               readonly="expedient_state in ('aprobada', 'rechazada', 'cancelada')"
+                               widget="text"
+                               style="min-height: 150px; width: 100%;" />
+                    </group>
+                    <group>
+                        <field name="expedient_manager_id" readonly="expedient_state in ('aprobada', 'rechazada', 'cancelada')"/>
+                    </group>
+                </group>
+
+                <!-- Remove the standalone notes section -->
+            </xpath>
+
+            <!-- Remove the old expedient_info group -->
+            <xpath expr="//group[@name='expedient_info']" position="replace"/>
+
+            <!-- Keep other readonly attributes -->
             <field name="partner_id" position="attributes">
                 <attribute name="readonly">is_expedient and expedient_state in ('aprobada', 'rechazada', 'cancelada')</attribute>
             </field>
 
-            <field name="validity_date" position="attributes">
-                <attribute name="readonly">is_expedient and expedient_state in ('aprobada', 'rechazada', 'cancelada')</attribute>
-            </field>
-
             <field name="date_order" position="attributes">
-                <attribute name="readonly">is_expedient and expedient_state in ('aprobada', 'rechazada', 'cancelada')</attribute>
-            </field>
-
-            <field name="payment_term_id" position="attributes">
-                <attribute name="readonly">is_expedient and expedient_state in ('aprobada', 'rechazada', 'cancelada')</attribute>
-            </field>
-
-            <field name="pricelist_id" position="attributes">
                 <attribute name="readonly">is_expedient and expedient_state in ('aprobada', 'rechazada', 'cancelada')</attribute>
             </field>
 
@@ -200,6 +228,49 @@
         </field>
     </record>
 
+    <!-- Search view for expedients with state filters - standalone view instead of inherited -->
+    <record id="view_sale_order_expedient_search" model="ir.ui.view">
+        <field name="name">sale.order.expedient.search</field>
+        <field name="model">sale.order</field>
+        <field name="arch" type="xml">
+            <search string="Search Expedients">
+                <!-- Standard Sale Order fields -->
+                <field name="name" string="Order" filter_domain="[('name','ilike',self)]"/>
+                <field name="partner_id" operator="child_of"/>
+                <field name="user_id"/>
+                <field name="order_line" string="Product" filter_domain="[('order_line.product_id', 'ilike', self)]"/>
+
+                <!-- Expedient specific fields -->
+                <field name="client_id"/>
+                <field name="expedient_number"/>
+
+                <!-- Filters -->
+                <filter string="My Orders" name="my_orders" domain="[('user_id', '=', uid)]"/>
+                <separator/>
+                <filter string="Expedients" name="is_expedient" domain="[('is_expedient', '=', True)]"/>
+                <separator/>
+                <filter string="Created or Pending" name="expedient_state_active"
+                       domain="[('expedient_state', 'in', ['creada', 'pendiente_documentacion'])]"/>
+                <separator/>
+                <filter string="Created" name="expedient_state_creada" domain="[('expedient_state', '=', 'creada')]"/>
+                <filter string="Pending Documentation" name="expedient_state_pendiente" domain="[('expedient_state', '=', 'pendiente_documentacion')]"/>
+                <filter string="Approved" name="expedient_state_aprobada" domain="[('expedient_state', '=', 'aprobada')]"/>
+                <filter string="Rejected" name="expedient_state_rechazada" domain="[('expedient_state', '=', 'rechazada')]"/>
+                <filter string="Canceled" name="expedient_state_cancelada" domain="[('expedient_state', '=', 'cancelada')]"/>
+
+                <!-- Group By -->
+                <group expand="0" string="Group By">
+                    <filter string="Salesperson" name="salesperson" domain="[]" context="{'group_by': 'user_id'}"/>
+                    <filter string="Customer" name="customer" domain="[]" context="{'group_by': 'partner_id'}"/>
+                    <filter string="Client" name="client" domain="[]" context="{'group_by': 'client_id'}"/>
+                    <filter string="Expedient State" name="expedient_state_group" domain="[]" context="{'group_by': 'expedient_state'}"/>
+                    <filter string="Order Date" name="order_month" domain="[]" context="{'group_by': 'date_order'}"/>
+                    <filter string="Status" name="status" domain="[]" context="{'group_by': 'state'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
     <!-- Vista específica para expedientes con botón al lado de la barra de búsqueda -->
     <record id="view_expedient_tree_custom" model="ir.ui.view">
         <field name="name">sale.order.expedient.tree.custom</field>
@@ -208,6 +279,9 @@
         <field name="priority">99</field>
         <field name="arch" type="xml">
             <tree string="Expedientes">
+                <control>
+                    <create string="New Expedient"/>
+                </control>
                 <field name="name"/>
                 <field name="partner_id"/>
                 <field name="date_order"/>
@@ -219,26 +293,14 @@
                        decoration-danger="expedient_state == 'rechazada'"
                        decoration-muted="expedient_state == 'cancelada'"
                        decoration-warning="expedient_state == 'pendiente_documentacion'"/>
-                <field name="expedient_deadline"/>
                 <field name="return_count" sum="Total Returns"/>
+                <field name="expedient_deadline"/>
                 <field name="amount_total" sum="Total"/>
                 <field name="state"/>
             </tree>
         </field>
     </record>
 
-    <!-- REMOVE OR COMMENT OUT this action definition - we'll use the one from wizards/expedient_wizard_views.xml -->
-    <!--
-    <record id="sale_order_expedient_action_wizard" model="ir.actions.act_window">
-        <field name="name">Wizard Expediente</field>
-        <field name="res_model">expedient.create.wizard</field>
-        <field name="view_mode">form</field>
-        <field name="target">new</field>
-        <field name="binding_model_id" ref="sale.model_sale_order"/>
-        <field name="binding_type">action</field>
-        <field name="binding_view_types">list,form</field>
-    </record>
-    -->
 
     <!-- Actualizar la acción para expedientes -->
     <record id="action_sale_order_expedient" model="ir.actions.act_window">
@@ -248,8 +310,8 @@
         <field name="view_mode">tree,form</field>
         <field name="view_id" ref="view_expedient_tree_custom"/>
         <field name="domain">[('is_expedient', '=', True)]</field>
-        <field name="context">{'default_is_expedient': True, 'search_default_is_expedient': True}</field>
-        <field name="search_view_id" ref="sale.sale_order_view_search_inherit_quotation"/>
+        <field name="context">{'default_is_expedient': True, 'search_default_is_expedient': True, 'search_default_expedient_state_active': 1}</field>
+        <field name="search_view_id" ref="view_sale_order_expedient_search"/>
         <field name="help" type="html">
             <p class="o_view_nocontent_smiling_face">
                 Crea un nuevo expediente
@@ -306,6 +368,6 @@
     <menuitem id="menu_create_expedient"
               name="Nuevo Expediente"
               parent="sale.sale_order_menu"
-              action="action_create_new_expedient"
+              action="action_button_create_expedient_wizard"
               sequence="26"/>
 </odoo>

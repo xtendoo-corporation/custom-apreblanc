@@ -7,9 +7,17 @@
         <field name="inherit_id" ref="sale_management.sale_order_template_view_form"/>
         <field name="arch" type="xml">
             <data>
+                <!-- Remove the old position of partner_id field -->
                 <field name="company_id" position="after">
-                    <field name="partner_id" options="{'no_create': True}" string="Default Customer"/>
+                    <!-- This line is empty because we're moving the field elsewhere -->
                 </field>
+
+                <!-- Position partner_id and journal_id fields after the title -->
+                <xpath expr="//div[hasclass('oe_title')]" position="after">
+                    <group>
+                        <field name="partner_id" options="{'no_create': True}" string="Cliente"/>
+                    </group>
+                </xpath>
 
                 <!-- Fix for Odoo 17: Use xpath to find sheet and add button at the top -->
                 <xpath expr="//sheet" position="inside">
