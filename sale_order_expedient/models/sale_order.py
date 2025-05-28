@@ -85,6 +85,11 @@ class SaleOrder(models.Model):
         help='Technical field used in views',
     )
 
+    # Related fields for customer information display
+    partner_vat = fields.Char(related='partner_id.vat', string='VAT', readonly=True)
+    partner_phone = fields.Char(related='partner_id.phone', string='Phone', readonly=True)
+    partner_email = fields.Char(related='partner_id.email', string='Email', readonly=True)
+
     @api.depends('expedient_return_history_ids')
     def _compute_return_count(self):
         for order in self:
@@ -117,55 +122,60 @@ class SaleOrder(models.Model):
         return super().create(vals_list)
 
     def write(self, vals):
-        # Handle expedient state change to 'cancelada' from status bar
-        if 'expedient_state' in vals and vals['expedient_state'] == 'cancelada':
-            for record in self:
-                # Only process if this is a state change to canceled
-                if record.expedient_state != 'cancelada':
-                    # Cancel the sale order if needed
-                    if record.state != 'cancel':
-                        record.action_cancel()
+        # Track if expedient state is changing to a state that requires order confirmation
+        confirm_states = ['aprobada', 'rechazada']
+        needs_confirmation = (
+            'expedient_state' in vals and
+            vals['expedient_state'] in confirm_states and
+            self.state == 'draft' and
+            self.is_expedient
+        )
 
-                    # Log both actions
-                    record.message_post(
-                        body=_("Expedient and sale order have been cancelled"),
-                        message_type='notification'
-                    )
+        # Process the write operation normally
+        result = super(SaleOrder, self).write(vals)
 
-        # If marking as expedient and has no expedient number
-        if vals.get('is_expedient') and not self.expedient_number:
-            vals['expedient_number'] = self.env['ir.sequence'].next_by_code('sale.order.expedient')
+        # After write, confirm orders that need confirmation
+        if needs_confirmation:
+            # Set a context flag to prevent infinite loops if action_confirm also updates expedient_state
+            if not self.env.context.get('expedient_confirmed'):
+                self.with_context(expedient_confirmed=True).action_confirm()
 
-        # Check if we're trying to modify a closed expedient
-        for record in self:
-            if record.is_expedient and record.expedient_state in ['aprobada', 'rechazada', 'cancelada']:
-                # Always allow changes to these specific fields
-                allowed_fields = {'message_ids', 'message_follower_ids', 'message_main_attachment_id',
-                                  'activity_ids', 'activity_state', 'activity_user_id', 'activity_type_id',
-                                  'activity_date_deadline', 'expedient_state'}
-
-                # If trying to modify fields other than allowed ones
-                if set(vals.keys()) - allowed_fields:
-                    raise exceptions.UserError(_("This expedient is closed and cannot be modified."))
-
-        return super().write(vals)
+        return result
 
     # Methods for changing expedient state
     def action_expedient_aprobada(self):
-        """Approve the expedient and track the change"""
-        self.write({'expedient_state': 'aprobada'})
+        """
+        Approve the expedient and convert quotation to sale order.
+        """
         for record in self:
+            # First confirm the sale order if it's a quotation
+            if record.state in ['draft', 'sent']:
+                record.action_confirm()
+
+            # Then update the expedient state
+            record.expedient_state = 'aprobada'
+
+            # Log the action
             record.message_post(
-                body=_("Expedient approved"),
+                body=_("Expedient approved and converted to sale order"),
                 message_type='notification'
             )
 
     def action_expedient_rechazada(self):
-        """Reject the expedient and track the change"""
-        self.write({'expedient_state': 'rechazada'})
+        """
+        Reject the expedient and convert quotation to sale order.
+        """
         for record in self:
+            # First confirm the sale order if it's a quotation
+            if record.state in ['draft', 'sent']:
+                record.action_confirm()
+
+            # Then update the expedient state
+            record.expedient_state = 'rechazada'
+
+            # Log the action
             record.message_post(
-                body=_("Expedient rejected"),
+                body=_("Expedient rejected and converted to sale order"),
                 message_type='notification'
             )
 
@@ -231,3 +241,21 @@ class SaleOrder(models.Model):
                 'context': {'default_sale_order_id': self.id}
             }
         return True
+
+    # Override action_confirm to handle expedient state change
+    def action_confirm(self):
+        # Check if we need to change expedient state
+        expedient_state = self.env.context.get('set_expedient_state')
+        result = super().action_confirm()
+
+        # After confirmation, update the expedient state if needed
+        if expedient_state and self.is_expedient:
+            self.write({'expedient_state': expedient_state})
+            # Post a message in the chatter
+            state_name = dict(self._fields['expedient_state'].selection).get(expedient_state)
+            self.message_post(
+                body=_("Expedient marked as %s and converted to sale order") % state_name,
+                message_type='notification'
+            )
+
+        return result
