@@ -11,11 +11,14 @@ class SaleOrder(models.Model):
          'The combination of Client ID and Expedient Number must be unique!')
     ]
 
-    is_expedient = fields.Boolean(
-        string='Is Expedient',
-        help='Check if this sale order is an expedient',
-        default=False,
-    )
+    expedient_type = fields.Selection([
+        ('none', 'None'),
+        ('pre_paid', 'Pre-pagado'),
+        ('post_paid', 'Post-pagado'),
+    ], string='Tipo de Expediente',
+        default='none',
+        help='Tipo de expediente de pre pago o post pago')
+
     # Expedient fields
     expedient_number = fields.Char(
         string='Expedient Number',
@@ -98,17 +101,17 @@ class SaleOrder(models.Model):
     @api.model_create_multi
     def create(self, vals_list):
         for vals in vals_list:
-            if vals.get('is_expedient') and not vals.get('expedient_number'):
+            if vals.get('expedient_type') and not vals.get('expedient_number'):
                 vals['expedient_number'] = self.env['ir.sequence'].next_by_code('sale.order.expedient')
 
-            # Ensure client_id and expedient_number are set as primary key fields
-            if vals.get('is_expedient') and not vals.get('client_id'):
-                raise exceptions.ValidationError(_("Client ID is required for expedients."))
-            if vals.get('is_expedient') and not vals.get('expedient_number'):
-                raise exceptions.ValidationError(_("Expedient Number is required for expedients."))
+            # Asegurar que client_id y expedient_number estén configurados como campos de clave primaria
+            if vals.get('expedient_type') and not vals.get('client_id'):
+                raise exceptions.ValidationError(_("Se requiere ID de cliente para expedientes."))
+            if vals.get('expedient_type') and not vals.get('expedient_number'):
+                raise exceptions.ValidationError(_("Se requiere Número de Expediente para expedientes."))
 
-            # Check if the combination already exists
-            if vals.get('is_expedient') and vals.get('client_id') and vals.get('expedient_number'):
+            # Verificar si la combinación ya existe
+            if vals.get('expedient_type') and vals.get('client_id') and vals.get('expedient_number'):
                 existing = self.env['sale.order'].search([
                     ('client_id', '=', vals.get('client_id')),
                     ('expedient_number', '=', vals.get('expedient_number'))
@@ -116,9 +119,8 @@ class SaleOrder(models.Model):
 
                 if existing:
                     raise exceptions.ValidationError(_(
-                        "An expedient with Client ID '%s' and Expedient Number '%s' already exists."
+                        "Ya existe un expediente con ID de Cliente '%s' y Número de Expediente '%s'."
                     ) % (vals.get('client_id'), vals.get('expedient_number')))
-
         return super().create(vals_list)
 
     def write(self, vals):
@@ -181,23 +183,25 @@ class SaleOrder(models.Model):
 
     def action_expedient_cancelada(self):
         """
-        Cancel the expedient and the linked sale order.
-        This method sets the expedient state to 'cancelada' and also
-        cancels the underlying sale order.
+        Cancela el expediente y opcionalmente el pedido de venta vinculado.
+        Para expedientes pre-pagados, no se cancela el pedido de venta.
         """
         for record in self:
-            # First cancel the sale order itself using standard method
-            if record.state != 'cancel':
-                record.action_cancel()
-
-            # Then update the expedient state
+            # Actualizar el estado del expediente primero
             record.expedient_state = 'cancelada'
 
-            # Log both actions
-            record.message_post(
-                body=_("Expedient and sale order have been cancelled"),
-                message_type='notification'
-            )
+            # Cancelar el pedido solo si NO es un expediente pre-pagado
+            if record.expedient_type != 'pre_paid' and record.state != 'cancel':
+                record.action_cancel()
+                record.message_post(
+                    body=_("Expediente y pedido de venta han sido cancelados"),
+                    message_type='notification'
+                )
+            else:
+                record.message_post(
+                    body=_("Expediente cancelado (el pedido de venta permanece activo por ser de prepago)"),
+                    message_type='notification'
+                )
 
     def action_expedient_pendiente_documentacion(self):
         """Set expedient as pending documentation and track the change"""

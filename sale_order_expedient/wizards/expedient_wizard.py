@@ -75,7 +75,7 @@ class ExpedientCreateWizard(models.TransientModel):
         # Always create as expedient from the wizard
         values = {
             'partner_id': self.partner_id.id,
-            'is_expedient': True,
+            'expedient_type': 'post_paid',
             'expedient_date': fields.Date.today(),
             'expedient_manager_id': self.env.user.id,
             'client_id': self.client_id,
