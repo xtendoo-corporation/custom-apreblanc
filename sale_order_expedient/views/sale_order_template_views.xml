@@ -12,10 +12,16 @@
                     <!-- This line is empty because we're moving the field elsewhere -->
                 </field>
 
-                <!-- Position partner_id and journal_id fields after the title -->
+                <!-- Position partner_id and allowed_user_ids fields after the title -->
                 <xpath expr="//div[hasclass('oe_title')]" position="after">
                     <group>
-                        <field name="partner_id" options="{'no_create': True}" string="Cliente"/>
+                        <group>
+                            <field name="partner_id" options="{'no_create': True}" string="Cliente"/>
+                        </group>
+                        <group>
+                            <field name="allowed_user_ids" widget="many2many_tags"
+                                   placeholder="Leave empty to allow all users"/>
+                        </group>
                     </group>
                 </xpath>
 
