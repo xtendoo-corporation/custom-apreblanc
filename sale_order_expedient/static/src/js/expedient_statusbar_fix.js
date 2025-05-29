@@ -21,7 +21,7 @@ patch(StatusBarField.prototype, {
 patch(FormStatusIndicator.prototype, {
     get isDisabled() {
         // Don't disable the status bar for expedient records
-        if (this.props.record && this.props.record.data.is_expedient) {
+        if (this.props.record && this.props.record.data.expedient_type && this.props.record.data.expedient_type !== 'none') {
             return false;
         }
         // Otherwise use the original behavior

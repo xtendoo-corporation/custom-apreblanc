@@ -367,7 +367,8 @@
         <field name="arch" type="xml">
             <tree string="Expedientes">
                 <control>
-                    <create string="New Expedient"/>
+                    <create string="New Expedient" context="{'expedient_mode': True}"/>
+                    <button string="Create Expedient" name="%(action_create_new_expedient)d" type="action" class="btn-primary"/>
                 </control>
                 <field name="name"/>
                 <field name="partner_id"/>
@@ -397,7 +398,7 @@
         <field name="view_mode">tree,form</field>
         <field name="view_id" ref="view_expedient_tree_custom"/>
         <field name="domain">[('expedient_type', '=', 'post_paid')]</field>
-        <field name="context">{'default_expedient_type': 'post_paid', 'search_default_expedient_filter': True, 'search_default_expedient_state_active': 1}</field>
+        <field name="context">{'default_expedient_type': 'post_paid', 'search_default_expedient_filter': True, 'search_default_expedient_state_active': 1, 'expedient_mode': True}</field>
         <field name="search_view_id" ref="view_sale_order_expedient_search"/>
         <field name="help" type="html">
             <p class="o_view_nocontent_smiling_face">

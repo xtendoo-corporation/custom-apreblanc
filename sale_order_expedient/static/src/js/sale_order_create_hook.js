@@ -16,26 +16,51 @@ patch(ListController.prototype, {
     },
 
     async createRecord() {
-        // Verificamos si estamos en sale.order Y es un expediente
-        // Revisamos el contexto para determinar si estamos en expedientes
-        const isExpedientView = this.props.context &&
-                               (this.props.context.default_is_expedient ||
-                                this.props.context.search_default_is_expedient ||
-                                this.props.context.expedient_mode);
+        // Verificamos si estamos en sale.order
+        if (this.props.resModel === 'sale.order') {
+            console.log("Interceptando creación en sale.order", this.props.context);
 
-        if (this.props.resModel === 'sale.order' && isExpedientView) {
-            await this.action.doAction({
-                type: 'ir.actions.act_window',
-                name: 'Crear Nuevo Expediente',
-                res_model: 'expedient.create.wizard',
-                view_mode: 'form',
-                views: [[false, 'form']],
-                target: 'new',
-                context: this.props.context || {},
-            });
-        } else {
-            // Para otros modelos, comportamiento estándar
-            await originalCreateRecord.call(this, ...arguments);
+            // Verificamos si estamos en la vista de expedientes
+            const isExpedientView = this._isExpedientView();
+
+            if (isExpedientView) {
+                console.log("Detectada vista de expedientes, lanzando wizard");
+                // Lanzar el wizard de expediente
+                await this.action.doAction({
+                    type: 'ir.actions.act_window',
+                    name: 'Crear Nuevo Expediente',
+                    res_model: 'expedient.create.wizard',
+                    view_mode: 'form',
+                    views: [[false, 'form']],
+                    target: 'new',
+                    context: this.props.context || {},
+                });
+                return;
+            }
         }
+
+        // Para otros modelos, comportamiento estándar
+        await originalCreateRecord.call(this, ...arguments);
     },
+
+    _isExpedientView() {
+        const context = this.props.context || {};
+
+        // Si la flag expedient_mode está presente, estamos en la vista de expedientes
+        if (context.expedient_mode) {
+            console.log("Detectado expedient_mode en contexto");
+            return true;
+        }
+
+        // También verificamos las otras flags por compatibilidad
+        if (context.default_is_expedient ||
+            context.search_default_is_expedient ||
+            context.default_expedient_type ||
+            context.search_default_expedient_filter) {
+            console.log("Detectadas otras flags de expedientes en contexto");
+            return true;
+        }
+
+        return false;
+    }
 });

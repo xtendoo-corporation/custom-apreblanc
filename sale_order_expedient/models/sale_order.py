@@ -124,23 +124,25 @@ class SaleOrder(models.Model):
         return super().create(vals_list)
 
     def write(self, vals):
+        """Handle changes in expedient state requiring order confirmation"""
         # Track if expedient state is changing to a state that requires order confirmation
-        confirm_states = ['aprobada', 'rechazada']
-        needs_confirmation = (
-            'expedient_state' in vals and
-            vals['expedient_state'] in confirm_states and
-            self.state == 'draft' and
-            self.is_expedient
-        )
-
-        # Process the write operation normally
         result = super(SaleOrder, self).write(vals)
 
-        # After write, confirm orders that need confirmation
-        if needs_confirmation:
-            # Set a context flag to prevent infinite loops if action_confirm also updates expedient_state
-            if not self.env.context.get('expedient_confirmed'):
-                self.with_context(expedient_confirmed=True).action_confirm()
+        # Only execute special logic for expedients after standard write is done
+        for record in self:
+            confirm_states = ['aprobada', 'rechazada']
+            needs_confirmation = (
+                'expedient_state' in vals and
+                vals['expedient_state'] in confirm_states and
+                record.state == 'draft' and
+                record.expedient_type != 'none'
+            )
+
+            # After write, confirm orders that need confirmation
+            if needs_confirmation:
+                # Set a context flag to prevent infinite loops if action_confirm also updates expedient_state
+                if not self.env.context.get('expedient_confirmed'):
+                    record.with_context(expedient_confirmed=True).action_confirm()
 
         return result
 
@@ -215,7 +217,7 @@ class SaleOrder(models.Model):
     def register_expedient_return(self):
         """Simplified method to register a return with full tracking"""
         self.ensure_one()
-        if self.is_expedient and self.return_reason_id:
+        if self.expedient_type != 'none' and self.return_reason_id:  # Reemplazamos is_expedient
             # Create a history record when registering a return
             history_vals = {
                 'sale_order_id': self.id,
@@ -253,7 +255,7 @@ class SaleOrder(models.Model):
         result = super().action_confirm()
 
         # After confirmation, update the expedient state if needed
-        if expedient_state and self.is_expedient:
+        if expedient_state and self.expedient_type != 'none':  # Reemplazamos is_expedient
             self.write({'expedient_state': expedient_state})
             # Post a message in the chatter
             state_name = dict(self._fields['expedient_state'].selection).get(expedient_state)
