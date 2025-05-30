@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Wizard view for creating expedients -->
+    <record id="view_expedient_create_wizard_form" model="ir.ui.view">
+        <field name="name">expedient.create.wizard.form</field>
+        <field name="model">expedient.create.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Crear Expediente">
+                <!-- Simplificamos la vista para empezar, sin usar el campo problemático -->
+                <group>
+                    <group>
+                        <field name="partner_id" required="1"/>
+                        <field name="client_id"/>
+                        <field name="expedient_number" required="1"/>
+                    </group>
+                    <group>
+                        <!-- Quitamos campos problemáticos hasta que se resuelva -->
+                        <field name="expedient_deadline"/>
+                        <field name="sale_order_template_id"
+                               context="{'default_partner_id': partner_id, 'show_all_templates': True}"/>
+                    </group>
+                </group>
+
+                <field name="expedient_notes" placeholder="Añadir notas sobre este expediente..."/>
+
+                <footer>
+                    <button name="action_create_expedient" string="Crear Expediente Postpagado" type="object" class="btn-primary" data-hotkey="q"/>
+                    <button string="Cancelar" class="btn-secondary" special="cancel" data-hotkey="z"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <!-- Acción para abrir el wizard -->
+    <record id="action_create_new_expedient" model="ir.actions.act_window">
+        <field name="name">Crear Expediente</field>
+        <field name="res_model">expedient.create.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+</odoo>

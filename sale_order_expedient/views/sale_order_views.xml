@@ -332,7 +332,8 @@
                 <field name="expedient_number"/>
 
                 <!-- Filters -->
-                <filter string="My Orders" name="my_orders" domain="[('user_id', '=', uid)]"/>
+                <filter string="Mis Expedientes" name="my_expedients" domain="[('expedient_manager_id', '=', uid)]" help="Mostrar solo mis expedientes"/>
+                <filter string="Todos los Expedientes" name="all_expedients" domain="[]" help="Mostrar todos los expedientes"/>
                 <separator/>
                 <filter string="Expedients" name="expedient_filter" domain="[('expedient_type', '!=', 'none')]"/>
                 <separator/>
@@ -367,8 +368,8 @@
         <field name="arch" type="xml">
             <tree string="Expedientes">
                 <control>
-                    <create string="New Expedient" context="{'expedient_mode': True}"/>
-                    <button string="Create Expedient" name="%(action_create_new_expedient)d" type="action" class="btn-primary"/>
+                    <create string="New Expedient" context="{'default_expedient_type': 'post_paid'}"/>
+                    <button string="Crear Expediente" name="%(action_create_new_expedient)d" type="action" class="btn-primary"/>
                 </control>
                 <field name="name"/>
                 <field name="partner_id"/>
@@ -398,7 +399,12 @@
         <field name="view_mode">tree,form</field>
         <field name="view_id" ref="view_expedient_tree_custom"/>
         <field name="domain">[('expedient_type', '=', 'post_paid')]</field>
-        <field name="context">{'default_expedient_type': 'post_paid', 'search_default_expedient_filter': True, 'search_default_expedient_state_active': 1, 'expedient_mode': True}</field>
+        <field name="context">{
+            'default_expedient_type': 'post_paid',
+            'search_default_expedient_filter': True,
+            'search_default_expedient_state_active': 1,
+            'search_default_my_expedients': 1
+        }</field>
         <field name="search_view_id" ref="view_sale_order_expedient_search"/>
         <field name="help" type="html">
             <p class="o_view_nocontent_smiling_face">

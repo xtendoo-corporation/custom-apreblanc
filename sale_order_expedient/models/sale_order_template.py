@@ -1,56 +1,35 @@
 # -*- coding: utf-8 -*-
 # Part of Odoo. See LICENSE file for full copyright and licensing details.
 
-from odoo import fields, models, api
+from odoo import api, fields, models
 
 
 class SaleOrderTemplate(models.Model):
-    _inherit = "sale.order.template"
+    _inherit = 'sale.order.template'
 
-    partner_id = fields.Many2one(
-        'res.partner',
-        string='Customer',
-        domain=[('customer_rank', '>', 0)],
-        help='Default customer for this quotation template'
-    )
-
+    partner_id = fields.Many2one('res.partner', string='Partner', ondelete='restrict')
     allowed_user_ids = fields.Many2many(
         'res.users',
-        'sale_order_template_user_rel',
-        'template_id',
-        'user_id',
         string='Allowed Users',
-        help="Users who can access this template. If empty, all users can access it."
+        help="Only these users will be able to view and use this template. "
+             "If empty, all users will have access."
     )
 
     @api.model
-    def search_read(self, domain=None, fields=None, offset=0, limit=None, order=None):
-        """Override search_read to filter templates by allowed users"""
-        if domain is None:
-            domain = []
-        
-        # Add user access filter
-        user_domain = [
-            '|',
-            ('allowed_user_ids', '=', False),  # No restrictions
-            ('allowed_user_ids', 'in', [self.env.user.id])  # Current user is allowed
-        ]
-        domain = domain + user_domain
-        
-        return super().search_read(domain, fields, offset, limit, order)
+    def _search(self, args, offset=0, limit=None, order=None, access_rights_uid=None):
+        # Primero comprobar si el usuario es un administrador
+        is_admin = self.env.user.has_group('base.group_system')
 
-    @api.model
-    def search(self, domain, offset=0, limit=None, order=None, count=False):
-        """Override search to filter templates by allowed users"""
-        if domain is None:
-            domain = []
-        
-        # Add user access filter
-        user_domain = [
-            '|',
-            ('allowed_user_ids', '=', False),  # No restrictions
-            ('allowed_user_ids', 'in', [self.env.user.id])  # Current user is allowed
-        ]
-        domain = domain + user_domain
-        
-        return super().search(domain, offset, limit, order, count)
+        # Si no es un administrador y no tiene acceso forzado
+        if not is_admin and not self.env.context.get('show_all_templates'):
+            # Modificar el dominio para incluir plantillas donde:
+            # 1. El usuario está en allowed_user_ids
+            # 2. allowed_user_ids está vacío (lo que significa acceso para todos)
+            if not args:
+                args = []
+
+            # Usamos un dominio OR para permitir ambas condiciones
+            args = ['&', '|', ('allowed_user_ids', '=', False),
+                         ('allowed_user_ids', 'in', [self.env.user.id])] + args
+
+        return super()._search(args, offset=offset, limit=limit, order=order, access_rights_uid=access_rights_uid)

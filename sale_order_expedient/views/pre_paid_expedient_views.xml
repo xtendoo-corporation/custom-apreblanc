@@ -1,0 +1,164 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Vista tree (lista) para expedientes prepagados -->
+    <record id="view_pre_paid_expedient_tree" model="ir.ui.view">
+        <field name="name">pre.paid.expedient.tree</field>
+        <field name="model">pre.paid.expedient</field>
+        <field name="arch" type="xml">
+            <tree string="Expedientes Prepagados" decoration-info="expedient_state == 'creada'" decoration-warning="expedient_state == 'pendiente_documentacion'" decoration-success="expedient_state == 'aprobada'" decoration-danger="expedient_state in ('rechazada', 'cancelada')">
+                <control>
+                    <create string="Nuevo Expediente Prepagado"/>
+                    <button string="Crear Expediente" name="%(action_create_new_expedient)d" type="action"
+                            class="btn-primary" context="{'default_expedient_payment_type': 'pre_paid'}"/>
+                </control>
+                <field name="name"/>
+                <field name="partner_id"/>
+                <field name="client_id"/>
+                <field name="expedient_number"/>
+                <field name="expedient_date"/>
+                <field name="expedient_deadline"/>
+                <field name="expedient_manager_id"/>
+                <!-- Eliminados los campos de saldo -->
+                <field name="expedient_state" widget="badge"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- Vista form para expedientes prepagados -->
+    <record id="view_pre_paid_expedient_form" model="ir.ui.view">
+        <field name="name">pre.paid.expedient.form</field>
+        <field name="model">pre.paid.expedient</field>
+        <field name="arch" type="xml">
+            <form string="Expediente Prepagado">
+                <header>
+                    <!-- Botones para cambiar el estado del expediente -->
+                    <button name="action_expedient_aprobada" string="Aprobar" type="object"
+                            class="oe_highlight"
+                            invisible="expedient_state in ['aprobada', 'rechazada', 'cancelada']"/>
+                    <button name="action_expedient_rechazada" string="Rechazar" type="object"
+                            invisible="expedient_state in ['aprobada', 'rechazada', 'cancelada']"/>
+                    <button name="action_expedient_cancelada" string="Cancelar" type="object"
+                            invisible="expedient_state == 'cancelada'"/>
+                    <button name="action_expedient_pendiente_documentacion" string="Pendiente Documentación" type="object"
+                            invisible="expedient_state in ['pendiente_documentacion', 'aprobada', 'rechazada', 'cancelada']"/>
+
+                    <!-- Barra de estado con opción clickable para cambiar estado directamente -->
+                    <field name="expedient_state" widget="statusbar"
+                           statusbar_visible="creada,pendiente_documentacion,aprobada,rechazada,cancelada"
+                           clickable="True"
+                           options="{'clickable': '1'}"
+                           class="expedient_statusbar"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <h1>
+                            <field name="name" readonly="1"/>
+                        </h1>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="partner_id" required="1"
+                                   widget="res_partner_many2one"
+                                   context="{'show_address': 1}"
+                                   options="{'always_reload': True}"/>
+                            <field name="client_id" required="1"/>
+                            <field name="expedient_number" required="1"/>
+                            <field name="expedient_date"/>
+                            <field name="expedient_deadline"/>
+                        </group>
+                        <group>
+                            <field name="expedient_manager_id" widget="many2one_avatar"/>
+                            <!-- Eliminados los campos de saldo, NIF, teléfono y email -->
+                        </group>
+                    </group>
+                    <notebook>
+                        <page name="returns" string="Devoluciones">
+                            <field name="expedient_return_history_ids" context="{'default_user_id': uid}">
+                                <tree editable="bottom" create="1" delete="1">
+                                    <field name="return_date"/>
+                                    <field name="return_reason_id" options="{'no_create': True}" required="1"/>
+                                    <field name="notes"/>
+                                    <field name="user_id" widget="many2one_avatar" force_save="1" readonly="1"/>
+                                </tree>
+                            </field>
+                        </page>
+                        <page string="Notas" name="notes">
+                            <field name="expedient_notes" placeholder="Añadir notas sobre este expediente..."/>
+                        </page>
+                        <page string="Pedidos Relacionados" name="related_orders">
+                            <field name="sale_order_ids" readonly="1">
+                                <tree>
+                                    <field name="name"/>
+                                    <field name="date_order"/>
+                                    <field name="partner_id"/>
+                                    <field name="amount_total" sum="Total"/>
+                                    <field name="state"/>
+                                </tree>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+                <div class="oe_chatter">
+                    <field name="message_follower_ids"/>
+                    <field name="activity_ids"/>
+                    <field name="message_ids"/>
+                </div>
+            </form>
+        </field>
+    </record>
+
+    <!-- Vista search para expedientes prepagados -->
+    <record id="view_pre_paid_expedient_search" model="ir.ui.view">
+        <field name="name">pre.paid.expedient.search</field>
+        <field name="model">pre.paid.expedient</field>
+        <field name="arch" type="xml">
+            <search string="Buscar Expedientes Prepagados">
+                <field name="name"/>
+                <field name="partner_id"/>
+                <field name="client_id"/>
+                <field name="expedient_number"/>
+                <field name="expedient_manager_id"/>
+                <separator/>
+                <filter string="Mis Expedientes" name="my_expedients" domain="[('expedient_manager_id', '=', uid)]"/>
+                <filter string="Todos los Expedientes" name="all_expedients" domain="[]"/>
+                <separator/>
+                <filter string="Creados" name="state_creada" domain="[('expedient_state', '=', 'creada')]"/>
+                <filter string="Pendientes de Documentación" name="state_pendiente_documentacion" domain="[('expedient_state', '=', 'pendiente_documentacion')]"/>
+                <filter string="Aprobados" name="state_aprobada" domain="[('expedient_state', '=', 'aprobada')]"/>
+                <filter string="Rechazados" name="state_rechazada" domain="[('expedient_state', '=', 'rechazada')]"/>
+                <filter string="Cancelados" name="state_cancelada" domain="[('expedient_state', '=', 'cancelada')]"/>
+                <filter string="Activos" name="active_expedients" domain="[('expedient_state', 'not in', ['rechazada', 'cancelada'])]"/>
+                <group expand="0" string="Agrupar Por">
+                    <filter string="Cliente" name="group_by_partner" context="{'group_by': 'partner_id'}"/>
+                    <filter string="Estado" name="group_by_state" context="{'group_by': 'expedient_state'}"/>
+                    <filter string="Responsable" name="group_by_manager" context="{'group_by': 'expedient_manager_id'}"/>
+                    <filter string="Fecha de Inicio" name="group_by_date" context="{'group_by': 'expedient_date:month'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- Acción de ventana para expedientes prepagados -->
+    <record id="action_pre_paid_expedient" model="ir.actions.act_window">
+        <field name="name">Expedientes Prepagados</field>
+        <field name="res_model">pre.paid.expedient</field>
+        <field name="view_mode">tree,form</field>
+        <field name="search_view_id" ref="view_pre_paid_expedient_search"/>
+        <field name="context">{'search_default_my_expedients': 1, 'search_default_active_expedients': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Cree su primer expediente prepagado
+            </p>
+            <p>
+                Los expedientes prepagados permiten gestionar fondos prepagados para clientes.
+            </p>
+        </field>
+    </record>
+
+    <!-- Elemento de menú para expedientes prepagados -->
+    <menuitem id="menu_pre_paid_expedient"
+              name="Expedientes Prepagados"
+              action="action_pre_paid_expedient"
+              parent="sale.sale_order_menu"
+              sequence="10"/>
+</odoo>

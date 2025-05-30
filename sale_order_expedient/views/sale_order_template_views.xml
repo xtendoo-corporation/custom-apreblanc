@@ -20,7 +20,9 @@
                         </group>
                         <group>
                             <field name="allowed_user_ids" widget="many2many_tags"
-                                   placeholder="Leave empty to allow all users"/>
+                                   placeholder="Añadir usuarios permitidos"
+                                   string="Usuarios con acceso"
+                                   help="Solo los usuarios seleccionados podrán ver y usar esta plantilla. Si está vacío, ningún usuario tendrá acceso."/>
                         </group>
                     </group>
                 </xpath>
@@ -38,5 +40,23 @@
                 </xpath>
             </data>
         </field>
+    </record>
+
+    <!-- Añadir un filtro de búsqueda para ver todas las plantillas -->
+    <record id="view_sale_order_template_search_inherit" model="ir.ui.view">
+        <field name="name">sale.order.template.search.inherit</field>
+        <field name="model">sale.order.template</field>
+        <field name="inherit_id" ref="sale_management.sale_order_template_view_search"/>
+        <field name="arch" type="xml">
+            <search>
+                <filter string="Mis Plantillas" name="my_templates" domain="['|', ('allowed_user_ids', '=', False), ('allowed_user_ids', 'in', uid)]"/>
+                <filter string="Todas las Plantillas" name="all_templates" domain="[]" context="{'show_all_templates': True}"/>
+            </search>
+        </field>
+    </record>
+
+    <!-- Modificar la acción para incluir el contexto -->
+    <record id="sale_management.sale_order_template_action" model="ir.actions.act_window">
+        <field name="context">{'search_default_my_templates': 1}</field>
     </record>
 </odoo>

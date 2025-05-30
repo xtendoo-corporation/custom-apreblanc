@@ -32,6 +32,15 @@ class SaleOrder(models.Model):
         index=True,
         help="Client identifier - part of the primary key along with Expedient Number"
     )
+    
+    # Relación con expedientes prepagados
+    pre_paid_expedient_id = fields.Many2one(
+        'pre.paid.expedient',
+        string='Expediente Prepagado',
+        domain="[('partner_id', '=', partner_id)]",
+        help='Relación con expediente prepagado',
+    )
+    
     # El campo expedient_id se ha eliminado, expedient_number es ahora el identificador único
     expedient_date = fields.Date(
         string='Start Date',
@@ -98,29 +107,68 @@ class SaleOrder(models.Model):
         for order in self:
             order.return_count = len(order.expedient_return_history_ids)
 
+    @api.onchange('expedient_type')
+    def _onchange_expedient_type(self):
+        """Al cambiar el tipo de expediente, reiniciar los campos correspondientes"""
+        if self.expedient_type == 'pre_paid':
+            # Para prepagados, usamos la relación con el modelo de expedientes prepagados
+            self.client_id = False
+            self.expedient_number = False
+            self.expedient_date = False
+            self.expedient_deadline = False
+            self.expedient_manager_id = False
+            self.expedient_state = 'creada'
+            self.expedient_notes = False
+        elif self.expedient_type == 'none':
+            # Si no es expediente, limpiar todos los campos
+            self.client_id = False
+            self.expedient_number = False
+            self.expedient_date = False
+            self.expedient_deadline = False
+            self.expedient_manager_id = False
+            self.expedient_state = 'creada'
+            self.expedient_notes = False
+            self.pre_paid_expedient_id = False
+    
+    @api.onchange('pre_paid_expedient_id')
+    def _onchange_pre_paid_expedient(self):
+        """Al seleccionar un expediente prepagado, actualizar el tipo de expediente"""
+        if self.pre_paid_expedient_id:
+            self.expedient_type = 'pre_paid'
+            # Autocompletar los campos desde el expediente prepagado
+            self.client_id = self.pre_paid_expedient_id.client_id
+            self.expedient_number = self.pre_paid_expedient_id.expedient_number
+        
     @api.model_create_multi
     def create(self, vals_list):
         for vals in vals_list:
-            if vals.get('expedient_type') and not vals.get('expedient_number'):
+            # Si es un expediente prepagado, verificar que tenga relación con el expediente
+            if vals.get('expedient_type') == 'pre_paid' and not vals.get('pre_paid_expedient_id'):
+                raise exceptions.ValidationError(_("Para expedientes prepagados, debe seleccionar un expediente prepagado existente."))
+                
+            # Gestión del número de expediente según su tipo
+            if vals.get('expedient_type') == 'post_paid' and not vals.get('expedient_number'):
                 vals['expedient_number'] = self.env['ir.sequence'].next_by_code('sale.order.expedient')
 
-            # Asegurar que client_id y expedient_number estén configurados como campos de clave primaria
-            if vals.get('expedient_type') and not vals.get('client_id'):
+            # Resto de validaciones para expedientes
+            if vals.get('expedient_type') in ['post_paid', 'pre_paid'] and not vals.get('client_id'):
                 raise exceptions.ValidationError(_("Se requiere ID de cliente para expedientes."))
-            if vals.get('expedient_type') and not vals.get('expedient_number'):
+            if vals.get('expedient_type') == 'post_paid' and not vals.get('expedient_number'):
                 raise exceptions.ValidationError(_("Se requiere Número de Expediente para expedientes."))
 
-            # Verificar si la combinación ya existe
-            if vals.get('expedient_type') and vals.get('client_id') and vals.get('expedient_number'):
+            # Verificar combinación única solo para expedientes post-pagados
+            if vals.get('expedient_type') == 'post_paid' and vals.get('client_id') and vals.get('expedient_number'):
                 existing = self.env['sale.order'].search([
                     ('client_id', '=', vals.get('client_id')),
-                    ('expedient_number', '=', vals.get('expedient_number'))
+                    ('expedient_number', '=', vals.get('expedient_number')),
+                    ('expedient_type', '=', 'post_paid')
                 ], limit=1)
 
                 if existing:
                     raise exceptions.ValidationError(_(
                         "Ya existe un expediente con ID de Cliente '%s' y Número de Expediente '%s'."
                     ) % (vals.get('client_id'), vals.get('expedient_number')))
+        
         return super().create(vals_list)
 
     def write(self, vals):
@@ -250,9 +298,20 @@ class SaleOrder(models.Model):
 
     # Override action_confirm to handle expedient state change
     def action_confirm(self):
+        # Verificar saldo suficiente para expedientes prepagados
+        for order in self:
+            if order.expedient_type == 'pre_paid' and order.pre_paid_expedient_id:
+                if order.amount_total > order.pre_paid_expedient_id.current_balance:
+                    raise exceptions.ValidationError(_(
+                        "No hay saldo suficiente en el expediente prepagado. "
+                        "Saldo actual: %.2f, Importe del pedido: %.2f"
+                    ) % (order.pre_paid_expedient_id.current_balance, order.amount_total))
+        
+        # Continuar con la confirmación normal
+        result = super().action_confirm()
+
         # Check if we need to change expedient state
         expedient_state = self.env.context.get('set_expedient_state')
-        result = super().action_confirm()
 
         # After confirmation, update the expedient state if needed
         if expedient_state and self.expedient_type != 'none':  # Reemplazamos is_expedient
