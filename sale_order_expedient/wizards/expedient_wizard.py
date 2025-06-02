@@ -31,20 +31,50 @@ class ExpedientCreateWizard(models.TransientModel):
         help="Client identifier - primary key field",
     )
 
+    expedient_type = fields.Selection([
+        ('post_paid', 'Post-pagado'),
+        ('pre_paid', 'Pre-pagado'),
+    ], string='Tipo de Expediente',
+        default='post_paid',
+        required=True,
+        help='Tipo de expediente')
+
+    currency_id = fields.Many2one(
+        'res.currency',
+        string='Moneda',
+        default=lambda self: self.env.company.currency_id.id,
+        invisible=1
+    )
+
+    @api.onchange('expedient_type')
+    def _onchange_expedient_type(self):
+        """Actualizar campos según tipo de expediente manteniendo acceso a plantillas"""
+        # Permitimos elegir plantillas independientemente del tipo de expediente
+        return {'domain': {'sale_order_template_id': self._get_template_domain()}}
+
     @api.onchange('sale_order_template_id')
     def _onchange_sale_order_template_id(self):
         """Auto-fill the customer based on the selected template configuration"""
         if self.sale_order_template_id and self.sale_order_template_id.partner_id:
             self.partner_id = self.sale_order_template_id.partner_id
 
-    @api.onchange('expedient_number', 'client_id')
+    @api.onchange('expedient_number', 'client_id', 'expedient_type')
     def _onchange_expedient_client(self):
         """Check if combination of client_id and expedient_number already exists"""
         if self.expedient_number and self.client_id:
-            existing = self.env['sale.order'].search([
-                ('client_id', '=', self.client_id),
-                ('expedient_number', '=', self.expedient_number)
-            ], limit=1)
+            # Buscar según el tipo de expediente
+            if self.expedient_type == 'pre_paid':
+                existing = self.env['pre.paid.expedient'].search([
+                    ('client_id', '=', self.client_id),
+                    ('expedient_number', '=', self.expedient_number)
+                ], limit=1)
+            else:
+                existing = self.env['sale.order'].search([
+                    ('client_id', '=', self.client_id),
+                    ('expedient_number', '=', self.expedient_number),
+                    ('expedient_type', '=', 'post_paid')
+                ], limit=1)
+
             if existing:
                 return {'warning': {
                     'title': _('Duplicate Expedient'),
@@ -63,15 +93,60 @@ class ExpedientCreateWizard(models.TransientModel):
     def action_create_expedient(self):
         self.ensure_one()
 
-        # Check for duplicates before creation
-        existing = self.env['sale.order'].search([
-            ('client_id', '=', self.client_id),
-            ('expedient_number', '=', self.expedient_number)
-        ], limit=1)
+        # Check for duplicates before creation based on expedient type
+        if self.expedient_type == 'pre_paid':
+            existing = self.env['pre.paid.expedient'].search([
+                ('client_id', '=', self.client_id),
+                ('expedient_number', '=', self.expedient_number)
+            ], limit=1)
 
-        if existing:
-            raise ValidationError(_("An expedient with this Client ID and Expedient Number combination already exists."))
+            if existing:
+                raise ValidationError(_("An expedient with this Client ID and Expedient Number combination already exists."))
 
+            # Crear expediente prepagado
+            return self._create_pre_paid_expedient()
+        else:
+            # Verificación para expedientes post-pagados
+            existing = self.env['sale.order'].search([
+                ('client_id', '=', self.client_id),
+                ('expedient_number', '=', self.expedient_number),
+                ('expedient_type', '=', 'post_paid')
+            ], limit=1)
+
+            if existing:
+                raise ValidationError(_("An expedient with this Client ID and Expedient Number combination already exists."))
+
+            # Crear expediente post-pagado
+            return self._create_post_paid_expedient()
+
+    def _create_pre_paid_expedient(self):
+        """Crear un expediente prepagado"""
+        values = {
+            'partner_id': self.partner_id.id,
+            'expedient_number': self.expedient_number,
+            'client_id': self.client_id,
+            'expedient_date': fields.Date.today(),
+            'expedient_manager_id': self.env.user.id,
+            'current_balance': 0.0,  # Establecemos el saldo actual a 0
+        }
+
+        # Podemos agregar la plantilla como referencia si es necesario
+        if self.sale_order_template_id:
+            values['expedient_notes'] = _("Created from template: %s") % self.sale_order_template_id.name
+
+        new_expedient = self.env['pre.paid.expedient'].create(values)
+
+        return {
+            'type': 'ir.actions.act_window',
+            'name': _('Pre-paid Expedient'),
+            'res_model': 'pre.paid.expedient',
+            'res_id': new_expedient.id,
+            'view_mode': 'form',
+            'target': 'current',
+        }
+
+    def _create_post_paid_expedient(self):
+        """Crear un expediente post-pagado (original)"""
         # Always create as expedient from the wizard
         values = {
             'partner_id': self.partner_id.id,

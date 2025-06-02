@@ -369,7 +369,8 @@
             <tree string="Expedientes">
                 <control>
                     <create string="New Expedient" context="{'default_expedient_type': 'post_paid'}"/>
-                    <button string="Crear Expediente" name="%(action_create_new_expedient)d" type="action" class="btn-primary"/>
+                    <button string="Crear Expediente" name="%(action_create_new_expedient)d" type="action"
+                            context="{'default_expedient_type': 'post_paid'}" class="btn-primary"/>
                 </control>
                 <field name="name"/>
                 <field name="partner_id"/>

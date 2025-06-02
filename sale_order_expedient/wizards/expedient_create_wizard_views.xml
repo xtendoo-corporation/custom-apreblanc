@@ -6,17 +6,25 @@
         <field name="model">expedient.create.wizard</field>
         <field name="arch" type="xml">
             <form string="Create Expedient">
-                <p class="text-muted mb-3">Solo puede seleccionar plantillas donde usted está incluido como usuario permitido.</p>
-                <group>
-                    <!-- Reordered fields - template first, then partner -->
-                    <field name="sale_order_template_id" options="{'no_create': True}"/>
-                    <field name="partner_id" options="{'no_create': True}"/>
-                    <!-- Other fields -->
-                    <field name="client_id"/>
-                    <field name="expedient_number"/>
-                </group>
+                <sheet>
+                    <group>
+                        <field name="expedient_type" widget="radio"/>
+                    </group>
+
+                    <group>
+                        <group>
+                            <field name="partner_id" required="1"/>
+                            <field name="client_id" required="1"/>
+                            <field name="expedient_number" required="1"/>
+                            <field name="currency_id" invisible="1"/>
+                        </group>
+                        <group>
+                            <field name="sale_order_template_id"/>
+                        </group>
+                    </group>
+                </sheet>
                 <footer>
-                    <button name="action_create_expedient" string="Create" type="object" class="btn-primary"/>
+                    <button string="Create" name="action_create_expedient" type="object" class="btn-primary"/>
                     <button string="Cancel" class="btn-secondary" special="cancel"/>
                 </footer>
             </form>
@@ -29,7 +37,8 @@
         <field name="res_model">expedient.create.wizard</field>
         <field name="view_mode">form</field>
         <field name="target">new</field>
-        <field name="binding_model_id" ref="sale_management.model_sale_order_template"/>
-        <field name="binding_view_types">form</field>
+        <field name="view_id" ref="view_expedient_create_wizard_form"/>
+        <field name="binding_model_id" ref="model_sale_order"/>
+        <field name="binding_view_types">form,list</field>
     </record>
 </odoo>
