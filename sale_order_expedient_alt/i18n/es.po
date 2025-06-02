@@ -797,18 +797,3 @@ msgstr "Asistente"
 #: model:ir.model,name:sale_order_expedient.model_expedient_create_wizard
 msgid "Wizard to create expedients"
 msgstr "Asistente para crear expedientes"
-
-#. module: sale_order_expedient
-#: model:ir.model.fields,field_description:sale_order_expedient.field_sale_order_template__allowed_user_ids
-msgid "Allowed Users"
-msgstr "Usuarios permitidos"
-
-#. module: sale_order_expedient
-#: model:ir.model.fields,help:sale_order_expedient.field_sale_order_template__allowed_user_ids
-msgid "IMPORTANTE: Solo estos usuarios podrán ver y usar esta plantilla en el asistente de creación de expedientes. Si está vacío, solo los administradores tendrán acceso."
-msgstr "IMPORTANTE: Solo estos usuarios podrán ver y usar esta plantilla en el asistente de creación de expedientes. Si está vacío, solo los administradores tendrán acceso."
-
-#. module: sale_order_expedient
-#: model_terms:ir.ui.view,arch_db:sale_order_expedient.view_expedient_create_wizard_form
-msgid "Solo puede seleccionar plantillas donde usted está incluido como usuario permitido."
-msgstr "Solo puede seleccionar plantillas donde usted está incluido como usuario permitido."

@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Tree view for return reasons -->
+    <record id="view_expedient_return_reason_tree" model="ir.ui.view">
+        <field name="name">expedient.return.reason.tree</field>
+        <field name="model">expedient.return.reason</field>
+        <field name="arch" type="xml">
+            <tree string="Return Reasons" editable="bottom" create="1">
+                <field name="sequence" widget="handle"/>
+                <field name="name"/>
+                <field name="description"/>
+                <field name="active"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- Action for return reasons -->
+    <record id="action_expedient_return_reason" model="ir.actions.act_window">
+        <field name="name">Return Reasons</field>
+        <field name="res_model">expedient.return.reason</field>
+        <field name="view_mode">tree</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Create a new return reason
+            </p>
+        </field>
+    </record>
+
+    <!-- Menu for return reasons in sales configuration -->
+    <menuitem id="menu_expedient_return_reason"
+              name="Return Reasons"
+              parent="sale.menu_sale_config"
+              action="action_expedient_return_reason"
+              sequence="20"/>
+
+    <record id="expedient_return_history_form_view" model="ir.ui.view">
+        <field name="name">sale.order.expedient.return.history.form</field>
+        <field name="model">sale.order.expedient.return.history</field>
+        <field name="arch" type="xml">
+            <form>
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="return_date" widget="datetime"/>
+                            <field name="return_reason_id"/>
+                            <field name="user_id"/>
+                        </group>
+                        <group>
+                            <field name="sale_order_id"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Notes">
+                            <field name="notes"/>
+                        </page>
+                    </notebook>
+                </sheet>
+                <div class="oe_chatter">
+                    <field name="message_follower_ids" widget="mail_followers"/>
+                    <field name="activity_ids" widget="mail_activity"/>
+                    <field name="message_ids" widget="mail_thread"/>
+                </div>
+            </form>
+        </field>
+    </record>
+
+    <record id="expedient_return_history_tree_view" model="ir.ui.view">
+        <field name="name">sale.order.expedient.return.history.tree</field>
+        <field name="model">sale.order.expedient.return.history</field>
+        <field name="arch" type="xml">
+            <tree>
+                <field name="return_date" widget="datetime"/>
+                <field name="return_reason_id"/>
+                <field name="sale_order_id"/>
+                <field name="user_id"/>
+            </tree>
+        </field>
+    </record>
+</odoo>

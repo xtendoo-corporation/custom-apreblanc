@@ -23,28 +23,27 @@ class SaleOrderTemplate(models.Model):
         help="Users who can access this template. If empty, all users can access it."
     )
 
-    @api.model
-    def search_read(self, domain=None, fields=None, offset=0, limit=None, order=None):
-        """Override search_read to filter templates by allowed users"""
-        if domain is None:
-            domain = []
-        
-        # Add user access filter
-        user_domain = [
-            '|',
-            ('allowed_user_ids', '=', False),  # No restrictions
-            ('allowed_user_ids', 'in', [self.env.user.id])  # Current user is allowed
-        ]
-        domain = domain + user_domain
-        
-        return super().search_read(domain, fields, offset, limit, order)
+    def check_access_for_current_user(self):
+        """Check if current user has access to this template"""
+        self.ensure_one()
+
+        # Administrators always have access
+        if self.env.user.has_group('base.group_system'):
+            return True
+
+        # If no users are specified, everyone has access
+        if not self.allowed_user_ids:
+            return True
+
+        # Otherwise, check if current user is in allowed_user_ids
+        return self.env.user.id in self.allowed_user_ids.ids
 
     @api.model
     def search(self, domain, offset=0, limit=None, order=None, count=False):
         """Override search to filter templates by allowed users"""
         if domain is None:
             domain = []
-        
+
         # Add user access filter
         user_domain = [
             '|',
@@ -52,5 +51,5 @@ class SaleOrderTemplate(models.Model):
             ('allowed_user_ids', 'in', [self.env.user.id])  # Current user is allowed
         ]
         domain = domain + user_domain
-        
+
         return super().search(domain, offset, limit, order, count)
