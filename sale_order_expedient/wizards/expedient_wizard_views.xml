@@ -6,12 +6,24 @@
         <field name="model">expedient.create.wizard</field>
         <field name="arch" type="xml">
             <form string="Create Expedient">
+                <!-- Destacar y colocar la plantilla primero -->
                 <group>
-                    <field name="sale_order_template_id" options="{'no_create': True}"/>
+                    <field name="sale_order_template_id" 
+                           options="{'no_create': True}" 
+                           placeholder="Seleccione una plantilla..."
+                           domain="[('active', '=', True), '|', ('allowed_user_ids', '=', False), ('allowed_user_ids', 'in', uid)]"/>
+                </group>
+                
+                <!-- Campos secundarios agrupados después de la plantilla -->
+                <group>
                     <field name="partner_id" options="{'no_create': True}"/>
                     <field name="expedient_number" required="1"/>
                     <field name="client_id" required="1"/>
                 </group>
+                
+                <!-- Campo tipo oculto -->
+                <field name="expedient_type" invisible="1"/>
+                
                 <footer>
                     <button name="action_create_expedient"
                             string="Create"

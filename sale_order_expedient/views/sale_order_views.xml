@@ -139,7 +139,7 @@
 
             <!-- Status bar only for expedients, ensure it's clickable -->
             <xpath expr="//sheet" position="inside">
-                <div class="position-absolute top-0 end-0 mt-3 me-3" invisible="expedient_type == 'none'">
+                <div class="position-absolute top-0 end-0 mt-3 me-3" invisible="expedient_type != 'post_paid'">
                     <field name="expedient_state"
                            widget="statusbar"
                            statusbar_visible="creada,pendiente_documentacion,aprobada,rechazada,cancelada"

@@ -56,7 +56,12 @@ class ExpedientCreateWizard(models.TransientModel):
     def _onchange_sale_order_template_id(self):
         """Auto-fill the customer based on the selected template configuration"""
         if self.sale_order_template_id and self.sale_order_template_id.partner_id:
+            # Autocompletar cliente cuando se selecciona la plantilla
             self.partner_id = self.sale_order_template_id.partner_id
+            
+            # Si la plantilla tiene configuración adicional, también completar esos campos
+            if hasattr(self.sale_order_template_id, 'client_id') and self.sale_order_template_id.client_id:
+                self.client_id = self.sale_order_template_id.client_id
 
     @api.onchange('expedient_number', 'client_id', 'expedient_type')
     def _onchange_expedient_client(self):

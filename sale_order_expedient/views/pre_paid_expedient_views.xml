@@ -56,20 +56,29 @@
         <field name="arch" type="xml">
             <form string="Expediente Prepagado">
                 <header>
-                    <!-- Eliminar los botones redundantes, dejando solo la barra de estado -->
+                    <!-- Barra de estado - mantener solo esta y eliminar los botones duplicados -->
                     <field name="expedient_state" widget="statusbar"
                            statusbar_visible="creada,pendiente_documentacion,aprobada,rechazada,cancelada"
                            clickable="True"
                            options="{'clickable': '1'}"
                            class="expedient_statusbar"/>
+
+                    <!-- Eliminar todos los botones de acción que duplican la barra de estado -->
+                    <!-- Estos botones se han eliminado:
+                    <button string="Aprobar Expediente" name="action_expedient_aprobada" type="object" class="oe_highlight" attrs="..."/>
+                    <button string="Rechazar Expediente" name="action_expedient_rechazada" type="object" class="btn-secondary" attrs="..."/>
+                    <button string="Documentación Pendiente" name="action_expedient_pendiente_documentacion" type="object" class="btn-warning" attrs="..."/>
+                    <button string="Cancelar Expediente" name="action_expedient_cancelada" type="object" class="btn-danger" attrs="..."/>
+                    -->
                 </header>
                 <sheet>
                     <div class="oe_button_box" name="button_box">
-                        <button name="action_view_invoices"
+                        <!-- Cambiar el botón de facturas por pedidos de venta -->
+                        <button name="action_view_sale_orders"
                                 type="object"
                                 class="oe_stat_button"
                                 icon="fa-pencil-square-o">
-                            <field name="invoice_count" widget="statinfo" string="Facturas"/>
+                            <field name="sale_order_count" widget="statinfo" string="Pedidos"/>
                         </button>
                         <button name="action_view_account_moves"
                                 type="object"
@@ -91,8 +100,9 @@
                                    options="{'always_reload': True}"/>
                             <field name="expedient_date"/>
                             <field name="sale_order_template_id" options="{'no_create': True}"/>
-                            <!-- Saldo inicial oculto -->
+                            <!-- Ocultar los campos de saldo -->
                             <field name="initial_balance" invisible="1"/>
+                            <field name="current_balance" invisible="1"/>
                             <!-- Campo notas oculto -->
                             <field name="expedient_notes" invisible="1"/>
                         </group>
@@ -115,9 +125,20 @@
                                 </tree>
                             </field>
                         </page>
-                        <!-- Página "Notas" eliminada -->
-                        <!-- Página "Pedidos Relacionados" eliminada -->
-                        <!-- Página "Facturas Relacionadas" eliminada -->
+                        <!-- Eliminar la página de pedidos relacionados -->
+                        <!--
+                        <page name="sale_orders" string="Pedidos Relacionados">
+                            <field name="sale_order_ids" readonly="1">
+                                <tree>
+                                    <field name="name"/>
+                                    <field name="partner_id"/>
+                                    <field name="date_order"/>
+                                    <field name="amount_total" sum="Total"/>
+                                    <field name="state"/>
+                                </tree>
+                            </field>
+                        </page>
+                        -->
                     </notebook>
                 </sheet>
                 <div class="oe_chatter">
