@@ -483,4 +483,22 @@
         </field>
     </record>
     -->
+
+    <!-- Vista simple para ocultar la pestaña de líneas de pedido -->
+    <record id="view_order_form_hide_order_lines" model="ir.ui.view">
+        <field name="name">sale.order.form.hide.order.lines</field>
+        <field name="model">sale.order</field>
+        <field name="inherit_id" ref="sale.view_order_form"/>
+        <field name="arch" type="xml">
+            <!-- Asegurar que el campo expedient_type está disponible -->
+            <form position="inside">
+                <field name="expedient_type" invisible="1"/>
+            </form>
+
+            <!-- Ocultar la página de líneas de pedido solo cuando es un expediente -->
+            <xpath expr="//page[@name='order_lines']" position="attributes">
+                <attribute name="invisible">expedient_type != 'none'</attribute>
+            </xpath>
+        </field>
+    </record>
 </odoo>

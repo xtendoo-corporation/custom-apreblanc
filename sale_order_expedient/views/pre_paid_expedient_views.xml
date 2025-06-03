@@ -56,18 +56,7 @@
         <field name="arch" type="xml">
             <form string="Expediente Prepagado">
                 <header>
-                    <!-- Botones para cambiar el estado del expediente -->
-                    <button name="action_expedient_aprobada" string="Aprobar" type="object"
-                            class="oe_highlight"
-                            invisible="expedient_state in ['aprobada', 'rechazada', 'cancelada']"/>
-                    <button name="action_expedient_rechazada" string="Rechazar" type="object"
-                            invisible="expedient_state in ['aprobada', 'rechazada', 'cancelada']"/>
-                    <button name="action_expedient_cancelada" string="Cancelar" type="object"
-                            invisible="expedient_state == 'cancelada'"/>
-                    <button name="action_expedient_pendiente_documentacion" string="Pendiente Documentación" type="object"
-                            invisible="expedient_state in ['pendiente_documentacion', 'aprobada', 'rechazada', 'cancelada']"/>
-
-                    <!-- Barra de estado con opción clickable para cambiar estado directamente -->
+                    <!-- Eliminar los botones redundantes, dejando solo la barra de estado -->
                     <field name="expedient_state" widget="statusbar"
                            statusbar_visible="creada,pendiente_documentacion,aprobada,rechazada,cancelada"
                            clickable="True"
@@ -100,15 +89,19 @@
                                    widget="res_partner_many2one"
                                    context="{'show_address': 1}"
                                    options="{'always_reload': True}"/>
-                            <field name="client_id" required="1"/>
-                            <field name="expedient_number" required="1"/>
                             <field name="expedient_date"/>
-                            <field name="expedient_deadline"/>
+                            <field name="sale_order_template_id" options="{'no_create': True}"/>
+                            <!-- Saldo inicial oculto -->
+                            <field name="initial_balance" invisible="1"/>
+                            <!-- Campo notas oculto -->
+                            <field name="expedient_notes" invisible="1"/>
                         </group>
                         <group>
+                            <!-- Mover responsable arriba de ID cliente -->
                             <field name="expedient_manager_id" widget="many2one_avatar"/>
-                            <field name="sale_order_template_id" options="{'no_create': True}"/>
-                            <field name="initial_balance"/>
+                            <field name="client_id" required="1"/>
+                            <field name="expedient_number" required="1"/>
+                            <field name="expedient_deadline"/>
                         </group>
                     </group>
                     <notebook>
@@ -122,35 +115,9 @@
                                 </tree>
                             </field>
                         </page>
-                        <page string="Notas" name="notes">
-                            <field name="expedient_notes" placeholder="Añadir notas sobre este expediente..."/>
-                        </page>
-                        <page string="Pedidos Relacionados" name="related_orders">
-                            <field name="sale_order_ids" readonly="1">
-                                <tree>
-                                    <field name="name"/>
-                                    <field name="date_order"/>
-                                    <field name="partner_id"/>
-                                    <field name="amount_total" sum="Total"/>
-                                    <field name="state"/>
-                                </tree>
-                            </field>
-                        </page>
-                        <page string="Facturas Relacionadas" name="related_invoices">
-                            <field name="invoice_ids" readonly="1">
-                                <tree>
-                                    <field name="name"/>
-                                    <field name="invoice_date"/>
-                                    <field name="partner_id"/>
-                                    <field name="amount_total" sum="Total"/>
-                                    <field name="payment_state" widget="badge"
-                                           decoration-danger="payment_state == 'not_paid'"
-                                           decoration-warning="payment_state == 'partial'"
-                                           decoration-success="payment_state == 'paid'"/>
-                                    <field name="state"/>
-                                </tree>
-                            </field>
-                        </page>
+                        <!-- Página "Notas" eliminada -->
+                        <!-- Página "Pedidos Relacionados" eliminada -->
+                        <!-- Página "Facturas Relacionadas" eliminada -->
                     </notebook>
                 </sheet>
                 <div class="oe_chatter">
