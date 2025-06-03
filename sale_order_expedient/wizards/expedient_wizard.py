@@ -130,9 +130,40 @@ class ExpedientCreateWizard(models.TransientModel):
             'current_balance': 0.0,  # Establecemos el saldo actual a 0
         }
 
-        # Podemos agregar la plantilla como referencia si es necesario
+        # Agregar la plantilla si está seleccionada
         if self.sale_order_template_id:
-            values['expedient_notes'] = _("Created from template: %s") % self.sale_order_template_id.name
+            values['sale_order_template_id'] = self.sale_order_template_id.id
+            values['expedient_notes'] = _("Creado desde la plantilla: %s") % self.sale_order_template_id.name
+
+            # En algunas versiones de Odoo, las líneas de plantilla pueden tener nombres
+            # de campo diferentes, así que vamos a ser flexibles
+            total_amount = 0.0
+            for line in self.sale_order_template_id.sale_order_template_line_ids:
+                # Obtener precio y cantidad verificando los nombres de campo disponibles
+                price = 0.0
+                qty = 1.0
+                discount = 0.0
+
+                # Verificar campo para precio
+                if hasattr(line, 'price_unit'):
+                    price = line.price_unit
+                elif hasattr(line, 'product_id') and line.product_id:
+                    price = line.product_id.list_price
+
+                # Verificar campo para cantidad
+                if hasattr(line, 'product_uom_qty'):
+                    qty = line.product_uom_qty
+
+                # Verificar campo para descuento
+                if hasattr(line, 'discount'):
+                    discount = line.discount
+
+                # Calcular importe de línea
+                line_amount = price * qty * (1 - (discount / 100.0))
+                total_amount += line_amount
+
+            if total_amount > 0:
+                values['initial_balance'] = total_amount
 
         new_expedient = self.env['pre.paid.expedient'].create(values)
 

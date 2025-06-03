@@ -39,3 +39,21 @@ class PrePaidExpedientReturnHistory(models.Model):
                 record.name = f"{record.pre_paid_expedient_id.name} - {record.return_date}"
             else:
                 record.name = "Nueva devolución"
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        records = super().create(vals_list)
+
+        # Cambiar el estado de los expedientes a "pendiente de documentación"
+        for record in records:
+            if record.pre_paid_expedient_id:
+                record.pre_paid_expedient_id.write({
+                    'expedient_state': 'pendiente_documentacion'
+                })
+                # Añadir mensaje en el chatter del expediente
+                record.pre_paid_expedient_id.message_post(
+                    body=f"Estado cambiado a 'Pendiente de Documentación' debido a la devolución creada el {record.return_date}",
+                    subtype_xmlid='mail.mt_note'
+                )
+
+        return records

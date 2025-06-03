@@ -8,7 +8,8 @@
             <form string="Create Expedient">
                 <sheet>
                     <group>
-                        <field name="expedient_type" widget="radio"/>
+                        <!-- Ocultar el campo de tipo de expediente ya que viene del contexto -->
+                        <field name="expedient_type" invisible="1"/>
                     </group>
 
                     <group>

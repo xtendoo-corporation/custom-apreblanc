@@ -4,3 +4,4 @@ from . import sale_order_expedient_return_history # Finalmente las clases que de
 from . import sale_order_template       # Clases relacionadas con plantillas de pedidos
 from . import pre_paid_expedient       # Y por último la nueva clase
 from . import pre_paid_expedient_return_history  # Y la clase de devoluciones de expedientes prepagados
+from . import account_move

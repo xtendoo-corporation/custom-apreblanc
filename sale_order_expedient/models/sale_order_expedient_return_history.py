@@ -35,25 +35,23 @@ class SaleOrderExpedientReturnHistory(models.Model):
         return defaults
 
     # Método create mejorado para tracking completo
-    @api.model
-    def create(self, vals):
-        _logger.info("Creando registro con valores: %s", vals)
-        record = super(SaleOrderExpedientReturnHistory, self).create(vals)
+    @api.model_create_multi
+    def create(self, vals_list):
+        records = super().create(vals_list)
 
-        # Post a message in the return history chatter
-        if record.return_reason_id and record.sale_order_id:
-            message = _("Return history entry created: %s") % record.return_reason_id.name
-            if record.notes:
-                message += _("\nNotes: %s") % record.notes
-            record.message_post(body=message, message_type='notification')
+        # Cambiar el estado de los expedientes a "pendiente de documentación"
+        for record in records:
+            if record.sale_order_id and record.sale_order_id.expedient_type == 'post_paid':
+                record.sale_order_id.write({
+                    'expedient_state': 'pendiente_documentacion'
+                })
+                # Añadir mensaje en el chatter del expediente
+                record.sale_order_id.message_post(
+                    body=f"Estado cambiado a 'Pendiente de Documentación' debido a la devolución creada el {record.return_date}",
+                    subtype_xmlid='mail.mt_note'
+                )
 
-            # Also post a message in the sale order chatter
-            record.sale_order_id.message_post(
-                body=_("New return entry added to expedient: %s") % record.return_reason_id.name,
-                message_type='notification'
-            )
-
-        return record
+        return records
 
     def write(self, vals):
         """Override write to add tracking message when return history is updated."""

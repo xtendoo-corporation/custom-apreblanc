@@ -366,10 +366,10 @@
         <field name="mode">primary</field>
         <field name="priority">99</field>
         <field name="arch" type="xml">
-            <tree string="Expedientes">
+            <tree string="Expedientes Postpago">
                 <control>
-                    <create string="New Expedient" context="{'default_expedient_type': 'post_paid'}"/>
-                    <button string="Crear Expediente" name="%(action_create_new_expedient)d" type="action"
+                    <create string="Nuevo Expediente Postpago" context="{'default_expedient_type': 'post_paid'}"/>
+                    <button string="Crear Expediente Postpago" name="%(action_create_new_expedient)d" type="action"
                             context="{'default_expedient_type': 'post_paid'}" class="btn-primary"/>
                 </control>
                 <field name="name"/>
@@ -454,15 +454,33 @@
 
     <!-- Menú para expedientes con la acción configurada -->
     <menuitem id="menu_sale_order_expedient"
-              name="Expedientes"
+              name="Expedientes Postpago"
               parent="sale.sale_order_menu"
               action="action_sale_order_expedient"
               sequence="25"/>
 
     <!-- Update to use the action from the wizard views -->
     <menuitem id="menu_create_expedient"
-              name="Nuevo Expediente"
+              name="Nuevo Expediente Postpago"
               parent="sale.sale_order_menu"
               action="action_button_create_expedient_wizard"
               sequence="26"/>
+
+    <!-- Comentar o eliminar esta vista que añade el botón en la cabecera -->
+    <!--
+    <record id="view_order_form_inherit_create_expedient" model="ir.ui.view">
+        <field name="name">sale.order.form.inherit.create.expedient</field>
+        <field name="model">sale.order</field>
+        <field name="inherit_id" ref="sale.view_order_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//header" position="inside">
+                <button name="%(sale_order_expedient.action_button_create_expedient_wizard)d"
+                        string="Crear Expediente Postpago"
+                        type="action"
+                        class="btn-primary"
+                        invisible="state not in ('draft', 'sent', 'sale')"/>
+            </xpath>
+        </field>
+    </record>
+    -->
 </odoo>

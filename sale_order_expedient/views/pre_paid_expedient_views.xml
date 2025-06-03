@@ -6,11 +6,6 @@
         <field name="model">pre.paid.expedient</field>
         <field name="arch" type="xml">
             <tree string="Expedientes Prepagados">
-                <control>
-                    <create string="Nuevo Prepagado"/>
-                    <button string="Crear Prepagado" name="%(sale_order_expedient.action_create_new_expedient)d"
-                            type="action" context="{'default_expedient_type': 'pre_paid'}" class="btn-primary"/>
-                </control>
                 <field name="expedient_number"/>
                 <field name="client_id"/>
                 <field name="partner_id"/>
@@ -23,6 +18,33 @@
                        decoration-danger="expedient_state == 'rechazada'"
                        decoration-muted="expedient_state == 'cancelada'"
                        decoration-warning="expedient_state == 'pendiente_documentacion'"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- Acción de ventana para crear un nuevo expediente prepagado -->
+    <record id="action_create_new_expedient" model="ir.actions.act_window">
+        <field name="name">Crear Nuevo Expediente</field>
+        <field name="res_model">pre.paid.expedient</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+
+    <!-- Vista tree con control para expedientes prepagados -->
+    <record id="view_pre_paid_expedient_tree_with_controls" model="ir.ui.view">
+        <field name="name">pre.paid.expedient.tree.with.controls</field>
+        <field name="model">pre.paid.expedient</field>
+        <field name="inherit_id" ref="view_pre_paid_expedient_tree"/>
+        <field name="arch" type="xml">
+            <tree position="attributes">
+                <attribute name="create">true</attribute>
+            </tree>
+            <tree position="inside">
+                <control>
+                    <create string="Nuevo Prepagado" context="{'default_expedient_type': 'pre_paid'}"/>
+                    <button string="Crear Prepagado" name="%(action_create_new_expedient)d"
+                            type="action" context="{'default_expedient_type': 'pre_paid'}" class="btn-primary"/>
+                </control>
             </tree>
         </field>
     </record>
@@ -53,6 +75,20 @@
                            class="expedient_statusbar"/>
                 </header>
                 <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_view_invoices"
+                                type="object"
+                                class="oe_stat_button"
+                                icon="fa-pencil-square-o">
+                            <field name="invoice_count" widget="statinfo" string="Facturas"/>
+                        </button>
+                        <button name="action_view_account_moves"
+                                type="object"
+                                class="oe_stat_button"
+                                icon="fa-book">
+                            <field name="account_move_count" widget="statinfo" string="Asientos"/>
+                        </button>
+                    </div>
                     <div class="oe_title">
                         <h1>
                             <field name="name" readonly="1"/>
@@ -71,7 +107,8 @@
                         </group>
                         <group>
                             <field name="expedient_manager_id" widget="many2one_avatar"/>
-                            <!-- Eliminados los campos de saldo, NIF, teléfono y email -->
+                            <field name="sale_order_template_id" options="{'no_create': True}"/>
+                            <field name="initial_balance"/>
                         </group>
                     </group>
                     <notebook>
@@ -95,6 +132,21 @@
                                     <field name="date_order"/>
                                     <field name="partner_id"/>
                                     <field name="amount_total" sum="Total"/>
+                                    <field name="state"/>
+                                </tree>
+                            </field>
+                        </page>
+                        <page string="Facturas Relacionadas" name="related_invoices">
+                            <field name="invoice_ids" readonly="1">
+                                <tree>
+                                    <field name="name"/>
+                                    <field name="invoice_date"/>
+                                    <field name="partner_id"/>
+                                    <field name="amount_total" sum="Total"/>
+                                    <field name="payment_state" widget="badge"
+                                           decoration-danger="payment_state == 'not_paid'"
+                                           decoration-warning="payment_state == 'partial'"
+                                           decoration-success="payment_state == 'paid'"/>
                                     <field name="state"/>
                                 </tree>
                             </field>
@@ -163,5 +215,37 @@
               name="Expedientes Prepagados"
               action="action_pre_paid_expedient"
               parent="sale.sale_order_menu"
-              sequence="10"/>
+              sequence="20"/>
+
+    <!-- Asegurar que estas vistas están comentadas o eliminadas -->
+    <!--
+    <record id="view_order_form_inherit_create_expedient" model="ir.ui.view">
+        <field name="name">sale.order.form.inherit.create.expedient</field>
+        <field name="model">sale.order</field>
+        <field name="inherit_id" ref="sale.view_order_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//header" position="inside">
+                <button name="%(sale_order_expedient.action_button_create_expedient_wizard)d"
+                        string="Crear Expediente"
+                        type="action"
+                        class="btn-primary"
+                        invisible="state not in ('draft', 'sent', 'sale')"/>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="view_order_form_inherit_expedient" model="ir.ui.view">
+        <field name="name">sale.order.form.inherit.expedient</field>
+        <field name="model">sale.order</field>
+        <field name="inherit_id" ref="sale.view_order_form"/>
+        <field name="arch" type="xml">
+            <button name="action_confirm" position="before">
+                <button name="%(sale_order_expedient.action_button_create_expedient_wizard)d"
+                        string="Crear Expediente"
+                        type="action"
+                        class="btn-primary"/>
+            </button>
+        </field>
+    </record>
+    -->
 </odoo>
