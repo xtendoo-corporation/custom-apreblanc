@@ -42,4 +42,37 @@
         <field name="binding_model_id" ref="model_sale_order"/>
         <field name="binding_view_types">form,list</field>
     </record>
+
+    <!-- Actualización del formulario para usar badges en el statusbar -->
+    <record id="view_order_form_expedient" model="ir.ui.view">
+        <field name="name">sale.order.form.inherit.expedient</field>
+        <field name="model">sale.order</field>
+        <field name="inherit_id" ref="sale.view_order_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//div[@class='o_pager']" position="before">
+                <!-- Status bar para expedientes post-pagados -->
+                <div class="position-absolute top-0 end-0 mt-3 me-3" invisible="expedient_type != 'post_paid'">
+                    <field name="expedient_state"
+                           widget="statusbar"
+                           statusbar_visible="creada,pendiente_documentacion,aprobada,rechazada"
+                           clickable="True"
+                           options="{'clickable': '1'}"
+                           class="expedient_statusbar_postpaid"
+                           nolabel="1"/>
+                </div>
+
+                <!-- Status bar para expedientes pre-pagados -->
+                <div class="position-absolute top-0 end-0 mt-3 me-3" invisible="expedient_type != 'pre_paid'">
+                    <field name="expedient_state"
+                           widget="statusbar"
+                           statusbar_visible="creada,pendiente_documentacion,aprobada,rechazada"
+                           clickable="True"
+                           options="{'clickable': '1'}"
+                           class="expedient_statusbar_prepaid"
+                           nolabel="1"
+                           help="Estado del expediente pre-pagado - Las devoluciones cambian automáticamente a pendiente de documentación"/>
+                </div>
+            </xpath>
+        </field>
+    </record>
 </odoo>

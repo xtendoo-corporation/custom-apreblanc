@@ -1,239 +1,80 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <!-- Vista tree para expedientes prepagados -->
+
+    <!-- Vista Tree para Pre Paid Expedient -->
     <record id="view_pre_paid_expedient_tree" model="ir.ui.view">
         <field name="name">pre.paid.expedient.tree</field>
         <field name="model">pre.paid.expedient</field>
         <field name="arch" type="xml">
             <tree string="Expedientes Prepagados">
-                <field name="expedient_number"/>
-                <field name="client_id"/>
+                <field name="name"/>
                 <field name="partner_id"/>
-                <field name="expedient_date"/>
-                <field name="expedient_manager_id" widget="many2one_avatar"/>
-                <field name="current_balance" sum="Disponible"/>
-                <field name="expedient_state" widget="badge"
-                       decoration-info="expedient_state == 'creada'"
-                       decoration-success="expedient_state == 'aprobada'"
-                       decoration-danger="expedient_state == 'rechazada'"
-                       decoration-muted="expedient_state == 'cancelada'"
-                       decoration-warning="expedient_state == 'pendiente_documentacion'"/>
+                <field name="client_id"/>
+                <field name="expedient_number"/>
+                <field name="initial_balance"/>
+                <field name="current_balance"/>
+                <field name="state" widget="badge"
+                       decoration-info="state == 'draft'"
+                       decoration-success="state == 'active'"
+                       decoration-muted="state == 'closed'"
+                       decoration-warning="state == 'suspended'"/>
             </tree>
         </field>
     </record>
 
-    <!-- Acción de ventana para crear un nuevo expediente prepagado -->
-    <record id="action_create_new_expedient" model="ir.actions.act_window">
-        <field name="name">Crear Nuevo Expediente</field>
-        <field name="res_model">pre.paid.expedient</field>
-        <field name="view_mode">form</field>
-        <field name="target">new</field>
-    </record>
-
-    <!-- Vista tree con control para expedientes prepagados -->
-    <record id="view_pre_paid_expedient_tree_with_controls" model="ir.ui.view">
-        <field name="name">pre.paid.expedient.tree.with.controls</field>
-        <field name="model">pre.paid.expedient</field>
-        <field name="inherit_id" ref="view_pre_paid_expedient_tree"/>
-        <field name="arch" type="xml">
-            <tree position="attributes">
-                <attribute name="create">true</attribute>
-            </tree>
-            <tree position="inside">
-                <control>
-                    <create string="Nuevo Prepagado" context="{'default_expedient_type': 'pre_paid'}"/>
-                    <button string="Crear Prepagado" name="%(action_create_new_expedient)d"
-                            type="action" context="{'default_expedient_type': 'pre_paid'}" class="btn-primary"/>
-                </control>
-            </tree>
-        </field>
-    </record>
-
-    <!-- Vista form para expedientes prepagados -->
+    <!-- Vista Form para Pre Paid Expedient -->
     <record id="view_pre_paid_expedient_form" model="ir.ui.view">
         <field name="name">pre.paid.expedient.form</field>
         <field name="model">pre.paid.expedient</field>
         <field name="arch" type="xml">
             <form string="Expediente Prepagado">
                 <header>
-                    <!-- Barra de estado - mantener solo esta y eliminar los botones duplicados -->
-                    <field name="expedient_state" widget="statusbar"
-                           statusbar_visible="creada,pendiente_documentacion,aprobada,rechazada,cancelada"
-                           clickable="True"
-                           options="{'clickable': '1'}"
-                           class="expedient_statusbar"/>
-
-                    <!-- Eliminar todos los botones de acción que duplican la barra de estado -->
-                    <!-- Estos botones se han eliminado:
-                    <button string="Aprobar Expediente" name="action_expedient_aprobada" type="object" class="oe_highlight" attrs="..."/>
-                    <button string="Rechazar Expediente" name="action_expedient_rechazada" type="object" class="btn-secondary" attrs="..."/>
-                    <button string="Documentación Pendiente" name="action_expedient_pendiente_documentacion" type="object" class="btn-warning" attrs="..."/>
-                    <button string="Cancelar Expediente" name="action_expedient_cancelada" type="object" class="btn-danger" attrs="..."/>
-                    -->
+                    <field name="state" widget="statusbar" statusbar_visible="draft,active,suspended,closed"/>
                 </header>
                 <sheet>
-                    <div class="oe_button_box" name="button_box">
-                        <!-- Cambiar el botón de facturas por pedidos de venta -->
-                        <button name="action_view_sale_orders"
-                                type="object"
-                                class="oe_stat_button"
-                                icon="fa-pencil-square-o">
-                            <field name="sale_order_count" widget="statinfo" string="Pedidos"/>
-                        </button>
-                        <button name="action_view_account_moves"
-                                type="object"
-                                class="oe_stat_button"
-                                icon="fa-book">
-                            <field name="account_move_count" widget="statinfo" string="Asientos"/>
-                        </button>
-                    </div>
-                    <div class="oe_title">
-                        <h1>
-                            <field name="name" readonly="1"/>
-                        </h1>
-                    </div>
                     <group>
                         <group>
-                            <field name="partner_id" required="1"
-                                   widget="res_partner_many2one"
-                                   context="{'show_address': 1}"
-                                   options="{'always_reload': True}"/>
-                            <field name="expedient_date"/>
-                            <field name="sale_order_template_id" options="{'no_create': True}"/>
-                            <!-- Ocultar los campos de saldo -->
-                            <field name="initial_balance" invisible="1"/>
-                            <field name="current_balance" invisible="1"/>
-                            <!-- Campo notas oculto -->
-                            <field name="expedient_notes" invisible="1"/>
+                            <field name="name"/>
+                            <field name="partner_id"/>
+                            <field name="client_id"/>
+                            <field name="expedient_number"/>
                         </group>
                         <group>
-                            <!-- Mover responsable arriba de ID cliente -->
-                            <field name="expedient_manager_id" widget="many2one_avatar"/>
-                            <field name="client_id" required="1"/>
-                            <field name="expedient_number" required="1"/>
-                            <field name="expedient_deadline"/>
+                            <field name="initial_balance"/>
+                            <field name="current_balance"/>
+                            <field name="date_created"/>
                         </group>
                     </group>
                     <notebook>
-                        <page name="returns" string="Devoluciones">
-                            <field name="expedient_return_history_ids" context="{'default_user_id': uid}">
-                                <tree editable="bottom" create="1" delete="1">
-                                    <field name="return_date"/>
-                                    <field name="return_reason_id" options="{'no_create': True}" required="1"/>
-                                    <field name="notes"/>
-                                    <field name="user_id" widget="many2one_avatar" force_save="1" readonly="1"/>
-                                </tree>
-                            </field>
+                        <page string="Notas">
+                            <field name="notes"/>
                         </page>
-                        <!-- Eliminar la página de pedidos relacionados -->
-                        <!--
-                        <page name="sale_orders" string="Pedidos Relacionados">
-                            <field name="sale_order_ids" readonly="1">
-                                <tree>
-                                    <field name="name"/>
-                                    <field name="partner_id"/>
-                                    <field name="date_order"/>
-                                    <field name="amount_total" sum="Total"/>
-                                    <field name="state"/>
-                                </tree>
-                            </field>
-                        </page>
-                        -->
                     </notebook>
                 </sheet>
-                <div class="oe_chatter">
-                    <field name="message_follower_ids"/>
-                    <field name="activity_ids"/>
-                    <field name="message_ids"/>
-                </div>
             </form>
         </field>
     </record>
 
-    <!-- Vista search para expedientes prepagados -->
-    <record id="view_pre_paid_expedient_search" model="ir.ui.view">
-        <field name="name">pre.paid.expedient.search</field>
-        <field name="model">pre.paid.expedient</field>
-        <field name="arch" type="xml">
-            <search string="Buscar Expedientes Prepagados">
-                <field name="name"/>
-                <field name="partner_id"/>
-                <field name="client_id"/>
-                <field name="expedient_number"/>
-                <field name="expedient_manager_id"/>
-                <separator/>
-                <filter string="Mis Expedientes" name="my_expedients" domain="[('expedient_manager_id', '=', uid)]"/>
-                <filter string="Todos los Expedientes" name="all_expedients" domain="[]"/>
-                <separator/>
-                <filter string="Creados" name="state_creada" domain="[('expedient_state', '=', 'creada')]"/>
-                <filter string="Pendientes de Documentación" name="state_pendiente_documentacion" domain="[('expedient_state', '=', 'pendiente_documentacion')]"/>
-                <filter string="Aprobados" name="state_aprobada" domain="[('expedient_state', '=', 'aprobada')]"/>
-                <filter string="Rechazados" name="state_rechazada" domain="[('expedient_state', '=', 'rechazada')]"/>
-                <filter string="Cancelados" name="state_cancelada" domain="[('expedient_state', '=', 'cancelada')]"/>
-                <filter string="Activos" name="active_expedients" domain="[('expedient_state', 'not in', ['rechazada', 'cancelada'])]"/>
-                <group expand="0" string="Agrupar Por">
-                    <filter string="Cliente" name="group_by_partner" context="{'group_by': 'partner_id'}"/>
-                    <filter string="Estado" name="group_by_state" context="{'group_by': 'expedient_state'}"/>
-                    <filter string="Responsable" name="group_by_manager" context="{'group_by': 'expedient_manager_id'}"/>
-                    <filter string="Fecha de Inicio" name="group_by_date" context="{'group_by': 'expedient_date:month'}"/>
-                </group>
-            </search>
-        </field>
-    </record>
-
-    <!-- Acción de ventana para expedientes prepagados -->
+    <!-- Acción para Pre Paid Expedient -->
     <record id="action_pre_paid_expedient" model="ir.actions.act_window">
         <field name="name">Expedientes Prepagados</field>
         <field name="res_model">pre.paid.expedient</field>
         <field name="view_mode">tree,form</field>
-        <field name="search_view_id" ref="view_pre_paid_expedient_search"/>
-        <field name="context">{'search_default_my_expedients': 1, 'search_default_active_expedients': 1}</field>
         <field name="help" type="html">
             <p class="o_view_nocontent_smiling_face">
-                Cree su primer expediente prepagado
+                Crear un nuevo expediente prepagado
             </p>
             <p>
-                Los expedientes prepagados permiten gestionar fondos prepagados para clientes.
+                Los expedientes prepagados permiten gestionar saldos prepagados
+                que pueden ser utilizados en múltiples órdenes de venta.
             </p>
         </field>
     </record>
 
-    <!-- Elemento de menú para expedientes prepagados -->
+    <!-- Menú para Pre Paid Expedient -->
     <menuitem id="menu_pre_paid_expedient"
-              name="Expedientes Prepagados"
-              action="action_pre_paid_expedient"
+              name="Expedientes Prepago"
               parent="sale.sale_order_menu"
-              sequence="20"/>
-
-    <!-- Asegurar que estas vistas están comentadas o eliminadas -->
-    <!--
-    <record id="view_order_form_inherit_create_expedient" model="ir.ui.view">
-        <field name="name">sale.order.form.inherit.create.expedient</field>
-        <field name="model">sale.order</field>
-        <field name="inherit_id" ref="sale.view_order_form"/>
-        <field name="arch" type="xml">
-            <xpath expr="//header" position="inside">
-                <button name="%(sale_order_expedient.action_button_create_expedient_wizard)d"
-                        string="Crear Expediente"
-                        type="action"
-                        class="btn-primary"
-                        invisible="state not in ('draft', 'sent', 'sale')"/>
-            </xpath>
-        </field>
-    </record>
-
-    <record id="view_order_form_inherit_expedient" model="ir.ui.view">
-        <field name="name">sale.order.form.inherit.expedient</field>
-        <field name="model">sale.order</field>
-        <field name="inherit_id" ref="sale.view_order_form"/>
-        <field name="arch" type="xml">
-            <button name="action_confirm" position="before">
-                <button name="%(sale_order_expedient.action_button_create_expedient_wizard)d"
-                        string="Crear Expediente"
-                        type="action"
-                        class="btn-primary"/>
-            </button>
-        </field>
-    </record>
-    -->
+              action="action_sale_order_prepaid"
+              sequence="25"/>
 </odoo>

@@ -25,14 +25,14 @@
         'views/sale_order_template_wizard_views.xml',
 
         # Vistas de expedientes prepagados
-        'views/pre_paid_expedient_views.xml',
         'views/sale_order_views.xml',
-        'views/pre_paid_expedient_return_history_views.xml',
+        'views/sale_order_prepaid_views.xml',
     ],
-    "assets": {
-        "web.assets_backend": [
-            "sale_order_expedient/static/src/js/sale_order_create_hook.js",
-            "sale_order_expedient/static/src/js/expedient_statusbar_fix.js",
+    'assets': {
+        'web.assets_backend': [
+            'sale_order_expedient/static/src/js/sale_order_create_hook.js',
+            'sale_order_expedient/static/src/js/expedient_statusbar_fix.js',
+            'sale_order_expedient/static/src/css/expedient_styles.css',
         ],
     },
     'installable': True,

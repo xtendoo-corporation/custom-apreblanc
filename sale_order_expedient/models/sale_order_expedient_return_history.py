@@ -53,6 +53,24 @@ class SaleOrderExpedientReturnHistory(models.Model):
 
         return records
 
+    @api.model
+    def create(self, vals):
+        """Override create to handle automatic state changes for pre-paid expedients"""
+        result = super().create(vals)
+
+        # Si se crea una nueva devolución para un expediente pre-pagado
+        if result.sale_order_id and result.sale_order_id.expedient_type == 'pre_paid':
+            expedient = result.sale_order_id
+            # Cambiar a pendiente de documentación si no está ya aprobado o rechazado
+            if expedient.expedient_state in ['creada']:
+                expedient.expedient_state = 'pendiente_documentacion'
+                expedient.message_post(
+                    body=_("Estado automáticamente cambiado a pendiente de documentación debido a registro de devolución"),
+                    message_type='notification'
+                )
+
+        return result
+
     def write(self, vals):
         """Override write to add tracking message when return history is updated."""
         result = super(SaleOrderExpedientReturnHistory, self).write(vals)

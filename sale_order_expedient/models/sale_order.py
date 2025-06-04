@@ -32,7 +32,7 @@ class SaleOrder(models.Model):
         index=True,
         help="Client identifier - part of the primary key along with Expedient Number"
     )
-    
+
     # Relación con expedientes prepagados
     pre_paid_expedient_id = fields.Many2one(
         'pre.paid.expedient',
@@ -40,7 +40,7 @@ class SaleOrder(models.Model):
         domain="[('partner_id', '=', partner_id)]",
         help='Relación con expediente prepagado',
     )
-    
+
     # El campo expedient_id se ha eliminado, expedient_number es ahora el identificador único
     expedient_date = fields.Date(
         string='Start Date',
@@ -129,7 +129,7 @@ class SaleOrder(models.Model):
             self.expedient_state = 'creada'
             self.expedient_notes = False
             self.pre_paid_expedient_id = False
-    
+
     @api.onchange('pre_paid_expedient_id')
     def _onchange_pre_paid_expedient(self):
         """Al seleccionar un expediente prepagado, actualizar el tipo de expediente"""
@@ -138,14 +138,14 @@ class SaleOrder(models.Model):
             # Autocompletar los campos desde el expediente prepagado
             self.client_id = self.pre_paid_expedient_id.client_id
             self.expedient_number = self.pre_paid_expedient_id.expedient_number
-        
+
     @api.model_create_multi
     def create(self, vals_list):
         for vals in vals_list:
             # Si es un expediente prepagado, verificar que tenga relación con el expediente
             if vals.get('expedient_type') == 'pre_paid' and not vals.get('pre_paid_expedient_id'):
                 raise exceptions.ValidationError(_("Para expedientes prepagados, debe seleccionar un expediente prepagado existente."))
-                
+
             # Gestión del número de expediente según su tipo
             if vals.get('expedient_type') == 'post_paid' and not vals.get('expedient_number'):
                 vals['expedient_number'] = self.env['ir.sequence'].next_by_code('sale.order.expedient')
@@ -168,8 +168,16 @@ class SaleOrder(models.Model):
                     raise exceptions.ValidationError(_(
                         "Ya existe un expediente con ID de Cliente '%s' y Número de Expediente '%s'."
                     ) % (vals.get('client_id'), vals.get('expedient_number')))
-        
-        return super().create(vals_list)
+
+        # Crear las órdenes de venta
+        orders = super().create(vals_list)
+
+        # Confirmar automáticamente los expedientes pre-pagados
+        pre_paid_orders = orders.filtered(lambda o: o.expedient_type == 'pre_paid')
+        if pre_paid_orders:
+            pre_paid_orders.with_context(auto_confirm_prepaid=True).action_confirm()
+
+        return orders
 
     def write(self, vals):
         """Handle changes in expedient state requiring order confirmation"""
@@ -306,7 +314,7 @@ class SaleOrder(models.Model):
                         "No hay saldo suficiente en el expediente prepagado. "
                         "Saldo actual: %.2f, Importe del pedido: %.2f"
                     ) % (order.pre_paid_expedient_id.current_balance, order.amount_total))
-        
+
         # Continuar con la confirmación normal
         result = super().action_confirm()
 
@@ -324,3 +332,132 @@ class SaleOrder(models.Model):
             )
 
         return result
+
+    def action_register_return(self):
+        """Register a return for this expedient"""
+        self.ensure_one()
+
+        # Create return history entry
+        return_entry = self.env['sale.order.expedient.return.history'].create({
+            'sale_order_id': self.id,
+            'return_reason_id': self.return_reason_id.id if self.return_reason_id else False,
+            'return_date': fields.Datetime.now(),
+            'user_id': self.env.user.id,
+            'notes': self.return_notes or '',
+        })
+
+        # Update return count
+        self.return_count = len(self.expedient_return_history_ids)
+
+        # Para expedientes pre-pagados, cambiar automáticamente a pendiente de documentación
+        if self.expedient_type == 'pre_paid' and self.expedient_state not in ['aprobada', 'rechazada']:
+            self.expedient_state = 'pendiente_documentacion'
+            self.message_post(
+                body=_("Expediente marcado como pendiente de documentación debido a devolución registrada"),
+                message_type='notification'
+            )
+
+        # Log the return
+        reason_name = return_entry.return_reason_id.name if return_entry.return_reason_id else _('Unknown reason')
+        self.message_post(body=_('Return registered: %s') % reason_name)
+
+        # Clear the return fields after registration
+        self.write({
+            'return_reason_id': False,
+            'return_notes': False,
+        })
+
+        return True
+
+    @api.model
+    def create(self, vals):
+        """Override create to handle expedient creation logic"""
+        # Set expedient manager if not provided
+        if vals.get('expedient_type') and vals['expedient_type'] != 'none':
+            if not vals.get('expedient_manager_id'):
+                vals['expedient_manager_id'] = self.env.user.id
+
+            # Set expedient date if not provided
+            if not vals.get('expedient_date'):
+                vals['expedient_date'] = fields.Date.today()
+
+            # Set initial expedient state
+            if not vals.get('expedient_state'):
+                vals['expedient_state'] = 'creada'
+
+        result = super().create(vals)
+
+        # Para expedientes pre-pagados, verificar si hay devoluciones previas
+        if result.expedient_type == 'pre_paid' and result.return_count > 0:
+            if result.expedient_state in ['creada']:
+                result.expedient_state = 'pendiente_documentacion'
+                result.message_post(
+                    body=_("Estado automáticamente cambiado a pendiente de documentación debido a devoluciones existentes"),
+                    message_type='notification'
+                )
+
+        return result
+
+    def write(self, vals):
+        """Override write to handle expedient state changes and return registrations"""
+        result = super().write(vals)
+
+        # Si se actualiza el número de devoluciones en expedientes pre-pagados
+        if 'return_count' in vals:
+            for record in self:
+                if (record.expedient_type == 'pre_paid' and
+                    record.return_count > 0 and
+                    record.expedient_state in ['creada']):
+                    record.expedient_state = 'pendiente_documentacion'
+                    record.message_post(
+                        body=_("Estado automáticamente cambiado a pendiente de documentación debido a nuevas devoluciones"),
+                        message_type='notification'
+                    )
+
+        return result
+
+    @api.model
+    def create(self, vals):
+        """Override create to handle pre-paid expedients auto-confirmation"""
+        record = super().create(vals)
+
+        # Si es un expediente pre-pagado, auto-confirmar
+        if record.expedient_type == 'pre_paid' and record.state == 'draft':
+            try:
+                record.action_confirm()
+                record.message_post(body=_('Expediente pre-pagado confirmado automáticamente como pedido de venta'))
+            except Exception as e:
+                record.message_post(body=_('Error al confirmar automáticamente el expediente pre-pagado: %s') % str(e))
+                _logger.warning("Error auto-confirming pre-paid expedient %s: %s", record.name, str(e))
+
+        return record
+
+    def action_approve_expedient(self):
+        """Approve the expedient and convert to sale order if needed"""
+        for record in self:
+            if record.expedient_type == 'pre_paid':
+                # Para expedientes pre-pagados, solo cambiar estado
+                record.expedient_state = 'aprobada'
+                record.message_post(body=_('Expediente pre-pagado aprobado'))
+                # Si no está confirmado, confirmar ahora
+                if record.state == 'draft':
+                    try:
+                        record.action_confirm()
+                        record.message_post(body=_('Expediente pre-pagado confirmado automáticamente como pedido de venta'))
+                    except Exception as e:
+                        record.message_post(body=_('Error al confirmar automáticamente el expediente pre-pagado: %s') % str(e))
+            else:
+                # Para expedientes post-pagados, usar la lógica existente
+                record.expedient_state = 'aprobada'
+                record.message_post(body=_('Expedient approved and converted to sale order'))
+
+    def action_reject_expedient(self):
+        """Reject the expedient"""
+        for record in self:
+            record.expedient_state = 'rechazada'
+            if record.expedient_type == 'pre_paid':
+                # Para expedientes pre-pagados, el pedido permanece activo
+                record.message_post(body=_('Expediente pre-pagado rechazado (el pedido de venta permanece activo)'))
+            else:
+                # Para expedientes post-pagados, usar lógica existente
+                record.message_post(body=_('Expedient rejected and converted to sale order'))

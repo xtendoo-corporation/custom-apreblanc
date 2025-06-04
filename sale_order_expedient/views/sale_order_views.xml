@@ -11,7 +11,7 @@
                 <field name="expedient_number" optional="show"/>
                 <field name="client_id" optional="show"/>
                 <field name="expedient_manager_id" optional="show" widget="many2one_avatar"/>
-                <field name="expedient_state" optional="show"
+                <field name="expedient_state" optional="show" widget="badge"
                        decoration-info="expedient_state == 'creada'"
                        decoration-success="expedient_state == 'aprobada'"
                        decoration-danger="expedient_state == 'rechazada'"
@@ -139,6 +139,7 @@
 
             <!-- Status bar only for expedients, ensure it's clickable -->
             <xpath expr="//sheet" position="inside">
+                <!-- Status bar para expedientes post-pagados -->
                 <div class="position-absolute top-0 end-0 mt-3 me-3" invisible="expedient_type != 'post_paid'">
                     <field name="expedient_state"
                            widget="statusbar"
@@ -148,6 +149,55 @@
                            class="expedient_statusbar"
                            nolabel="1"/>
                 </div>
+
+                <!-- Status bar separado para expedientes pre-pagados -->
+                <div class="position-absolute top-0 end-0 mt-3 me-3" invisible="expedient_type != 'pre_paid'">
+                    <field name="expedient_state"
+                           widget="statusbar"
+                           statusbar_visible="creada,pendiente_documentacion,aprobada,rechazada"
+                           clickable="True"
+                           options="{'clickable': '1'}"
+                           class="expedient_statusbar_prepaid"
+                           nolabel="1"
+                           help="Estado del expediente pre-pagado - Las devoluciones cambian automáticamente a pendiente de documentación"/>
+                </div>
+            </xpath>
+
+            <!-- Asegurar que los expedientes prepagados NO se bloqueen -->
+            <xpath expr="//group[@name='expedient_info']//field[@name='partner_id']" position="attributes">
+                <attribute name="readonly">expedient_type == 'post_paid' and expedient_state in ('aprobada', 'rechazada', 'cancelada')</attribute>
+            </xpath>
+
+            <xpath expr="//group[@name='expedient_info']//field[@name='partner_invoice_id']" position="attributes">
+                <attribute name="readonly">expedient_type == 'post_paid' and expedient_state in ('aprobada', 'rechazada', 'cancelada')</attribute>
+            </xpath>
+
+            <xpath expr="//group[@name='expedient_info']//field[@name='partner_shipping_id']" position="attributes">
+                <attribute name="readonly">expedient_type == 'post_paid' and expedient_state in ('aprobada', 'rechazada', 'cancelada')</attribute>
+            </xpath>
+
+            <xpath expr="//group[@name='expedient_info']//field[@name='expedient_number']" position="attributes">
+                <attribute name="readonly">expedient_type == 'post_paid' and expedient_state in ('aprobada', 'rechazada', 'cancelada')</attribute>
+            </xpath>
+
+            <xpath expr="//group[@name='expedient_info']//field[@name='client_id']" position="attributes">
+                <attribute name="readonly">expedient_type == 'post_paid' and expedient_state in ('aprobada', 'rechazada', 'cancelada')</attribute>
+            </xpath>
+
+            <xpath expr="//group[@name='expedient_info']//field[@name='expedient_date']" position="attributes">
+                <attribute name="readonly">expedient_type == 'post_paid' and expedient_state in ('aprobada', 'rechazada', 'cancelada')</attribute>
+            </xpath>
+
+            <xpath expr="//group[@name='expedient_info']//field[@name='expedient_deadline']" position="attributes">
+                <attribute name="readonly">expedient_type == 'post_paid' and expedient_state in ('aprobada', 'rechazada', 'cancelada')</attribute>
+            </xpath>
+
+            <xpath expr="//group[@name='expedient_info']//field[@name='expedient_manager_id']" position="attributes">
+                <attribute name="readonly">expedient_type == 'post_paid' and expedient_state in ('aprobada', 'rechazada', 'cancelada')</attribute>
+            </xpath>
+
+            <xpath expr="//group[@name='expedient_info']//field[@name='expedient_notes']" position="attributes">
+                <attribute name="readonly">expedient_type == 'post_paid' and expedient_state in ('aprobada', 'rechazada', 'cancelada')</attribute>
             </xpath>
 
             <!-- REMOVE THE CUSTOM BUTTONS -->
@@ -458,13 +508,6 @@
               parent="sale.sale_order_menu"
               action="action_sale_order_expedient"
               sequence="25"/>
-
-    <!-- Update to use the action from the wizard views -->
-    <menuitem id="menu_create_expedient"
-              name="Nuevo Expediente Postpago"
-              parent="sale.sale_order_menu"
-              action="action_button_create_expedient_wizard"
-              sequence="26"/>
 
     <!-- Comentar o eliminar esta vista que añade el botón en la cabecera -->
     <!--
