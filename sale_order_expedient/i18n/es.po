@@ -407,25 +407,43 @@ msgstr "Expediente y pedido de venta han sido cancelados"
 #. module: sale_order_expedient
 #: model:ir.actions.act_window,name:sale_order_expedient.action_sale_order_expedient
 msgid "Expedientes"
-msgstr "Expedientes Post-pagados"
+msgstr "Expedientes Postpago"
 
 #. module: sale_order_expedient
 #: model:ir.ui.menu,name:sale_order_expedient.menu_sale_order_expedient
 #: model_terms:ir.ui.view,arch_db:sale_order_expedient.view_expedient_tree_custom
 msgid "Expedientes Postpago"
-msgstr "Expedientes Post-pagados"
-
-#. module: sale_order_expedient
-#: model:ir.actions.act_window,name:sale_order_expedient.action_sale_order_prepaid
-#: model:ir.ui.menu,name:sale_order_expedient.menu_sale_order_prepaid
-#: model_terms:ir.ui.view,arch_db:sale_order_expedient.view_sale_order_prepaid_tree
-msgid "Expedientes Pre-pagados"
-msgstr "Expedientes Pre-pagados"
+msgstr "Expedientes Postpago"
 
 #. module: sale_order_expedient
 #: model_terms:ir.ui.view,arch_db:sale_order_expedient.view_sale_order_expedient_search
 msgid "Expedients"
-msgstr "Expedientes Post-pagados"
+msgstr "Expedientes Postpago"
+
+#. module: sale_order_expedient
+#: model_terms:ir.ui.view,arch_db:sale_order_expedient.view_sale_order_expedient_search
+msgid "Mis Expedientes"
+msgstr "Mis Expedientes Postpago"
+
+#. module: sale_order_expedient
+#: model_terms:ir.ui.view,arch_db:sale_order_expedient.view_sale_order_expedient_search
+msgid "Mostrar solo mis expedientes"
+msgstr "Mostrar solo mis expedientes postpago"
+
+#. module: sale_order_expedient
+#: model_terms:ir.ui.view,arch_db:sale_order_expedient.view_sale_order_expedient_search
+msgid "Mostrar todos los expedientes"
+msgstr "Mostrar todos los expedientes postpago"
+
+#. module: sale_order_expedient
+#: model_terms:ir.ui.view,arch_db:sale_order_expedient.view_sale_order_expedient_search
+msgid "Search Expedients"
+msgstr "Buscar Expedientes Postpago"
+
+#. module: sale_order_expedient
+#: model_terms:ir.ui.view,arch_db:sale_order_expedient.view_sale_order_expedient_search
+msgid "Todos los Expedientes"
+msgstr "Todos los Expedientes Postpago"
 
 #. module: sale_order_expedient
 #: model:ir.model.fields,field_description:sale_order_expedient.field_expedient_return_reason__message_follower_ids
@@ -574,7 +592,7 @@ msgstr "Mensajes"
 #. module: sale_order_expedient
 #: model_terms:ir.ui.view,arch_db:sale_order_expedient.view_sale_order_expedient_search
 msgid "Mis Expedientes"
-msgstr "Mis Expedientes Post-pagados"
+msgstr "Mis Expedientes Postpago"
 
 #. module: sale_order_expedient
 #: model_terms:ir.ui.view,arch_db:sale_order_expedient.view_sale_order_template_search_inherit
@@ -589,12 +607,12 @@ msgstr "Moneda"
 #. module: sale_order_expedient
 #: model_terms:ir.ui.view,arch_db:sale_order_expedient.view_sale_order_expedient_search
 msgid "Mostrar solo mis expedientes"
-msgstr "Mostrar solo mis expedientes post-pagados"
+msgstr "Mostrar solo mis expedientes postpago"
 
 #. module: sale_order_expedient
 #: model_terms:ir.ui.view,arch_db:sale_order_expedient.view_sale_order_expedient_search
 msgid "Mostrar todos los expedientes"
-msgstr "Mostrar todos los expedientes post-pagados"
+msgstr "Mostrar todos los expedientes postpago"
 
 #. module: sale_order_expedient
 #: model:ir.model.fields,field_description:sale_order_expedient.field_expedient_return_reason__my_activity_date_deadline
@@ -900,7 +918,7 @@ msgstr "Se requiere Número de Expediente para expedientes."
 #. module: sale_order_expedient
 #: model_terms:ir.ui.view,arch_db:sale_order_expedient.view_sale_order_expedient_search
 msgid "Search Expedients"
-msgstr "Buscar Expedientes Post-pagados"
+msgstr "Buscar Expedientes Postpago"
 
 #. module: sale_order_expedient
 #: model:ir.model.fields,field_description:sale_order_expedient.field_expedient_return_reason__sequence
@@ -1011,7 +1029,7 @@ msgstr "Todas las Plantillas"
 #. module: sale_order_expedient
 #: model_terms:ir.ui.view,arch_db:sale_order_expedient.view_sale_order_expedient_search
 msgid "Todos los Expedientes"
-msgstr "Todos los Expedientes Post-pagados"
+msgstr "Todos los Expedientes Postpago"
 
 #. module: sale_order_expedient
 #: model_terms:ir.ui.view,arch_db:sale_order_expedient.view_sale_order_prepaid_tree

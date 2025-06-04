@@ -20,14 +20,12 @@
                 <field name="expedient_deadline"/>
                 <field name="expedient_manager_id"/>
                 <field name="return_count" string="Devoluciones"/>
-                <field name="amount_total" sum="Total"/>
                 <field name="expedient_state" widget="badge"
                        decoration-info="expedient_state=='creada'"
                        decoration-warning="expedient_state=='pendiente_documentacion'"
                        decoration-success="expedient_state=='aprobada'"
                        decoration-danger="expedient_state=='rechazada'"
                        decoration-muted="expedient_state=='cancelada'"/>
-                <field name="expedient_type" invisible="1"/>
             </tree>
         </field>
     </record>

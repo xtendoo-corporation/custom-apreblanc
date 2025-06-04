@@ -137,10 +137,10 @@
                 <!-- Completely remove the warning banner -->
             </xpath>
 
-            <!-- Status bar only for expedients, ensure it's clickable -->
+            <!-- Status bar unificada para todos los expedientes -->
             <xpath expr="//sheet" position="inside">
-                <!-- Status bar para expedientes post-pagados -->
-                <div class="position-absolute top-0 end-0 mt-3 me-3" invisible="expedient_type != 'post_paid'">
+                <!-- Status bar para todos los expedientes -->
+                <div class="position-absolute top-0 end-0 mt-3 me-3" invisible="expedient_type == 'none'">
                     <field name="expedient_state"
                            widget="statusbar"
                            statusbar_visible="creada,pendiente_documentacion,aprobada,rechazada,cancelada"
@@ -148,18 +148,6 @@
                            options="{'clickable': '1'}"
                            class="expedient_statusbar"
                            nolabel="1"/>
-                </div>
-
-                <!-- Status bar separado para expedientes pre-pagados -->
-                <div class="position-absolute top-0 end-0 mt-3 me-3" invisible="expedient_type != 'pre_paid'">
-                    <field name="expedient_state"
-                           widget="statusbar"
-                           statusbar_visible="creada,pendiente_documentacion,aprobada,rechazada"
-                           clickable="True"
-                           options="{'clickable': '1'}"
-                           class="expedient_statusbar_prepaid"
-                           nolabel="1"
-                           help="Estado del expediente pre-pagado - Las devoluciones cambian automáticamente a pendiente de documentación"/>
                 </div>
             </xpath>
 
@@ -200,37 +188,6 @@
                 <attribute name="readonly">expedient_type == 'post_paid' and expedient_state in ('aprobada', 'rechazada', 'cancelada')</attribute>
             </xpath>
 
-            <!-- REMOVE THE CUSTOM BUTTONS -->
-            <!--
-            <xpath expr="//header" position="inside">
-                <button string="Approve Expedient"
-                        name="action_confirm"
-                        type="object"
-                        class="oe_highlight"
-                        attrs="{'invisible': ['|', ('expedient_type', '=', 'none'), ('expedient_state', 'in', ['aprobada', 'rechazada', 'cancelada'])]}"
-                        context="{'set_expedient_state': 'aprobada'}" />
-
-                <button string="Reject Expedient"
-                        name="action_confirm"
-                        type="object"
-                        class="btn-secondary"
-                        attrs="{'invisible': ['|', ('expedient_type', '=', 'none'), ('expedient_state', 'in', ['aprobada', 'rechazada', 'cancelada'])]}"
-                        context="{'set_expedient_state': 'rechazada'}" />
-
-                <button string="Set Pending Documentation"
-                        name="action_expedient_pendiente_documentacion"
-                        type="object"
-                        class="btn-warning"
-                        attrs="{'invisible': ['|', ('expedient_type', '=', 'none'), ('expedient_state', 'in', ['pendiente_documentacion', 'aprobada', 'rechazada', 'cancelada'])]}" />
-
-                <button string="Cancel Expedient"
-                        name="action_expedient_cancelada"
-                        type="object"
-                        class="btn-danger"
-                        attrs="{'invisible': ['|', ('expedient_type', '=', 'none'), ('expedient_state', '=', 'cancelada')]}" />
-            </xpath>
-            -->
-
             <!-- Update all readonly attributes in expedient_info group -->
             <xpath expr="//group[@name='expedient_info']//field[@name='partner_id']" position="attributes">
                 <attribute name="readonly">0</attribute>
@@ -268,8 +225,6 @@
                 <attribute name="readonly">0</attribute>
             </xpath>
 
-            <!-- REMOVE THE PROBLEMATIC XPATH that references a page that doesn't exist yet -->
-            <!-- INSTEAD, modify the returns page at the point where it's created -->
             <xpath expr="//notebook/page[1]" position="before">
                 <page name="returns" string="Returns" invisible="expedient_type == 'none'">
                     <field name="expedient_return_history_ids"
@@ -444,7 +399,7 @@
 
     <!-- Actualizar la acción para expedientes -->
     <record id="action_sale_order_expedient" model="ir.actions.act_window">
-        <field name="name">Expedientes</field>
+        <field name="name">Expedientes Postpago</field>
         <field name="type">ir.actions.act_window</field>
         <field name="res_model">sale.order</field>
         <field name="view_mode">tree,form</field>

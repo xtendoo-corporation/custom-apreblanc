@@ -50,27 +50,15 @@
         <field name="inherit_id" ref="sale.view_order_form"/>
         <field name="arch" type="xml">
             <xpath expr="//div[@class='o_pager']" position="before">
-                <!-- Status bar para expedientes post-pagados -->
-                <div class="position-absolute top-0 end-0 mt-3 me-3" invisible="expedient_type != 'post_paid'">
+                <!-- Status bar unificada para todos los expedientes -->
+                <div class="position-absolute top-0 end-0 mt-3 me-3" invisible="expedient_type == 'none'">
                     <field name="expedient_state"
                            widget="statusbar"
-                           statusbar_visible="creada,pendiente_documentacion,aprobada,rechazada"
+                           statusbar_visible="creada,pendiente_documentacion,aprobada,rechazada,cancelada"
                            clickable="True"
                            options="{'clickable': '1'}"
-                           class="expedient_statusbar_postpaid"
+                           class="expedient_statusbar"
                            nolabel="1"/>
-                </div>
-
-                <!-- Status bar para expedientes pre-pagados -->
-                <div class="position-absolute top-0 end-0 mt-3 me-3" invisible="expedient_type != 'pre_paid'">
-                    <field name="expedient_state"
-                           widget="statusbar"
-                           statusbar_visible="creada,pendiente_documentacion,aprobada,rechazada"
-                           clickable="True"
-                           options="{'clickable': '1'}"
-                           class="expedient_statusbar_prepaid"
-                           nolabel="1"
-                           help="Estado del expediente pre-pagado - Las devoluciones cambian automáticamente a pendiente de documentación"/>
                 </div>
             </xpath>
         </field>
