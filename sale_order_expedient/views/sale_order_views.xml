@@ -60,17 +60,17 @@
 
             <!-- Hide standard sales fields when expedient_type is not 'none' -->
             <xpath expr="//group[1]" position="attributes">
-                <attribute name="invisible">expedient_type != 'none'</attribute>
+                <attribute name="invisible">expedient_type != 'none' and context.get('show_as_expedient', False)</attribute>
             </xpath>
 
             <xpath expr="//group[2]" position="attributes">
-                <attribute name="invisible">expedient_type != 'none'</attribute>
+                <attribute name="invisible">expedient_type != 'none' and context.get('show_as_expedient', False)</attribute>
             </xpath>
 
-            <!-- Only show expedient info when expedient_type is not 'none' -->
+            <!-- Only show expedient info when expedient_type is not 'none' AND show_as_expedient context is True -->
             <xpath expr="//group[1]" position="before">
-                <group name="expedient_info" string="Expedient Information"
-                       invisible="expedient_type == 'none'">
+                <group name="expedient_info" string="Información del Expediente Post-pagado"
+                       invisible="expedient_type == 'none' or not context.get('show_as_expedient', False)">
                     <group>
                         <!-- Partner field with standard Odoo address display -->
                         <field name="partner_id" readonly="expedient_state in ('aprobada', 'rechazada', 'cancelada')"
@@ -140,7 +140,7 @@
             <!-- Status bar unificada para todos los expedientes -->
             <xpath expr="//sheet" position="inside">
                 <!-- Status bar para todos los expedientes -->
-                <div class="position-absolute top-0 end-0 mt-3 me-3" invisible="expedient_type == 'none'">
+                <div class="position-absolute top-0 end-0 mt-3 me-3" invisible="expedient_type == 'none' or not context.get('show_as_expedient', False)">
                     <field name="expedient_state"
                            widget="statusbar"
                            statusbar_visible="creada,pendiente_documentacion,aprobada,rechazada,cancelada"
@@ -226,7 +226,7 @@
             </xpath>
 
             <xpath expr="//notebook/page[1]" position="before">
-                <page name="returns" string="Returns" invisible="expedient_type == 'none'">
+                <page name="returns" string="Returns" invisible="expedient_type == 'none' or not context.get('show_as_expedient', False)">
                     <field name="expedient_return_history_ids"
                            context="{'default_user_id': uid, 'form_view_ref': 'sale_order_expedient.view_expedient_return_history_form'}"
                            readonly="0"
@@ -267,13 +267,14 @@
                 <attribute name="readonly">0</attribute>
             </xpath>
 
-            <!-- Hide the Order Lines tab when expedient_type is not 'none' -->
+            <!-- Hide the Order Lines tab when expedient_type is not 'none' AND show_as_expedient is True -->
             <xpath expr="//notebook/page[@name='order_lines']" position="attributes">
+                <attribute name="invisible">expedient_type != 'none' and context.get('show_as_expedient', False)</attribute>
             </xpath>
 
-            <!-- Hide the Optional Products tab when expedient_type is not 'none' -->
+            <!-- Hide the Optional Products tab when expedient_type is not 'none' AND show_as_expedient is True -->
             <xpath expr="//notebook/page[@name='optional_products']" position="attributes">
-                <attribute name="invisible">expedient_type != 'none'</attribute>
+                <attribute name="invisible">expedient_type != 'none' and context.get('show_as_expedient', False)</attribute>
             </xpath>
         </field>
     </record>
@@ -409,12 +410,13 @@
             'default_expedient_type': 'post_paid',
             'search_default_expedient_filter': True,
             'search_default_expedient_state_active': 1,
-            'search_default_my_expedients': 1
+            'search_default_my_expedients': 1,
+            'show_as_expedient': True
         }</field>
         <field name="search_view_id" ref="view_sale_order_expedient_search"/>
         <field name="help" type="html">
             <p class="o_view_nocontent_smiling_face">
-                Crea un nuevo expediente
+                Crea un nuevo expediente post-pagado
             </p>
         </field>
         <field name="binding_model_id" ref="model_sale_order"/>
@@ -493,9 +495,10 @@
                 <field name="expedient_type" invisible="1"/>
             </form>
 
-            <!-- Ocultar la página de líneas de pedido solo cuando es un expediente -->
+            <!-- Ocultar líneas de pedido cuando se accede desde vistas de expedientes (show_as_expedient = True) -->
+            <!-- Solo mostrar cuando NO hay contexto show_as_expedient (vistas normales de presupuestos) -->
             <xpath expr="//page[@name='order_lines']" position="attributes">
-                <attribute name="invisible">expedient_type != 'none'</attribute>
+                <attribute name="invisible">context.get('show_as_expedient', False)</attribute>
             </xpath>
         </field>
     </record>

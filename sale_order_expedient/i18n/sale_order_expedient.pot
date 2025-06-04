@@ -6,8 +6,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Odoo Server 17.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-06-04 07:24+0000\n"
-"PO-Revision-Date: 2025-06-04 07:24+0000\n"
+"POT-Creation-Date: 2025-06-04 12:38+0000\n"
+"PO-Revision-Date: 2025-06-04 12:38+0000\n"
 "Last-Translator: \n"
 "Language-Team: \n"
 "MIME-Version: 1.0\n"
@@ -156,7 +156,7 @@ msgstr ""
 
 #. module: sale_order_expedient
 #: model_terms:ir.actions.act_window,help:sale_order_expedient.action_sale_order_expedient
-msgid "Crea un nuevo expediente"
+msgid "Crea un nuevo expediente post-pagado"
 msgstr ""
 
 #. module: sale_order_expedient
@@ -267,6 +267,11 @@ msgid "Description"
 msgstr ""
 
 #. module: sale_order_expedient
+#: model_terms:ir.ui.view,arch_db:sale_order_expedient.view_sale_order_prepaid_tree
+msgid "Devoluciones"
+msgstr ""
+
+#. module: sale_order_expedient
 #: model:ir.model.fields,field_description:sale_order_expedient.field_expedient_create_wizard__display_name
 #: model:ir.model.fields,field_description:sale_order_expedient.field_expedient_return_reason__display_name
 #: model:ir.model.fields,field_description:sale_order_expedient.field_pre_paid_expedient__display_name
@@ -292,8 +297,46 @@ msgid "Email"
 msgstr ""
 
 #. module: sale_order_expedient
-#: model_terms:ir.ui.view,arch_db:sale_order_expedient.view_order_form_expedient
-msgid "Estado del expediente pre-pagado - No se puede cancelar"
+#. odoo-python
+#: code:addons/sale_order_expedient/models/sale_order.py:0
+#: code:addons/sale_order_expedient/models/sale_order.py:0
+#: code:addons/sale_order_expedient/wizards/expedient_create_wizard.py:0
+#, python-format
+msgid "Error al confirmar automáticamente el expediente pre-pagado: %s"
+msgstr ""
+
+#. module: sale_order_expedient
+#. odoo-python
+#: code:addons/sale_order_expedient/wizards/expedient_create_wizard.py:0
+#, python-format
+msgid "Error al crear el expediente: %s"
+msgstr ""
+
+#. module: sale_order_expedient
+#. odoo-python
+#: code:addons/sale_order_expedient/models/sale_order.py:0
+#, python-format
+msgid ""
+"Estado automáticamente cambiado a pendiente de documentación debido a "
+"devoluciones existentes"
+msgstr ""
+
+#. module: sale_order_expedient
+#. odoo-python
+#: code:addons/sale_order_expedient/models/sale_order.py:0
+#, python-format
+msgid ""
+"Estado automáticamente cambiado a pendiente de documentación debido a nuevas"
+" devoluciones"
+msgstr ""
+
+#. module: sale_order_expedient
+#. odoo-python
+#: code:addons/sale_order_expedient/models/sale_order_expedient_return_history.py:0
+#, python-format
+msgid ""
+"Estado automáticamente cambiado a pendiente de documentación debido a "
+"registro de devolución"
 msgstr ""
 
 #. module: sale_order_expedient
@@ -302,11 +345,6 @@ msgstr ""
 #: model:ir.model.fields,field_description:sale_order_expedient.field_sale_order_expedient_return_history__sale_order_id
 #, python-format
 msgid "Expedient"
-msgstr ""
-
-#. module: sale_order_expedient
-#: model_terms:ir.ui.view,arch_db:sale_order_expedient.view_order_form_expedient
-msgid "Expedient Information"
 msgstr ""
 
 #. module: sale_order_expedient
@@ -330,6 +368,7 @@ msgstr ""
 #. module: sale_order_expedient
 #. odoo-python
 #: code:addons/sale_order_expedient/models/sale_order.py:0
+#: code:addons/sale_order_expedient/models/sale_order.py:0
 #, python-format
 msgid "Expedient approved and converted to sale order"
 msgstr ""
@@ -349,6 +388,7 @@ msgstr ""
 #. module: sale_order_expedient
 #. odoo-python
 #: code:addons/sale_order_expedient/models/sale_order.py:0
+#: code:addons/sale_order_expedient/models/sale_order.py:0
 #, python-format
 msgid "Expedient rejected and converted to sale order"
 msgstr ""
@@ -362,6 +402,14 @@ msgstr ""
 
 #. module: sale_order_expedient
 #. odoo-python
+#: code:addons/sale_order_expedient/wizards/expedient_create_wizard.py:0
+#, python-format
+msgid "Expediente"
+msgstr ""
+
+#. module: sale_order_expedient
+#. odoo-python
+#: code:addons/sale_order_expedient/wizards/expedient_create_wizard.py:0
 #: code:addons/sale_order_expedient/wizards/expedient_wizard.py:0
 #, python-format
 msgid "Expediente Pre-pagado"
@@ -385,6 +433,39 @@ msgid ""
 msgstr ""
 
 #. module: sale_order_expedient
+#. odoo-python
+#: code:addons/sale_order_expedient/models/sale_order.py:0
+#, python-format
+msgid ""
+"Expediente marcado como pendiente de documentación debido a devolución "
+"registrada"
+msgstr ""
+
+#. module: sale_order_expedient
+#. odoo-python
+#: code:addons/sale_order_expedient/models/sale_order.py:0
+#: code:addons/sale_order_expedient/wizards/expedient_create_wizard.py:0
+#, python-format
+msgid "Expediente pre-pagado aprobado"
+msgstr ""
+
+#. module: sale_order_expedient
+#. odoo-python
+#: code:addons/sale_order_expedient/models/sale_order.py:0
+#: code:addons/sale_order_expedient/models/sale_order.py:0
+#: code:addons/sale_order_expedient/wizards/expedient_create_wizard.py:0
+#, python-format
+msgid "Expediente pre-pagado confirmado automáticamente como pedido de venta"
+msgstr ""
+
+#. module: sale_order_expedient
+#. odoo-python
+#: code:addons/sale_order_expedient/models/sale_order.py:0
+#, python-format
+msgid "Expediente pre-pagado rechazado (el pedido de venta permanece activo)"
+msgstr ""
+
+#. module: sale_order_expedient
 #: model:ir.model.fields,help:sale_order_expedient.field_account_bank_statement_line__pre_paid_expedient_id
 #: model:ir.model.fields,help:sale_order_expedient.field_account_move__pre_paid_expedient_id
 #: model:ir.model.fields,help:sale_order_expedient.field_account_payment__pre_paid_expedient_id
@@ -400,10 +481,6 @@ msgstr ""
 
 #. module: sale_order_expedient
 #: model:ir.actions.act_window,name:sale_order_expedient.action_sale_order_expedient
-msgid "Expedientes"
-msgstr ""
-
-#. module: sale_order_expedient
 #: model:ir.ui.menu,name:sale_order_expedient.menu_sale_order_expedient
 #: model_terms:ir.ui.view,arch_db:sale_order_expedient.view_expedient_tree_custom
 msgid "Expedientes Postpago"
@@ -497,6 +574,11 @@ msgstr ""
 #: model:ir.model.fields,help:sale_order_expedient.field_sale_order_expedient_return_history__message_has_error
 #: model:ir.model.fields,help:sale_order_expedient.field_sale_order_expedient_return_history__message_has_sms_error
 msgid "If checked, some messages have a delivery error."
+msgstr ""
+
+#. module: sale_order_expedient
+#: model_terms:ir.ui.view,arch_db:sale_order_expedient.view_order_form_expedient
+msgid "Información del Expediente Post-pagado"
 msgstr ""
 
 #. module: sale_order_expedient
@@ -642,6 +724,7 @@ msgstr ""
 #. module: sale_order_expedient
 #. odoo-python
 #: code:addons/sale_order_expedient/models/sale_order.py:0
+#: code:addons/sale_order_expedient/wizards/expedient_create_wizard.py:0
 #, python-format
 msgid ""
 "No hay saldo suficiente en el expediente prepagado. Saldo actual: %.2f, "
@@ -717,10 +800,16 @@ msgstr ""
 #. module: sale_order_expedient
 #. odoo-python
 #: code:addons/sale_order_expedient/models/sale_order.py:0
+#: code:addons/sale_order_expedient/wizards/expedient_create_wizard.py:0
 #, python-format
 msgid ""
 "Para expedientes prepagados, debe seleccionar un expediente prepagado "
 "existente."
+msgstr ""
+
+#. module: sale_order_expedient
+#: model:ir.model.fields,field_description:sale_order_expedient.field_expedient_create_wizard__partner_readonly
+msgid "Partner Readonly"
 msgstr ""
 
 #. module: sale_order_expedient
@@ -838,6 +927,7 @@ msgstr ""
 #. module: sale_order_expedient
 #. odoo-python
 #: code:addons/sale_order_expedient/models/sale_order.py:0
+#: code:addons/sale_order_expedient/models/sale_order.py:0
 #, python-format
 msgid "Return registered: %s"
 msgstr ""
@@ -952,6 +1042,13 @@ msgid "Template Line"
 msgstr ""
 
 #. module: sale_order_expedient
+#. odoo-python
+#: code:addons/sale_order_expedient/wizards/expedient_wizard.py:0
+#, python-format
+msgid "Template without Customer"
+msgstr ""
+
+#. module: sale_order_expedient
 #: model:ir.model.fields,help:sale_order_expedient.field_sale_order__partner_vat
 msgid ""
 "The Tax Identification Number. Values here will be validated based on the "
@@ -966,19 +1063,32 @@ msgid "The combination of Client ID and Expedient Number must be unique!"
 msgstr ""
 
 #. module: sale_order_expedient
-#: model:ir.model.fields,field_description:sale_order_expedient.field_expedient_create_wizard__expedient_type
+#. odoo-python
+#: code:addons/sale_order_expedient/wizards/expedient_wizard.py:0
+#, python-format
+msgid ""
+"The selected template does not have a customer configured. Please select a "
+"different template."
+msgstr ""
+
+#. module: sale_order_expedient
 #: model:ir.model.fields,field_description:sale_order_expedient.field_sale_order__expedient_type
 msgid "Tipo de Expediente"
 msgstr ""
 
 #. module: sale_order_expedient
-#: model:ir.model.fields,help:sale_order_expedient.field_expedient_create_wizard__expedient_type
-msgid "Tipo de expediente"
+#: model:ir.model.fields,field_description:sale_order_expedient.field_expedient_create_wizard__expedient_type
+msgid "Tipo de Expediente Post-pagado"
 msgstr ""
 
 #. module: sale_order_expedient
 #: model:ir.model.fields,help:sale_order_expedient.field_sale_order__expedient_type
 msgid "Tipo de expediente de pre pago o post pago"
+msgstr ""
+
+#. module: sale_order_expedient
+#: model:ir.model.fields,help:sale_order_expedient.field_expedient_create_wizard__expedient_type
+msgid "Tipo de expediente post-pagado"
 msgstr ""
 
 #. module: sale_order_expedient
@@ -989,11 +1099,6 @@ msgstr ""
 #. module: sale_order_expedient
 #: model_terms:ir.ui.view,arch_db:sale_order_expedient.view_sale_order_expedient_search
 msgid "Todos los Expedientes"
-msgstr ""
-
-#. module: sale_order_expedient
-#: model_terms:ir.ui.view,arch_db:sale_order_expedient.view_sale_order_prepaid_tree
-msgid "Total"
 msgstr ""
 
 #. module: sale_order_expedient
@@ -1011,6 +1116,7 @@ msgstr ""
 
 #. module: sale_order_expedient
 #. odoo-python
+#: code:addons/sale_order_expedient/models/sale_order.py:0
 #: code:addons/sale_order_expedient/models/sale_order_expedient_return_history.py:0
 #, python-format
 msgid "Unknown reason"

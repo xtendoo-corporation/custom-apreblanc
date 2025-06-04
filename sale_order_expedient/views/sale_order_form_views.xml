@@ -5,7 +5,7 @@
         <field name="name">expedient.create.wizard.form</field>
         <field name="model">expedient.create.wizard</field>
         <field name="arch" type="xml">
-            <form string="Create Expedient">
+            <form string="Crear Expediente Post-pagado">
                 <sheet>
                     <group>
                         <!-- Ocultar el campo de tipo de expediente ya que viene del contexto -->
@@ -34,7 +34,7 @@
 
     <!-- Action to open the wizard -->
     <record id="action_create_new_expedient" model="ir.actions.act_window">
-        <field name="name">Create Expedient</field>
+        <field name="name">Crear Expediente Post-pagado</field>
         <field name="res_model">expedient.create.wizard</field>
         <field name="view_mode">form</field>
         <field name="target">new</field>

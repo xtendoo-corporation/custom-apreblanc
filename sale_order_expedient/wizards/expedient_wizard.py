@@ -13,6 +13,12 @@ class ExpedientCreateWizard(models.TransientModel):
         domain=[('customer_rank', '>', 0)]
     )
 
+    # Campo computado para determinar si partner_id debe ser readonly
+    partner_readonly = fields.Boolean(
+        compute='_compute_partner_readonly',
+        store=False
+    )
+
     sale_order_template_id = fields.Many2one(
         'sale.order.template',
         string='Quotation Template',
@@ -34,10 +40,10 @@ class ExpedientCreateWizard(models.TransientModel):
     expedient_type = fields.Selection([
         ('post_paid', 'Post-pagado'),
         ('pre_paid', 'Pre-pagado'),
-    ], string='Tipo de Expediente',
+    ], string='Tipo de Expediente Post-pagado',
         default='post_paid',
         required=True,
-        help='Tipo de expediente')
+        help='Tipo de expediente post-pagado')
 
     currency_id = fields.Many2one(
         'res.currency',
@@ -45,6 +51,12 @@ class ExpedientCreateWizard(models.TransientModel):
         default=lambda self: self.env.company.currency_id.id,
         invisible=1
     )
+
+    @api.depends('sale_order_template_id')
+    def _compute_partner_readonly(self):
+        """Compute if partner field should be readonly"""
+        for record in self:
+            record.partner_readonly = bool(record.sale_order_template_id)
 
     @api.onchange('expedient_type')
     def _onchange_expedient_type(self):
@@ -55,8 +67,22 @@ class ExpedientCreateWizard(models.TransientModel):
     @api.onchange('sale_order_template_id')
     def _onchange_sale_order_template_id(self):
         """Auto-fill the customer based on the selected template configuration"""
-        if self.sale_order_template_id and self.sale_order_template_id.partner_id:
-            self.partner_id = self.sale_order_template_id.partner_id
+        if self.sale_order_template_id:
+            if self.sale_order_template_id.partner_id:
+                # Set the partner and make the field readonly
+                self.partner_id = self.sale_order_template_id.partner_id
+            else:
+                # Clear partner and show warning if template has no customer
+                self.partner_id = False
+                return {
+                    'warning': {
+                        'title': _('Template without Customer'),
+                        'message': _('The selected template does not have a customer configured. Please select a different template.')
+                    }
+                }
+        else:
+            # If no template selected, clear partner
+            self.partner_id = False
 
     @api.onchange('expedient_number', 'client_id', 'expedient_type')
     def _onchange_expedient_client(self):
@@ -256,6 +282,7 @@ class ExpedientCreateWizard(models.TransientModel):
             'res_id': new_order.id,
             'view_mode': 'form',
             'target': 'current',
+            'context': {'show_as_expedient': True}
         }
 
     def _create_post_paid_expedient(self):
@@ -349,5 +376,6 @@ class ExpedientCreateWizard(models.TransientModel):
             'res_id': new_order.id,
             'view_mode': 'form',
             'target': 'current',
+            'context': {'show_as_expedient': True}
         }
 

@@ -6,8 +6,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Odoo Server 17.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-06-04 07:27+0000\n"
-"PO-Revision-Date: 2025-06-04 07:27+0000\n"
+"POT-Creation-Date: 2025-06-04 12:38+0000\n"
+"PO-Revision-Date: 2025-06-04 12:38+0000\n"
 "Last-Translator: \n"
 "Language-Team: \n"
 "MIME-Version: 1.0\n"
@@ -151,7 +151,7 @@ msgstr "Identificador de Cliente - campo de clave primaria"
 #. module: sale_order_expedient
 #: model_terms:ir.ui.view,arch_db:sale_order_expedient.view_sale_order_template_form_inherit
 msgid "Cliente"
-msgstr ""
+msgstr "Cliente"
 
 #. module: sale_order_expedient
 #: model:ir.model.fields.selection,name:sale_order_expedient.selection__pre_paid_expedient__state__closed
@@ -160,13 +160,258 @@ msgstr "Cerrado"
 
 #. module: sale_order_expedient
 #: model_terms:ir.actions.act_window,help:sale_order_expedient.action_sale_order_expedient
-msgid "Crea un nuevo expediente"
+msgid "Crea un nuevo expediente post-pagado"
 msgstr "Crea un nuevo expediente post-pagado"
 
 #. module: sale_order_expedient
 #: model:ir.model.fields.selection,name:sale_order_expedient.selection__sale_order__expedient_state__creada
 msgid "Creada"
 msgstr "Creada"
+
+#. module: sale_order_expedient
+#: model_terms:ir.actions.act_window,help:sale_order_expedient.action_sale_order_prepaid
+msgid "Crear un nuevo expediente pre-pagado"
+msgstr "Crear un nuevo expediente pre-pagado"
+
+#. module: sale_order_expedient
+#: model_terms:ir.ui.view,arch_db:sale_order_expedient.view_sale_order_prepaid_tree
+msgid "Devoluciones"
+msgstr "Devoluciones"
+
+#. module: sale_order_expedient
+#. odoo-python
+#: code:addons/sale_order_expedient/wizards/expedient_create_wizard.py:0
+#, python-format
+msgid "Expediente"
+msgstr "Expediente"
+
+#. module: sale_order_expedient
+#: model:ir.actions.act_window,name:sale_order_expedient.action_sale_order_expedient
+#: model:ir.ui.menu,name:sale_order_expedient.menu_sale_order_expedient
+#: model_terms:ir.ui.view,arch_db:sale_order_expedient.view_expedient_tree_custom
+msgid "Expedientes Postpago"
+msgstr "Expedientes Post-pagado"
+
+#. module: sale_order_expedient
+#: model_terms:ir.ui.view,arch_db:sale_order_expedient.view_sale_order_expedient_search
+msgid "Expedients"
+msgstr "Expedientes"
+
+#. module: sale_order_expedient
+#: model:ir.model.fields,field_description:sale_order_expedient.field_expedient_return_reason__message_follower_ids
+#: model:ir.model.fields,field_description:sale_order_expedient.field_pre_paid_expedient__message_follower_ids
+#: model:ir.model.fields,field_description:sale_order_expedient.field_sale_order_expedient_return_history__message_follower_ids
+msgid "Followers"
+msgstr "Seguidores"
+
+#. module: sale_order_expedient
+#: model:ir.model.fields,field_description:sale_order_expedient.field_expedient_return_reason__message_partner_ids
+#: model:ir.model.fields,field_description:sale_order_expedient.field_pre_paid_expedient__message_partner_ids
+#: model:ir.model.fields,field_description:sale_order_expedient.field_sale_order_expedient_return_history__message_partner_ids
+msgid "Followers (Partners)"
+msgstr "Seguidores (Empresas)"
+
+#. module: sale_order_expedient
+#: model:ir.model.fields,help:sale_order_expedient.field_expedient_return_reason__activity_type_icon
+#: model:ir.model.fields,help:sale_order_expedient.field_pre_paid_expedient__activity_type_icon
+#: model:ir.model.fields,help:sale_order_expedient.field_sale_order_expedient_return_history__activity_type_icon
+msgid "Font awesome icon e.g. fa-tasks"
+msgstr "Icono de Font Awesome ej. fa-tasks"
+
+#. module: sale_order_expedient
+#: model_terms:ir.ui.view,arch_db:sale_order_expedient.view_sale_order_expedient_search
+msgid "Group By"
+msgstr "Agrupar por"
+
+#. module: sale_order_expedient
+#: model:ir.model.fields,field_description:sale_order_expedient.field_expedient_return_reason__has_message
+#: model:ir.model.fields,field_description:sale_order_expedient.field_pre_paid_expedient__has_message
+#: model:ir.model.fields,field_description:sale_order_expedient.field_sale_order_expedient_return_history__has_message
+msgid "Has Message"
+msgstr "Tiene Mensaje"
+
+#. module: sale_order_expedient
+#: model:ir.model.fields,field_description:sale_order_expedient.field_expedient_create_wizard__id
+#: model:ir.model.fields,field_description:sale_order_expedient.field_expedient_return_reason__id
+#: model:ir.model.fields,field_description:sale_order_expedient.field_pre_paid_expedient__id
+#: model:ir.model.fields,field_description:sale_order_expedient.field_sale_order_expedient_return_history__id
+msgid "ID"
+msgstr "ID"
+
+#. module: sale_order_expedient
+#: model:ir.model.fields,field_description:sale_order_expedient.field_expedient_return_reason__activity_exception_icon
+#: model:ir.model.fields,field_description:sale_order_expedient.field_pre_paid_expedient__activity_exception_icon
+#: model:ir.model.fields,field_description:sale_order_expedient.field_sale_order_expedient_return_history__activity_exception_icon
+msgid "Icon"
+msgstr "Icono"
+
+#. module: sale_order_expedient
+#: model:ir.model.fields,help:sale_order_expedient.field_expedient_return_reason__activity_exception_icon
+#: model:ir.model.fields,help:sale_order_expedient.field_pre_paid_expedient__activity_exception_icon
+#: model:ir.model.fields,help:sale_order_expedient.field_sale_order_expedient_return_history__activity_exception_icon
+msgid "Icon to indicate an exception activity."
+msgstr "Icono para indicar una actividad de excepción."
+
+#. module: sale_order_expedient
+#: model:ir.model.fields,help:sale_order_expedient.field_sale_order__expedient_number
+msgid ""
+"Identifier for the expedient - must be unique when combined with Client ID"
+msgstr "Identificador del expediente - debe ser único cuando se combina con el ID de Cliente"
+
+#. module: sale_order_expedient
+#: model:ir.model.fields,help:sale_order_expedient.field_expedient_return_reason__message_needaction
+#: model:ir.model.fields,help:sale_order_expedient.field_pre_paid_expedient__message_needaction
+#: model:ir.model.fields,help:sale_order_expedient.field_sale_order_expedient_return_history__message_needaction
+msgid "If checked, new messages require your attention."
+msgstr "Si está marcado, los nuevos mensajes requieren su atención."
+
+#. module: sale_order_expedient
+#: model:ir.model.fields,help:sale_order_expedient.field_expedient_return_reason__message_has_error
+#: model:ir.model.fields,help:sale_order_expedient.field_expedient_return_reason__message_has_sms_error
+#: model:ir.model.fields,help:sale_order_expedient.field_pre_paid_expedient__message_has_error
+#: model:ir.model.fields,help:sale_order_expedient.field_pre_paid_expedient__message_has_sms_error
+#: model:ir.model.fields,help:sale_order_expedient.field_sale_order_expedient_return_history__message_has_error
+#: model:ir.model.fields,help:sale_order_expedient.field_sale_order_expedient_return_history__message_has_sms_error
+msgid "If checked, some messages have a delivery error."
+msgstr "Si está marcado, algunos mensajes tienen un error de entrega."
+
+#. module: sale_order_expedient
+#: model:ir.model.fields,field_description:sale_order_expedient.field_pre_paid_expedient__initial_balance
+msgid "Initial Balance"
+msgstr "Saldo Inicial"
+
+#. module: sale_order_expedient
+#: model:ir.model.fields,field_description:sale_order_expedient.field_expedient_return_reason__message_is_follower
+#: model:ir.model.fields,field_description:sale_order_expedient.field_pre_paid_expedient__message_is_follower
+#: model:ir.model.fields,field_description:sale_order_expedient.field_sale_order_expedient_return_history__message_is_follower
+msgid "Is Follower"
+msgstr "Es Seguidor"
+
+#. module: sale_order_expedient
+#: model:ir.model.fields,field_description:sale_order_expedient.field_expedient_create_wizard__write_uid
+#: model:ir.model.fields,field_description:sale_order_expedient.field_expedient_return_reason__write_uid
+#: model:ir.model.fields,field_description:sale_order_expedient.field_pre_paid_expedient__write_uid
+#: model:ir.model.fields,field_description:sale_order_expedient.field_sale_order_expedient_return_history__write_uid
+msgid "Last Updated by"
+msgstr "Última actualización por"
+
+#. module: sale_order_expedient
+#: model:ir.model.fields,field_description:sale_order_expedient.field_expedient_create_wizard__write_date
+#: model:ir.model.fields,field_description:sale_order_expedient.field_expedient_return_reason__write_date
+#: model:ir.model.fields,field_description:sale_order_expedient.field_pre_paid_expedient__write_date
+#: model:ir.model.fields,field_description:sale_order_expedient.field_sale_order_expedient_return_history__write_date
+msgid "Last Updated on"
+msgstr "Última actualización el"
+
+#. module: sale_order_expedient
+#: model:ir.model.fields,field_description:sale_order_expedient.field_sale_order__expedient_manager_id
+msgid "Manager"
+msgstr "Gestor"
+
+#. module: sale_order_expedient
+#: model:ir.model.fields,field_description:sale_order_expedient.field_expedient_return_reason__message_has_error
+#: model:ir.model.fields,field_description:sale_order_expedient.field_pre_paid_expedient__message_has_error
+#: model:ir.model.fields,field_description:sale_order_expedient.field_sale_order_expedient_return_history__message_has_error
+msgid "Message Delivery error"
+msgstr "Error de entrega de mensaje"
+
+#. module: sale_order_expedient
+#: model:ir.model.fields,field_description:sale_order_expedient.field_expedient_return_reason__message_ids
+#: model:ir.model.fields,field_description:sale_order_expedient.field_pre_paid_expedient__message_ids
+#: model:ir.model.fields,field_description:sale_order_expedient.field_sale_order_expedient_return_history__message_ids
+msgid "Messages"
+msgstr "Mensajes"
+
+#. module: sale_order_expedient
+#: model_terms:ir.ui.view,arch_db:sale_order_expedient.view_sale_order_expedient_search
+msgid "Mis Expedientes"
+msgstr "Mis Expedientes"
+
+#. module: sale_order_expedient
+#: model_terms:ir.ui.view,arch_db:sale_order_expedient.view_sale_order_template_search_inherit
+msgid "Mis Plantillas"
+msgstr "Mis Plantillas"
+
+#. module: sale_order_expedient
+#: model:ir.model.fields,field_description:sale_order_expedient.field_expedient_create_wizard__currency_id
+msgid "Moneda"
+msgstr "Moneda"
+
+#. module: sale_order_expedient
+#: model_terms:ir.ui.view,arch_db:sale_order_expedient.view_sale_order_expedient_search
+msgid "Mostrar solo mis expedientes"
+msgstr "Mostrar solo mis expedientes"
+
+#. module: sale_order_expedient
+#: model_terms:ir.ui.view,arch_db:sale_order_expedient.view_sale_order_expedient_search
+msgid "Mostrar todos los expedientes"
+msgstr "Mostrar todos los expedientes"
+
+#. module: sale_order_expedient
+#: model:ir.model.fields,field_description:sale_order_expedient.field_expedient_return_reason__my_activity_date_deadline
+#: model:ir.model.fields,field_description:sale_order_expedient.field_pre_paid_expedient__my_activity_date_deadline
+#: model:ir.model.fields,field_description:sale_order_expedient.field_sale_order_expedient_return_history__my_activity_date_deadline
+msgid "My Activity Deadline"
+msgstr "Mi fecha límite de actividad"
+
+#. module: sale_order_expedient
+#: model:ir.model.fields,field_description:sale_order_expedient.field_expedient_return_reason__name
+#: model:ir.model.fields,field_description:sale_order_expedient.field_pre_paid_expedient__name
+msgid "Name"
+msgstr "Nombre"
+
+#. module: sale_order_expedient
+#. odoo-python
+#: code:addons/sale_order_expedient/models/pre_paid_expedient.py:0
+#: code:addons/sale_order_expedient/models/pre_paid_expedient.py:0
+#: code:addons/sale_order_expedient/models/pre_paid_expedient.py:0
+#: code:addons/sale_order_expedient/models/pre_paid_expedient.py:0
+#, python-format
+msgid "New Pre-paid Expedient"
+msgstr "Nuevo Expediente Pre-pagado"
+
+#. module: sale_order_expedient
+#: model:ir.model.fields,field_description:sale_order_expedient.field_expedient_return_reason__activity_calendar_event_id
+#: model:ir.model.fields,field_description:sale_order_expedient.field_pre_paid_expedient__activity_calendar_event_id
+#: model:ir.model.fields,field_description:sale_order_expedient.field_sale_order_expedient_return_history__activity_calendar_event_id
+msgid "Next Activity Calendar Event"
+msgstr "Próximo evento de calendario de actividad"
+
+#. module: sale_order_expedient
+#: model:ir.model.fields,field_description:sale_order_expedient.field_expedient_return_reason__activity_date_deadline
+#: model:ir.model.fields,field_description:sale_order_expedient.field_pre_paid_expedient__activity_date_deadline
+#: model:ir.model.fields,field_description:sale_order_expedient.field_sale_order_expedient_return_history__activity_date_deadline
+msgid "Next Activity Deadline"
+msgstr "Próxima fecha límite de actividad"
+
+#. module: sale_order_expedient
+#: model:ir.model.fields,field_description:sale_order_expedient.field_expedient_return_reason__activity_summary
+#: model:ir.model.fields,field_description:sale_order_expedient.field_pre_paid_expedient__activity_summary
+#: model:ir.model.fields,field_description:sale_order_expedient.field_sale_order_expedient_return_history__activity_summary
+msgid "Next Activity Summary"
+msgstr "Resumen de próxima actividad"
+
+#. module: sale_order_expedient
+#: model:ir.model.fields,field_description:sale_order_expedient.field_expedient_return_reason__activity_type_id
+#: model:ir.model.fields,field_description:sale_order_expedient.field_pre_paid_expedient__activity_type_id
+#: model:ir.model.fields,field_description:sale_order_expedient.field_sale_order_expedient_return_history__activity_type_id
+msgid "Next Activity Type"
+msgstr "Próximo tipo de actividad"
+
+#. module: sale_order_expedient
+#. odoo-python
+#: code:addons/sale_order_expedient/models/sale_order.py:0
+#: code:addons/sale_order_expedient/wizards/expedient_create_wizard.py:0
+#, python-format
+msgid ""
+"No hay saldo suficiente en el expediente prepagado. Saldo actual: %.2f, "
+"Importe del pedido: %.2f"
+msgstr ""
+
+#. module: sale_order_expedient
+#: model:ir.model.fields.selection,name:sale_order_expedient.selection__sale_order__expedient_type__none
+msgid "None"
+msgstr "Ninguno"
 
 #. module: sale_order_expedient
 #: model_terms:ir.ui.view,arch_db:sale_order_expedient.view_expedient_tree_custom
@@ -178,11 +423,6 @@ msgstr "Crear Expediente Post-pagado"
 #: model_terms:ir.ui.view,arch_db:sale_order_expedient.view_sale_order_prepaid_tree
 msgid "Crear Expediente Pre-pagado"
 msgstr "Crear Expediente Pre-pagado"
-
-#. module: sale_order_expedient
-#: model_terms:ir.actions.act_window,help:sale_order_expedient.action_sale_order_prepaid
-msgid "Crear un nuevo expediente pre-pagado"
-msgstr "Crear un nuevo expediente pre-pagado"
 
 #. module: sale_order_expedient
 #: model_terms:ir.ui.view,arch_db:sale_order_expedient.view_expedient_create_wizard_form
@@ -296,22 +536,61 @@ msgid "Email"
 msgstr "Correo Electrónico"
 
 #. module: sale_order_expedient
-#: model_terms:ir.ui.view,arch_db:sale_order_expedient.view_order_form_expedient
-msgid "Estado del expediente pre-pagado - No se puede cancelar"
-msgstr "Estado del expediente pre-pagado - Las devoluciones cambian automáticamente a pendiente de documentación"
+#. odoo-python
+#: code:addons/sale_order_expedient/models/sale_order.py:0
+#: code:addons/sale_order_expedient/models/sale_order.py:0
+#: code:addons/sale_order_expedient/wizards/expedient_create_wizard.py:0
+#, python-format
+msgid "Error al confirmar automáticamente el expediente pre-pagado: %s"
+msgstr "Error al confirmar automáticamente el expediente pre-pagado: %s"
+
+#. module: sale_order_expedient
+#. odoo-python
+#: code:addons/sale_order_expedient/wizards/expedient_create_wizard.py:0
+#, python-format
+msgid "Error al crear el expediente: %s"
+msgstr "Error al crear el expediente: %s"
 
 #. module: sale_order_expedient
 #. odoo-python
 #: code:addons/sale_order_expedient/models/sale_order.py:0
+#, python-format
+msgid ""
+"Estado automáticamente cambiado a pendiente de documentación debido a "
+"devoluciones existentes"
+msgstr ""
+"Estado automáticamente cambiado a pendiente de documentación debido a "
+"devoluciones existentes"
+
+#. module: sale_order_expedient
+#. odoo-python
+#: code:addons/sale_order_expedient/models/sale_order.py:0
+#, python-format
+msgid ""
+"Estado automáticamente cambiado a pendiente de documentación debido a nuevas"
+" devoluciones"
+msgstr ""
+"Estado automáticamente cambiado a pendiente de documentación debido a nuevas"
+" devoluciones"
+
+#. module: sale_order_expedient
+#. odoo-python
+#: code:addons/sale_order_expedient/models/sale_order_expedient_return_history.py:0
+#, python-format
+msgid ""
+"Estado automáticamente cambiado a pendiente de documentación debido a "
+"registro de devolución"
+msgstr ""
+"Estado automáticamente cambiado a pendiente de documentación debido a "
+"registro de devolución"
+
+#. module: sale_order_expedient
+#. odoo-python
+#: code:addons/sale_order_expedient/wizards/expedient_wizard.py:0
 #: model:ir.model.fields,field_description:sale_order_expedient.field_sale_order_expedient_return_history__sale_order_id
 #, python-format
 msgid "Expedient"
 msgstr "Expediente"
-
-#. module: sale_order_expedient
-#: model_terms:ir.ui.view,arch_db:sale_order_expedient.view_order_form_expedient
-msgid "Expedient Information"
-msgstr "Información del Expediente"
 
 #. module: sale_order_expedient
 #: model:ir.model.fields,field_description:sale_order_expedient.field_expedient_create_wizard__expedient_number
@@ -334,6 +613,7 @@ msgstr "Estado del Expediente"
 #. module: sale_order_expedient
 #. odoo-python
 #: code:addons/sale_order_expedient/models/sale_order.py:0
+#: code:addons/sale_order_expedient/models/sale_order.py:0
 #, python-format
 msgid "Expedient approved and converted to sale order"
 msgstr "Expediente aprobado y convertido a pedido de venta"
@@ -348,10 +628,11 @@ msgstr "Expediente marcado como %s y convertido a pedido de venta"
 #. module: sale_order_expedient
 #: model:ir.model.fields,help:sale_order_expedient.field_expedient_create_wizard__expedient_number
 msgid "Expedient number - Unique identifier for this expedient"
-msgstr "Número de Expediente - Identificador único para este expediente"
+msgstr "Número de expediente - Identificador único para este expediente"
 
 #. module: sale_order_expedient
 #. odoo-python
+#: code:addons/sale_order_expedient/models/sale_order.py:0
 #: code:addons/sale_order_expedient/models/sale_order.py:0
 #, python-format
 msgid "Expedient rejected and converted to sale order"
@@ -366,6 +647,7 @@ msgstr "Expediente marcado como pendiente de documentación"
 
 #. module: sale_order_expedient
 #. odoo-python
+#: code:addons/sale_order_expedient/wizards/expedient_create_wizard.py:0
 #: code:addons/sale_order_expedient/wizards/expedient_wizard.py:0
 #, python-format
 msgid "Expediente Pre-pagado"
@@ -391,6 +673,41 @@ msgstr ""
 "prepago)"
 
 #. module: sale_order_expedient
+#. odoo-python
+#: code:addons/sale_order_expedient/models/sale_order.py:0
+#, python-format
+msgid ""
+"Expediente marcado como pendiente de documentación debido a devolución "
+"registrada"
+msgstr ""
+"Expediente marcado como pendiente de documentación debido a devolución "
+"registrada"
+
+#. module: sale_order_expedient
+#. odoo-python
+#: code:addons/sale_order_expedient/models/sale_order.py:0
+#: code:addons/sale_order_expedient/wizards/expedient_create_wizard.py:0
+#, python-format
+msgid "Expediente pre-pagado aprobado"
+msgstr "Expediente pre-pagado aprobado"
+
+#. module: sale_order_expedient
+#. odoo-python
+#: code:addons/sale_order_expedient/models/sale_order.py:0
+#: code:addons/sale_order_expedient/models/sale_order.py:0
+#: code:addons/sale_order_expedient/wizards/expedient_create_wizard.py:0
+#, python-format
+msgid "Expediente pre-pagado confirmado automáticamente como pedido de venta"
+msgstr "Expediente pre-pagado confirmado automáticamente como pedido de venta"
+
+#. module: sale_order_expedient
+#. odoo-python
+#: code:addons/sale_order_expedient/models/sale_order.py:0
+#, python-format
+msgid "Expediente pre-pagado rechazado (el pedido de venta permanece activo)"
+msgstr "Expediente pre-pagado rechazado (el pedido de venta permanece activo)"
+
+#. module: sale_order_expedient
 #: model:ir.model.fields,help:sale_order_expedient.field_account_bank_statement_line__pre_paid_expedient_id
 #: model:ir.model.fields,help:sale_order_expedient.field_account_move__pre_paid_expedient_id
 #: model:ir.model.fields,help:sale_order_expedient.field_account_payment__pre_paid_expedient_id
@@ -405,156 +722,21 @@ msgid "Expediente y pedido de venta han sido cancelados"
 msgstr "Expediente y pedido de venta han sido cancelados"
 
 #. module: sale_order_expedient
-#: model:ir.actions.act_window,name:sale_order_expedient.action_sale_order_expedient
-msgid "Expedientes"
-msgstr "Expedientes Postpago"
+#: model:ir.actions.act_window,name:sale_order_expedient.action_sale_order_prepaid
+#: model:ir.ui.menu,name:sale_order_expedient.menu_sale_order_prepaid
+#: model_terms:ir.ui.view,arch_db:sale_order_expedient.view_sale_order_prepaid_tree
+msgid "Expedientes Pre-pagados"
+msgstr "Expedientes Pre-pagados"
 
 #. module: sale_order_expedient
-#: model:ir.ui.menu,name:sale_order_expedient.menu_sale_order_expedient
-#: model_terms:ir.ui.view,arch_db:sale_order_expedient.view_expedient_tree_custom
-msgid "Expedientes Postpago"
-msgstr "Expedientes Postpago"
-
-#. module: sale_order_expedient
-#: model_terms:ir.ui.view,arch_db:sale_order_expedient.view_sale_order_expedient_search
-msgid "Expedients"
-msgstr "Expedientes Postpago"
-
-#. module: sale_order_expedient
-#: model_terms:ir.ui.view,arch_db:sale_order_expedient.view_sale_order_expedient_search
-msgid "Mis Expedientes"
-msgstr "Mis Expedientes Postpago"
-
-#. module: sale_order_expedient
-#: model_terms:ir.ui.view,arch_db:sale_order_expedient.view_sale_order_expedient_search
-msgid "Mostrar solo mis expedientes"
-msgstr "Mostrar solo mis expedientes postpago"
-
-#. module: sale_order_expedient
-#: model_terms:ir.ui.view,arch_db:sale_order_expedient.view_sale_order_expedient_search
-msgid "Mostrar todos los expedientes"
-msgstr "Mostrar todos los expedientes postpago"
-
-#. module: sale_order_expedient
-#: model_terms:ir.ui.view,arch_db:sale_order_expedient.view_sale_order_expedient_search
-msgid "Search Expedients"
-msgstr "Buscar Expedientes Postpago"
-
-#. module: sale_order_expedient
-#: model_terms:ir.ui.view,arch_db:sale_order_expedient.view_sale_order_expedient_search
-msgid "Todos los Expedientes"
-msgstr "Todos los Expedientes Postpago"
-
-#. module: sale_order_expedient
-#: model:ir.model.fields,field_description:sale_order_expedient.field_expedient_return_reason__message_follower_ids
-#: model:ir.model.fields,field_description:sale_order_expedient.field_pre_paid_expedient__message_follower_ids
-#: model:ir.model.fields,field_description:sale_order_expedient.field_sale_order_expedient_return_history__message_follower_ids
-msgid "Followers"
-msgstr "Seguidores"
-
-#. module: sale_order_expedient
-#: model:ir.model.fields,field_description:sale_order_expedient.field_expedient_return_reason__message_partner_ids
-#: model:ir.model.fields,field_description:sale_order_expedient.field_pre_paid_expedient__message_partner_ids
-#: model:ir.model.fields,field_description:sale_order_expedient.field_sale_order_expedient_return_history__message_partner_ids
-msgid "Followers (Partners)"
-msgstr "Seguidores (Partners)"
-
-#. module: sale_order_expedient
-#: model:ir.model.fields,help:sale_order_expedient.field_expedient_return_reason__activity_type_icon
-#: model:ir.model.fields,help:sale_order_expedient.field_pre_paid_expedient__activity_type_icon
-#: model:ir.model.fields,help:sale_order_expedient.field_sale_order_expedient_return_history__activity_type_icon
-msgid "Font awesome icon e.g. fa-tasks"
-msgstr "Icono de Font Awesome, por ejemplo, fa-tasks"
-
-#. module: sale_order_expedient
-#: model_terms:ir.ui.view,arch_db:sale_order_expedient.view_sale_order_expedient_search
-msgid "Group By"
-msgstr "Agrupar Por"
-
-#. module: sale_order_expedient
-#: model:ir.model.fields,field_description:sale_order_expedient.field_expedient_return_reason__has_message
-#: model:ir.model.fields,field_description:sale_order_expedient.field_pre_paid_expedient__has_message
-#: model:ir.model.fields,field_description:sale_order_expedient.field_sale_order_expedient_return_history__has_message
-msgid "Has Message"
-msgstr "Tiene Mensaje"
-
-#. module: sale_order_expedient
-#: model:ir.model.fields,field_description:sale_order_expedient.field_expedient_create_wizard__id
-#: model:ir.model.fields,field_description:sale_order_expedient.field_expedient_return_reason__id
-#: model:ir.model.fields,field_description:sale_order_expedient.field_pre_paid_expedient__id
-#: model:ir.model.fields,field_description:sale_order_expedient.field_sale_order_expedient_return_history__id
-msgid "ID"
-msgstr "ID"
-
-#. module: sale_order_expedient
-#: model:ir.model.fields,field_description:sale_order_expedient.field_expedient_return_reason__activity_exception_icon
-#: model:ir.model.fields,field_description:sale_order_expedient.field_pre_paid_expedient__activity_exception_icon
-#: model:ir.model.fields,field_description:sale_order_expedient.field_sale_order_expedient_return_history__activity_exception_icon
-msgid "Icon"
-msgstr "Icono"
-
-#. module: sale_order_expedient
-#: model:ir.model.fields,help:sale_order_expedient.field_expedient_return_reason__activity_exception_icon
-#: model:ir.model.fields,help:sale_order_expedient.field_pre_paid_expedient__activity_exception_icon
-#: model:ir.model.fields,help:sale_order_expedient.field_sale_order_expedient_return_history__activity_exception_icon
-msgid "Icon to indicate an exception activity."
-msgstr "Icono para indicar una actividad de excepción."
-
-#. module: sale_order_expedient
-#: model:ir.model.fields,help:sale_order_expedient.field_sale_order__expedient_number
-msgid ""
-"Identifier for the expedient - must be unique when combined with Client ID"
-msgstr "Número único asignado al expediente"
-
-#. module: sale_order_expedient
-#: model:ir.model.fields,help:sale_order_expedient.field_expedient_return_reason__message_needaction
-#: model:ir.model.fields,help:sale_order_expedient.field_pre_paid_expedient__message_needaction
-#: model:ir.model.fields,help:sale_order_expedient.field_sale_order_expedient_return_history__message_needaction
-msgid "If checked, new messages require your attention."
-msgstr "Si está marcado, hay nuevos mensajes que requieren su atención."
-
-#. module: sale_order_expedient
-#: model:ir.model.fields,help:sale_order_expedient.field_expedient_return_reason__message_has_error
-#: model:ir.model.fields,help:sale_order_expedient.field_expedient_return_reason__message_has_sms_error
-#: model:ir.model.fields,help:sale_order_expedient.field_pre_paid_expedient__message_has_error
-#: model:ir.model.fields,help:sale_order_expedient.field_pre_paid_expedient__message_has_sms_error
-#: model:ir.model.fields,help:sale_order_expedient.field_sale_order_expedient_return_history__message_has_error
-#: model:ir.model.fields,help:sale_order_expedient.field_sale_order_expedient_return_history__message_has_sms_error
-msgid "If checked, some messages have a delivery error."
-msgstr "Si está marcado, algunos mensajes tienen un error de entrega."
-
-#. module: sale_order_expedient
-#: model:ir.model.fields,field_description:sale_order_expedient.field_pre_paid_expedient__initial_balance
-msgid "Initial Balance"
-msgstr "Saldo Inicial"
-
-#. module: sale_order_expedient
-#: model:ir.model.fields,field_description:sale_order_expedient.field_expedient_return_reason__message_is_follower
-#: model:ir.model.fields,field_description:sale_order_expedient.field_pre_paid_expedient__message_is_follower
-#: model:ir.model.fields,field_description:sale_order_expedient.field_sale_order_expedient_return_history__message_is_follower
-msgid "Is Follower"
-msgstr "Es Seguidor"
+#: model_terms:ir.ui.view,arch_db:sale_order_expedient.view_order_form_expedient
+msgid "Información del Expediente Post-pagado"
+msgstr "Información del Expediente Post-pagado"
 
 #. module: sale_order_expedient
 #: model:ir.model,name:sale_order_expedient.model_account_move
 msgid "Journal Entry"
 msgstr "Asiento contable"
-
-#. module: sale_order_expedient
-#: model:ir.model.fields,field_description:sale_order_expedient.field_expedient_create_wizard__write_uid
-#: model:ir.model.fields,field_description:sale_order_expedient.field_expedient_return_reason__write_uid
-#: model:ir.model.fields,field_description:sale_order_expedient.field_pre_paid_expedient__write_uid
-#: model:ir.model.fields,field_description:sale_order_expedient.field_sale_order_expedient_return_history__write_uid
-msgid "Last Updated by"
-msgstr "Última actualización por"
-
-#. module: sale_order_expedient
-#: model:ir.model.fields,field_description:sale_order_expedient.field_expedient_create_wizard__write_date
-#: model:ir.model.fields,field_description:sale_order_expedient.field_expedient_return_reason__write_date
-#: model:ir.model.fields,field_description:sale_order_expedient.field_pre_paid_expedient__write_date
-#: model:ir.model.fields,field_description:sale_order_expedient.field_sale_order_expedient_return_history__write_date
-msgid "Last Updated on"
-msgstr "Última actualización el"
 
 #. module: sale_order_expedient
 #: model:ir.model.fields,field_description:sale_order_expedient.field_sale_order__locked
@@ -571,103 +753,9 @@ msgstr ""
 "                y están vinculados a expedientes prepagados existentes con saldo disponible."
 
 #. module: sale_order_expedient
-#: model:ir.model.fields,field_description:sale_order_expedient.field_sale_order__expedient_manager_id
-msgid "Manager"
-msgstr "Responsable"
-
-#. module: sale_order_expedient
-#: model:ir.model.fields,field_description:sale_order_expedient.field_expedient_return_reason__message_has_error
-#: model:ir.model.fields,field_description:sale_order_expedient.field_pre_paid_expedient__message_has_error
-#: model:ir.model.fields,field_description:sale_order_expedient.field_sale_order_expedient_return_history__message_has_error
-msgid "Message Delivery error"
-msgstr "Error de Entrega de Mensaje"
-
-#. module: sale_order_expedient
-#: model:ir.model.fields,field_description:sale_order_expedient.field_expedient_return_reason__message_ids
-#: model:ir.model.fields,field_description:sale_order_expedient.field_pre_paid_expedient__message_ids
-#: model:ir.model.fields,field_description:sale_order_expedient.field_sale_order_expedient_return_history__message_ids
-msgid "Messages"
-msgstr "Mensajes"
-
-#. module: sale_order_expedient
-#: model_terms:ir.ui.view,arch_db:sale_order_expedient.view_sale_order_expedient_search
-msgid "Mis Expedientes"
-msgstr "Mis Expedientes Postpago"
-
-#. module: sale_order_expedient
-#: model_terms:ir.ui.view,arch_db:sale_order_expedient.view_sale_order_template_search_inherit
-msgid "Mis Plantillas"
-msgstr "Mis Plantillas"
-
-#. module: sale_order_expedient
-#: model:ir.model.fields,field_description:sale_order_expedient.field_expedient_create_wizard__currency_id
-msgid "Moneda"
-msgstr "Moneda"
-
-#. module: sale_order_expedient
-#: model_terms:ir.ui.view,arch_db:sale_order_expedient.view_sale_order_expedient_search
-msgid "Mostrar solo mis expedientes"
-msgstr "Mostrar solo mis expedientes postpago"
-
-#. module: sale_order_expedient
-#: model_terms:ir.ui.view,arch_db:sale_order_expedient.view_sale_order_expedient_search
-msgid "Mostrar todos los expedientes"
-msgstr "Mostrar todos los expedientes postpago"
-
-#. module: sale_order_expedient
-#: model:ir.model.fields,field_description:sale_order_expedient.field_expedient_return_reason__my_activity_date_deadline
-#: model:ir.model.fields,field_description:sale_order_expedient.field_pre_paid_expedient__my_activity_date_deadline
-#: model:ir.model.fields,field_description:sale_order_expedient.field_sale_order_expedient_return_history__my_activity_date_deadline
-msgid "My Activity Deadline"
-msgstr "Mi Fecha Límite de Actividad"
-
-#. module: sale_order_expedient
-#: model:ir.model.fields,field_description:sale_order_expedient.field_expedient_return_reason__name
-#: model:ir.model.fields,field_description:sale_order_expedient.field_pre_paid_expedient__name
-msgid "Name"
-msgstr "Nombre"
-
-#. module: sale_order_expedient
-#. odoo-python
-#: code:addons/sale_order_expedient/models/pre_paid_expedient.py:0
-#: code:addons/sale_order_expedient/models/pre_paid_expedient.py:0
-#: code:addons/sale_order_expedient/models/pre_paid_expedient.py:0
-#: code:addons/sale_order_expedient/models/pre_paid_expedient.py:0
-#, python-format
-msgid "New Pre-paid Expedient"
-msgstr "Nuevo Expediente Pre-pagado"
-
-#. module: sale_order_expedient
-#: model:ir.model.fields,field_description:sale_order_expedient.field_expedient_return_reason__activity_calendar_event_id
-#: model:ir.model.fields,field_description:sale_order_expedient.field_pre_paid_expedient__activity_calendar_event_id
-#: model:ir.model.fields,field_description:sale_order_expedient.field_sale_order_expedient_return_history__activity_calendar_event_id
-msgid "Next Activity Calendar Event"
-msgstr "Siguiente Evento de Calendario de Actividad"
-
-#. module: sale_order_expedient
-#: model:ir.model.fields,field_description:sale_order_expedient.field_expedient_return_reason__activity_date_deadline
-#: model:ir.model.fields,field_description:sale_order_expedient.field_pre_paid_expedient__activity_date_deadline
-#: model:ir.model.fields,field_description:sale_order_expedient.field_sale_order_expedient_return_history__activity_date_deadline
-msgid "Next Activity Deadline"
-msgstr "Fecha Límite de Siguiente Actividad"
-
-#. module: sale_order_expedient
-#: model:ir.model.fields,field_description:sale_order_expedient.field_expedient_return_reason__activity_summary
-#: model:ir.model.fields,field_description:sale_order_expedient.field_pre_paid_expedient__activity_summary
-#: model:ir.model.fields,field_description:sale_order_expedient.field_sale_order_expedient_return_history__activity_summary
-msgid "Next Activity Summary"
-msgstr "Resumen de la Siguiente Actividad"
-
-#. module: sale_order_expedient
-#: model:ir.model.fields,field_description:sale_order_expedient.field_expedient_return_reason__activity_type_id
-#: model:ir.model.fields,field_description:sale_order_expedient.field_pre_paid_expedient__activity_type_id
-#: model:ir.model.fields,field_description:sale_order_expedient.field_sale_order_expedient_return_history__activity_type_id
-msgid "Next Activity Type"
-msgstr "Tipo de la Siguiente Actividad"
-
-#. module: sale_order_expedient
 #. odoo-python
 #: code:addons/sale_order_expedient/models/sale_order.py:0
+#: code:addons/sale_order_expedient/wizards/expedient_create_wizard.py:0
 #, python-format
 msgid ""
 "No hay saldo suficiente en el expediente prepagado. Saldo actual: %.2f, "
@@ -675,11 +763,6 @@ msgid ""
 msgstr ""
 "No hay saldo suficiente en el expediente prepagado. Saldo actual: %.2f, "
 "Importe del pedido: %.2f"
-
-#. module: sale_order_expedient
-#: model:ir.model.fields.selection,name:sale_order_expedient.selection__sale_order__expedient_type__none
-msgid "None"
-msgstr "Ninguno"
 
 #. module: sale_order_expedient
 #: model_terms:ir.ui.view,arch_db:sale_order_expedient.view_order_form_expedient
@@ -695,56 +778,14 @@ msgid "Notes"
 msgstr "Notas"
 
 #. module: sale_order_expedient
-#: model_terms:ir.ui.view,arch_db:sale_order_expedient.view_expedient_tree_custom
-msgid "Nuevo Expediente Postpago"
-msgstr "Nuevo Expediente Post-pagado"
-
-#. module: sale_order_expedient
 #: model_terms:ir.ui.view,arch_db:sale_order_expedient.view_sale_order_prepaid_tree
 msgid "Nuevo Expediente Pre-pagado"
 msgstr "Nuevo Expediente Pre-pagado"
 
 #. module: sale_order_expedient
-#: model:ir.model.fields,field_description:sale_order_expedient.field_expedient_return_reason__message_needaction_counter
-#: model:ir.model.fields,field_description:sale_order_expedient.field_pre_paid_expedient__message_needaction_counter
-#: model:ir.model.fields,field_description:sale_order_expedient.field_sale_order_expedient_return_history__message_needaction_counter
-msgid "Number of Actions"
-msgstr "Número de Acciones"
-
-#. module: sale_order_expedient
-#: model:ir.model.fields,field_description:sale_order_expedient.field_expedient_return_reason__message_has_error_counter
-#: model:ir.model.fields,field_description:sale_order_expedient.field_pre_paid_expedient__message_has_error_counter
-#: model:ir.model.fields,field_description:sale_order_expedient.field_sale_order_expedient_return_history__message_has_error_counter
-msgid "Number of errors"
-msgstr "Número de errores"
-
-#. module: sale_order_expedient
-#: model:ir.model.fields,help:sale_order_expedient.field_expedient_return_reason__message_needaction_counter
-#: model:ir.model.fields,help:sale_order_expedient.field_pre_paid_expedient__message_needaction_counter
-#: model:ir.model.fields,help:sale_order_expedient.field_sale_order_expedient_return_history__message_needaction_counter
-msgid "Number of messages requiring action"
-msgstr "Número de mensajes que requieren acción"
-
-#. module: sale_order_expedient
-#: model:ir.model.fields,help:sale_order_expedient.field_expedient_return_reason__message_has_error_counter
-#: model:ir.model.fields,help:sale_order_expedient.field_pre_paid_expedient__message_has_error_counter
-#: model:ir.model.fields,help:sale_order_expedient.field_sale_order_expedient_return_history__message_has_error_counter
-msgid "Number of messages with delivery error"
-msgstr "Número de mensajes con error de entrega"
-
-#. module: sale_order_expedient
-#: model_terms:ir.ui.view,arch_db:sale_order_expedient.view_sale_order_expedient_search
-msgid "Order"
-msgstr "Pedido"
-
-#. module: sale_order_expedient
-#: model_terms:ir.ui.view,arch_db:sale_order_expedient.view_sale_order_expedient_search
-msgid "Order Date"
-msgstr "Fecha del Pedido"
-
-#. module: sale_order_expedient
 #. odoo-python
 #: code:addons/sale_order_expedient/models/sale_order.py:0
+#: code:addons/sale_order_expedient/wizards/expedient_create_wizard.py:0
 #, python-format
 msgid ""
 "Para expedientes prepagados, debe seleccionar un expediente prepagado "
@@ -765,11 +806,6 @@ msgid "Pending Documentation"
 msgstr "Pendiente de Documentación"
 
 #. module: sale_order_expedient
-#: model:ir.model.fields,field_description:sale_order_expedient.field_sale_order__partner_phone
-msgid "Phone"
-msgstr "Teléfono"
-
-#. module: sale_order_expedient
 #: model:ir.model.fields.selection,name:sale_order_expedient.selection__expedient_create_wizard__expedient_type__post_paid
 #: model:ir.model.fields.selection,name:sale_order_expedient.selection__sale_order__expedient_type__post_paid
 msgid "Post-pagado"
@@ -782,27 +818,10 @@ msgid "Pre-pagado"
 msgstr "Pre-pagado"
 
 #. module: sale_order_expedient
-#: model:ir.model,name:sale_order_expedient.model_pre_paid_expedient
-msgid "Pre-paid Expedient"
-msgstr "Expediente Pre-pagado"
-
-#. module: sale_order_expedient
-#: model_terms:ir.ui.view,arch_db:sale_order_expedient.view_sale_order_expedient_search
-msgid "Product"
-msgstr "Producto"
-
-#. module: sale_order_expedient
 #: model:ir.model,name:sale_order_expedient.model_sale_order_template
 #: model:ir.model.fields,field_description:sale_order_expedient.field_expedient_create_wizard__sale_order_template_id
 msgid "Quotation Template"
 msgstr "Plantilla de presupuesto"
-
-#. module: sale_order_expedient
-#: model:ir.model.fields,field_description:sale_order_expedient.field_expedient_return_reason__rating_ids
-#: model:ir.model.fields,field_description:sale_order_expedient.field_pre_paid_expedient__rating_ids
-#: model:ir.model.fields,field_description:sale_order_expedient.field_sale_order_expedient_return_history__rating_ids
-msgid "Ratings"
-msgstr "Valoraciones"
 
 #. module: sale_order_expedient
 #: model:ir.model.fields.selection,name:sale_order_expedient.selection__sale_order__expedient_state__rechazada
@@ -816,80 +835,23 @@ msgid "Relación con expediente prepagado"
 msgstr "Relación con expediente prepagado"
 
 #. module: sale_order_expedient
-#: model:ir.model.fields,field_description:sale_order_expedient.field_expedient_return_reason__activity_user_id
-#: model:ir.model.fields,field_description:sale_order_expedient.field_pre_paid_expedient__activity_user_id
-#: model:ir.model.fields,field_description:sale_order_expedient.field_sale_order_expedient_return_history__activity_user_id
-msgid "Responsible User"
-msgstr "Usuario Responsable"
-
-#. module: sale_order_expedient
-#: model:ir.model.fields,field_description:sale_order_expedient.field_sale_order__return_count
-msgid "Return Count"
-msgstr "Número de Devoluciones"
-
-#. module: sale_order_expedient
-#: model:ir.model.fields,field_description:sale_order_expedient.field_sale_order_expedient_return_history__return_date
-msgid "Return Date & Time"
-msgstr "Fecha y Hora de Devolución"
-
-#. module: sale_order_expedient
-#: model:ir.model.fields,field_description:sale_order_expedient.field_sale_order__expedient_return_history_ids
-msgid "Return History"
-msgstr "Historial de Devoluciones"
-
-#. module: sale_order_expedient
 #: model:ir.model,name:sale_order_expedient.model_expedient_return_reason
 #: model:ir.model.fields,field_description:sale_order_expedient.field_sale_order__return_reason_id
 #: model:ir.model.fields,field_description:sale_order_expedient.field_sale_order_expedient_return_history__return_reason_id
 msgid "Return Reason"
-msgstr "Motivo de Devolución"
+msgstr "Razón de Devolución"
 
 #. module: sale_order_expedient
 #: model:ir.actions.act_window,name:sale_order_expedient.action_expedient_return_reason
 #: model:ir.ui.menu,name:sale_order_expedient.menu_expedient_return_reason
 #: model_terms:ir.ui.view,arch_db:sale_order_expedient.view_expedient_return_reason_tree
 msgid "Return Reasons"
-msgstr "Motivos de Devolución"
-
-#. module: sale_order_expedient
-#. odoo-python
-#: code:addons/sale_order_expedient/models/sale_order_expedient_return_history.py:0
-#, python-format
-msgid "Return history entry deleted: %s"
-msgstr "Entrada del historial de devoluciones eliminada: %s"
-
-#. module: sale_order_expedient
-#. odoo-python
-#: code:addons/sale_order_expedient/models/sale_order_expedient_return_history.py:0
-#, python-format
-msgid "Return history entry updated"
-msgstr "Entrada del historial de devoluciones actualizada"
-
-#. module: sale_order_expedient
-#. odoo-python
-#: code:addons/sale_order_expedient/models/sale_order.py:0
-#, python-format
-msgid "Return registered: %s"
-msgstr "Devolución registrada: %s"
+msgstr "Razones de Devolución"
 
 #. module: sale_order_expedient
 #: model_terms:ir.ui.view,arch_db:sale_order_expedient.view_order_form_expedient
 msgid "Returns"
 msgstr "Devoluciones"
-
-#. module: sale_order_expedient
-#: model:ir.model.fields,field_description:sale_order_expedient.field_expedient_return_reason__message_has_sms_error
-#: model:ir.model.fields,field_description:sale_order_expedient.field_pre_paid_expedient__message_has_sms_error
-#: model:ir.model.fields,field_description:sale_order_expedient.field_sale_order_expedient_return_history__message_has_sms_error
-msgid "SMS Delivery error"
-msgstr "Error de entrega de SMS"
-
-#. module: sale_order_expedient
-#. odoo-python
-#: code:addons/sale_order_expedient/wizard/sale_order_template_wizard.py:0
-#, python-format
-msgid "Sale Order"
-msgstr "Pedido de Venta"
 
 #. module: sale_order_expedient
 #: model:ir.model,name:sale_order_expedient.model_sale_order
@@ -898,8 +860,8 @@ msgstr "Pedido de venta"
 
 #. module: sale_order_expedient
 #: model_terms:ir.ui.view,arch_db:sale_order_expedient.view_sale_order_expedient_search
-msgid "Salesperson"
-msgstr "Comercial"
+msgid "Search Expedients"
+msgstr "Buscar Expedientes"
 
 #. module: sale_order_expedient
 #. odoo-python
@@ -916,16 +878,6 @@ msgid "Se requiere Número de Expediente para expedientes."
 msgstr "Se requiere Número de Expediente para expedientes."
 
 #. module: sale_order_expedient
-#: model_terms:ir.ui.view,arch_db:sale_order_expedient.view_sale_order_expedient_search
-msgid "Search Expedients"
-msgstr "Buscar Expedientes Postpago"
-
-#. module: sale_order_expedient
-#: model:ir.model.fields,field_description:sale_order_expedient.field_expedient_return_reason__sequence
-msgid "Sequence"
-msgstr "Secuencia"
-
-#. module: sale_order_expedient
 #: model_terms:ir.ui.view,arch_db:sale_order_expedient.view_sale_order_template_form_inherit
 msgid ""
 "Solo los usuarios seleccionados podrán ver y usar esta plantilla. Si está "
@@ -935,86 +887,30 @@ msgstr ""
 "vacío, ningún usuario tendrá acceso."
 
 #. module: sale_order_expedient
-#: model:ir.model.fields,field_description:sale_order_expedient.field_sale_order__expedient_date
-msgid "Start Date"
-msgstr "Fecha de inicio"
-
-#. module: sale_order_expedient
-#: model:ir.model.fields,help:sale_order_expedient.field_sale_order__expedient_date
-msgid "Start date of the expedient"
-msgstr "Fecha de inicio del expediente"
-
-#. module: sale_order_expedient
-#: model:ir.model.fields,field_description:sale_order_expedient.field_pre_paid_expedient__state
-msgid "State"
-msgstr "Estado"
-
-#. module: sale_order_expedient
-#: model_terms:ir.ui.view,arch_db:sale_order_expedient.view_sale_order_expedient_search
-msgid "Status"
-msgstr "Estado"
-
-#. module: sale_order_expedient
-#: model:ir.model.fields,help:sale_order_expedient.field_expedient_return_reason__activity_state
-#: model:ir.model.fields,help:sale_order_expedient.field_pre_paid_expedient__activity_state
-#: model:ir.model.fields,help:sale_order_expedient.field_sale_order_expedient_return_history__activity_state
-msgid ""
-"Status based on activities\n"
-"Overdue: Due date is already passed\n"
-"Today: Activity date is today\n"
-"Planned: Future activities."
-msgstr ""
-"Estado basado en actividades\n"
-"Vencida: La fecha límite ya ha pasado\n"
-"Hoy: La fecha de la actividad es hoy\n"
-"Planificada: Actividades futuras."
-
-#. module: sale_order_expedient
-#: model:ir.model.fields.selection,name:sale_order_expedient.selection__pre_paid_expedient__state__suspended
-msgid "Suspended"
-msgstr "Suspendido"
-
-#. module: sale_order_expedient
 #: model:ir.model.fields,help:sale_order_expedient.field_sale_order__locked
 msgid "Technical field used in views"
 msgstr "Campo técnico usado en vistas"
 
 #. module: sale_order_expedient
-#. odoo-python
-#: code:addons/sale_order_expedient/wizards/expedient_wizard.py:0
-#: code:addons/sale_order_expedient/wizards/expedient_wizard.py:0
-#, python-format
-msgid "Template Line"
-msgstr "Línea de Plantilla"
+#: model_terms:ir.ui.view,arch_db:sale_order_expedient.view_sale_order_expedient_search
+msgid "Todos los Expedientes"
+msgstr "Todos los Expedientes"
 
 #. module: sale_order_expedient
-#: model:ir.model.fields,help:sale_order_expedient.field_sale_order__partner_vat
-msgid ""
-"The Tax Identification Number. Values here will be validated based on the "
-"country format. You can use '/' to indicate that the partner is not subject "
-"to tax."
-msgstr ""
-"El Número de Identificación Fiscal. Los valores aquí serán validados basándose en el "
-"formato del país. Puede usar '/' para indicar que el contacto no está sujeto "
-"a impuestos."
+#: model_terms:ir.ui.view,arch_db:sale_order_expedient.view_expedient_tree_custom
+#: model_terms:ir.ui.view,arch_db:sale_order_expedient.view_sale_order_expedient_tree
+msgid "Total Returns"
+msgstr "Total de Devoluciones"
 
 #. module: sale_order_expedient
-#: model:ir.model.constraint,message:sale_order_expedient.constraint_pre_paid_expedient_client_expedient_unique
-#: model:ir.model.constraint,message:sale_order_expedient.constraint_sale_order_client_expedient_unique
-msgid "The combination of Client ID and Expedient Number must be unique!"
-msgstr ""
-"¡La combinación de ID de Cliente y Número de Expediente debe ser única!"
-
-#. module: sale_order_expedient
-#: model:ir.model.fields,field_description:sale_order_expedient.field_expedient_create_wizard__expedient_type
 #: model:ir.model.fields,field_description:sale_order_expedient.field_sale_order__expedient_type
 msgid "Tipo de Expediente"
 msgstr "Tipo de Expediente"
 
 #. module: sale_order_expedient
-#: model:ir.model.fields,help:sale_order_expedient.field_expedient_create_wizard__expedient_type
-msgid "Tipo de expediente"
-msgstr "Tipo de expediente"
+#: model:ir.model.fields,field_description:sale_order_expedient.field_expedient_create_wizard__expedient_type
+msgid "Tipo de Expediente Post-pagado"
+msgstr "Tipo de Expediente Post-pagado"
 
 #. module: sale_order_expedient
 #: model:ir.model.fields,help:sale_order_expedient.field_sale_order__expedient_type
@@ -1022,49 +918,9 @@ msgid "Tipo de expediente de pre pago o post pago"
 msgstr "Tipo de expediente de pre pago o post pago"
 
 #. module: sale_order_expedient
-#: model_terms:ir.ui.view,arch_db:sale_order_expedient.view_sale_order_template_search_inherit
-msgid "Todas las Plantillas"
-msgstr "Todas las Plantillas"
-
-#. module: sale_order_expedient
-#: model_terms:ir.ui.view,arch_db:sale_order_expedient.view_sale_order_expedient_search
-msgid "Todos los Expedientes"
-msgstr "Todos los Expedientes Postpago"
-
-#. module: sale_order_expedient
-#: model_terms:ir.ui.view,arch_db:sale_order_expedient.view_sale_order_prepaid_tree
-msgid "Total"
-msgstr "Total"
-
-#. module: sale_order_expedient
-#: model_terms:ir.ui.view,arch_db:sale_order_expedient.view_expedient_tree_custom
-#: model_terms:ir.ui.view,arch_db:sale_order_expedient.view_sale_order_expedient_tree
-msgid "Total Returns"
-msgstr "Total Devoluciones"
-
-#. module: sale_order_expedient
-#: model:ir.model.fields,help:sale_order_expedient.field_expedient_return_reason__activity_exception_decoration
-#: model:ir.model.fields,help:sale_order_expedient.field_pre_paid_expedient__activity_exception_decoration
-#: model:ir.model.fields,help:sale_order_expedient.field_sale_order_expedient_return_history__activity_exception_decoration
-msgid "Type of the exception activity on record."
-msgstr "Tipo de actividad de excepción registrada."
-
-#. module: sale_order_expedient
-#. odoo-python
-#: code:addons/sale_order_expedient/models/sale_order_expedient_return_history.py:0
-#, python-format
-msgid "Unknown reason"
-msgstr "Motivo desconocido"
-
-#. module: sale_order_expedient
-#: model:ir.model.fields,help:sale_order_expedient.field_expedient_return_reason__sequence
-msgid "Used to order Return Reasons"
-msgstr "Usado para ordenar los motivos de devolución"
-
-#. module: sale_order_expedient
-#: model:ir.model.fields,field_description:sale_order_expedient.field_sale_order_expedient_return_history__user_id
-msgid "User"
-msgstr "Usuario"
+#: model:ir.model.fields,help:sale_order_expedient.field_expedient_create_wizard__expedient_type
+msgid "Tipo de expediente post-pagado"
+msgstr "Tipo de expediente post-pagado"
 
 #. module: sale_order_expedient
 #: model:ir.model.fields,help:sale_order_expedient.field_sale_order__expedient_manager_id
@@ -1075,40 +931,6 @@ msgstr "Usuario responsable de gestionar este expediente"
 #: model:ir.model.fields,help:sale_order_expedient.field_sale_order_template__allowed_user_ids
 msgid "Users who can access this template. If empty, all users can access it."
 msgstr "Usuarios que pueden acceder a esta plantilla. Si está vacío, todos los usuarios pueden acceder."
-
-#. module: sale_order_expedient
-#: model_terms:ir.ui.view,arch_db:sale_order_expedient.view_sale_order_template_form_inherit
-msgid "Usuarios con acceso"
-msgstr "Usuarios con acceso"
-
-#. module: sale_order_expedient
-#: model:ir.model.fields,field_description:sale_order_expedient.field_sale_order__partner_vat
-msgid "VAT"
-msgstr "NIF/CIF"
-
-#. module: sale_order_expedient
-#: model:ir.model.fields,field_description:sale_order_expedient.field_expedient_return_reason__website_message_ids
-#: model:ir.model.fields,field_description:sale_order_expedient.field_pre_paid_expedient__website_message_ids
-#: model:ir.model.fields,field_description:sale_order_expedient.field_sale_order_expedient_return_history__website_message_ids
-msgid "Website Messages"
-msgstr "Mensajes del Sitio Web"
-
-#. module: sale_order_expedient
-#: model:ir.model.fields,help:sale_order_expedient.field_expedient_return_reason__website_message_ids
-#: model:ir.model.fields,help:sale_order_expedient.field_pre_paid_expedient__website_message_ids
-#: model:ir.model.fields,help:sale_order_expedient.field_sale_order_expedient_return_history__website_message_ids
-msgid "Website communication history"
-msgstr "Historial de comunicaciones del sitio web"
-
-#. module: sale_order_expedient
-#: model:ir.actions.server,name:sale_order_expedient.action_button_create_expedient_wizard
-msgid "Wizard"
-msgstr "Asistente"
-
-#. module: sale_order_expedient
-#: model:ir.model,name:sale_order_expedient.model_expedient_create_wizard
-msgid "Wizard to create expedients"
-msgstr "Asistente para crear expedientes"
 
 #. module: sale_order_expedient
 #. odoo-python

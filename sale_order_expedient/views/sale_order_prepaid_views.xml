@@ -39,7 +39,8 @@
         <field name="domain">[('expedient_type', '=', 'pre_paid')]</field>
         <field name="context">{
             'default_expedient_type': 'pre_paid',
-            'search_default_expedient_type': 'pre_paid'
+            'search_default_expedient_type': 'pre_paid',
+            'show_as_expedient': True
         }</field>
         <field name="help" type="html">
             <p class="o_view_nocontent_smiling_face">

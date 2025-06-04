@@ -15,7 +15,7 @@
                     <group>
                         <group>
                             <field name="sale_order_template_id"/>
-                            <field name="partner_id" required="1"/>
+                            <field name="partner_id" required="1" readonly="1"/>
                             <field name="client_id" required="1"/>
                             <field name="expedient_number" required="1"/>
                             <field name="currency_id" invisible="1"/>

@@ -6,13 +6,13 @@ _logger = logging.getLogger(__name__)
 
 class ExpedientCreateWizard(models.TransientModel):
     _name = 'expedient.create.wizard'
-    _description = 'Wizard para crear expedientes'
+    _description = 'Wizard para crear expedientes post-pagados'
 
     # El tipo de expediente se define por defecto desde el contexto
     expedient_type = fields.Selection([
         ('post_paid', 'Expediente Post-pagado'),
         ('pre_paid', 'Expediente Pre-pagado')
-    ], string='Tipo de Expediente', required=True, default=lambda self: self._get_default_expedient_type())
+    ], string='Tipo de Expediente Post-pagado', required=True, default=lambda self: self._get_default_expedient_type())
 
     # ... existing code ...
 

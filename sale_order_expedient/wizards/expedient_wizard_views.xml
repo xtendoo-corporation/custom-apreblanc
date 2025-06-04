@@ -6,12 +6,28 @@
         <field name="model">expedient.create.wizard</field>
         <field name="arch" type="xml">
             <form string="Create Expedient">
-                <group>
-                    <field name="sale_order_template_id" options="{'no_create': True}"/>
-                    <field name="partner_id" options="{'no_create': True}"/>
-                    <field name="expedient_number" required="1"/>
-                    <field name="client_id" required="1"/>
-                </group>
+                <sheet>
+                    <group>
+                        <!-- Ocultar el campo de tipo de expediente ya que viene del contexto -->
+                        <field name="expedient_type" invisible="1"/>
+                    </group>
+
+                    <group>
+                        <group>
+                            <field name="sale_order_template_id" options="{'no_create': True}"/>
+                            <field name="partner_readonly" invisible="1"/>
+                            <field name="partner_id"
+                                   options="{'no_create': True}"
+                                   readonly="partner_readonly"
+                                   placeholder="Se completará automáticamente con la plantilla seleccionada"/>
+                            <field name="client_id" required="1"/>
+                            <field name="expedient_number" required="1"/>
+                            <field name="currency_id" invisible="1"/>
+                        </group>
+                        <group>
+                        </group>
+                    </group>
+                </sheet>
                 <footer>
                     <button name="action_create_expedient"
                             string="Create"
@@ -32,6 +48,7 @@
         <field name="name">Create Expedient</field>
         <field name="res_model">expedient.create.wizard</field>
         <field name="view_mode">form</field>
+        <field name="view_id" ref="view_expedient_create_wizard_form"/>
         <field name="target">new</field>
     </record>
 </odoo>
