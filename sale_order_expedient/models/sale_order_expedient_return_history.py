@@ -39,37 +39,20 @@ class SaleOrderExpedientReturnHistory(models.Model):
     def create(self, vals_list):
         records = super().create(vals_list)
 
-        # Cambiar el estado de los expedientes a "pendiente de documentación"
+        # Cambiar el estado de los expedientes a "pendiente de documentación" SIEMPRE que haya una devolución
         for record in records:
-            if record.sale_order_id and record.sale_order_id.expedient_type == 'post_paid':
+            if record.sale_order_id and record.sale_order_id.expedient_type in ['post_paid', 'pre_paid']:
+                # Siempre cambiar a pendiente_documentacion sin importar el estado actual
                 record.sale_order_id.write({
                     'expedient_state': 'pendiente_documentacion'
                 })
                 # Añadir mensaje en el chatter del expediente
                 record.sale_order_id.message_post(
-                    body=f"Estado cambiado a 'Pendiente de Documentación' debido a la devolución creada el {record.return_date}",
+                    body=_("Estado cambiado a 'Pendiente de Documentación' debido a la devolución creada el %s") % record.return_date,
                     subtype_xmlid='mail.mt_note'
                 )
 
         return records
-
-    @api.model
-    def create(self, vals):
-        """Override create to handle automatic state changes for pre-paid expedients"""
-        result = super().create(vals)
-
-        # Si se crea una nueva devolución para un expediente pre-pagado
-        if result.sale_order_id and result.sale_order_id.expedient_type == 'pre_paid':
-            expedient = result.sale_order_id
-            # Cambiar a pendiente de documentación si no está ya aprobado o rechazado
-            if expedient.expedient_state in ['creada']:
-                expedient.expedient_state = 'pendiente_documentacion'
-                expedient.message_post(
-                    body=_("Estado automáticamente cambiado a pendiente de documentación debido a registro de devolución"),
-                    message_type='notification'
-                )
-
-        return result
 
     def write(self, vals):
         """Override write to add tracking message when return history is updated."""

@@ -536,8 +536,9 @@ class SaleOrder(models.Model):
         # Update return count
         self.return_count = len(self.expedient_return_history_ids)
 
-        # Para expedientes pre-pagados, cambiar automáticamente a pendiente de documentación
-        if self.expedient_type == 'pre_paid' and self.expedient_state not in ['aprobada', 'rechazada']:
+        # Para cualquier expediente (pre o post pagado), siempre cambiar a pendiente de documentación
+        if self.expedient_type in ['pre_paid', 'post_paid']:
+            # Siempre cambiamos a pendiente de documentación, sin importar el estado actual
             self.expedient_state = 'pendiente_documentacion'
             self.message_post(
                 body=_("Expediente marcado como pendiente de documentación debido a devolución registrada"),
