@@ -24,7 +24,8 @@
                        decoration-muted="expedient_state == 'cancelada'"
                        decoration-warning="expedient_state == 'pendiente_documentacion'"/>
                 <field name="return_count" sum="Total Returns"/>
-                <field name="expedient_deadline"/>
+                <field name="expedient_date_end"/>
+                <field name="expedient_resolution_time" optional="show"/>
                 <field name="state"/>
             </tree>
         </field>

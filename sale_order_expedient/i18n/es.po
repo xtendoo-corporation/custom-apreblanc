@@ -940,3 +940,96 @@ msgid ""
 "Ya existe un expediente con ID de Cliente '%s' y Número de Expediente '%s'."
 msgstr ""
 "Ya existe un expediente con ID de Cliente '%s' y Número de Expediente '%s'."
+
+#. module: sale_order_expedient
+#: model:ir.model.fields,field_description:sale_order_expedient.field_sale_order__expedient_date
+msgid "Start Date & Time"
+msgstr "Fecha y Hora de Inicio"
+
+#. module: sale_order_expedient
+#: model:ir.model.fields,help:sale_order_expedient.field_sale_order__expedient_date
+msgid "Start date and time of the expedient"
+msgstr "Fecha y hora de inicio del expediente"
+
+#. module: sale_order_expedient
+#: model:ir.model.fields,field_description:sale_order_expedient.field_sale_order__expedient_resolution_time
+msgid "Tiempo de Resolución"
+msgstr "Tiempo de Resolución"
+
+#. module: sale_order_expedient
+#: model:ir.model.fields,help:sale_order_expedient.field_sale_order__expedient_date_start
+msgid "Fecha y hora en que se inició el expediente"
+msgstr "Fecha y hora en que se inició el expediente"
+
+#. module: sale_order_expedient
+#: model:ir.model.fields,help:sale_order_expedient.field_sale_order__expedient_date_end
+msgid "Fecha y hora en que se finalizó el expediente (aprobación o rechazo)"
+msgstr "Fecha y hora en que se finalizó el expediente (aprobación o rechazo)"
+
+#. module: sale_order_expedient
+#: model:ir.model.fields,help:sale_order_expedient.field_sale_order__expedient_resolution_time
+msgid "Tiempo transcurrido desde el inicio hasta la resolución del expediente"
+msgstr "Tiempo transcurrido desde el inicio hasta la resolución del expediente"
+
+#. module: sale_order_expedient
+#. odoo-python
+#: code:addons/sale_order_expedient/models/sale_order.py:0
+#, python-format
+msgid "Expediente abierto el %s"
+msgstr "Expediente abierto el %s"
+
+#. module: sale_order_expedient
+#. odoo-python
+#: code:addons/sale_order_expedient/models/sale_order.py:0
+#, python-format
+msgid "Expediente aprobado el %s. Tiempo de resolución: %s"
+msgstr "Expediente aprobado el %s. Tiempo de resolución: %s"
+
+#. module: sale_order_expedient
+#. odoo-python
+#: code:addons/sale_order_expedient/models/sale_order.py:0
+#, python-format
+msgid "Expediente rechazado el %s. Tiempo de resolución: %s"
+msgstr "Expediente rechazado el %s. Tiempo de resolución: %s"
+
+#. module: sale_order_expedient
+#. odoo-python
+#: code:addons/sale_order_expedient/models/sale_order.py:0
+#, python-format
+msgid "Expediente cancelado el %s"
+msgstr "Expediente cancelado el %s"
+
+#. module: sale_order_expedient
+#. odoo-python
+#: code:addons/sale_order_expedient/models/sale_order.py:0
+#, python-format
+msgid ". El pedido de venta también ha sido cancelado"
+msgstr ". El pedido de venta también ha sido cancelado"
+
+#. module: sale_order_expedient
+#. odoo-python
+#: code:addons/sale_order_expedient/models/sale_order.py:0
+#, python-format
+msgid "Expediente pre-pagado aprobado el %s. Tiempo de resolución: %s"
+msgstr "Expediente pre-pagado aprobado el %s. Tiempo de resolución: %s"
+
+#. module: sale_order_expedient
+#. odoo-python
+#: code:addons/sale_order_expedient/models/sale_order.py:0
+#, python-format
+msgid "Expediente pre-pagado rechazado el %s. Tiempo de resolución: %s (el pedido de venta permanece activo)"
+msgstr "Expediente pre-pagado rechazado el %s. Tiempo de resolución: %s (el pedido de venta permanece activo)"
+
+#. module: sale_order_expedient
+#. odoo-python
+#: code:addons/sale_order_expedient/models/sale_order.py:0
+#, python-format
+msgid "Expediente marcado como %s el %s. Tiempo de resolución: %s"
+msgstr "Expediente marcado como %s el %s. Tiempo de resolución: %s"
+
+#. module: sale_order_expedient
+#. odoo-python
+#: code:addons/sale_order_expedient/models/sale_order.py:0
+#, python-format
+msgid "Actualizando fecha de fin automáticamente para expediente %s. Estado cambiado a: %s"
+msgstr "Actualizando fecha de fin automáticamente para expediente %s. Estado cambiado a: %s"

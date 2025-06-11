@@ -13,6 +13,7 @@
 
         # Datos
         'data/ir_sequence_data.xml',
+        'data/ir_cron.xml',
 
         # Wizards (movidos al principio para evitar dependencias circulares)
         'wizards/expedient_wizard_views.xml',

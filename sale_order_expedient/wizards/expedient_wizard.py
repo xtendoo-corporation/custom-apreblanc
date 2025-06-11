@@ -196,7 +196,7 @@ class ExpedientCreateWizard(models.TransientModel):
         sale_order_vals = {
             'partner_id': self.partner_id.id,
             'expedient_type': 'pre_paid',
-            'expedient_date': fields.Date.today(),
+            'expedient_date': fields.Datetime.now(),
             'expedient_manager_id': self.env.user.id,
             'client_id': self.client_id,
             'expedient_number': self.expedient_number,
@@ -291,7 +291,7 @@ class ExpedientCreateWizard(models.TransientModel):
         values = {
             'partner_id': self.partner_id.id,
             'expedient_type': 'post_paid',
-            'expedient_date': fields.Date.today(),
+            'expedient_date': fields.Datetime.now(),
             'expedient_manager_id': self.env.user.id,
             'client_id': self.client_id,
             'expedient_number': self.expedient_number,
