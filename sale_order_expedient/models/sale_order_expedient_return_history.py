@@ -42,12 +42,27 @@ class SaleOrderExpedientReturnHistory(models.Model):
         # Cambiar el estado de los expedientes a "pendiente de documentación" SIEMPRE que haya una devolución
         for record in records:
             if record.sale_order_id and record.sale_order_id.expedient_type in ['post_paid', 'pre_paid']:
-                # Siempre cambiar a pendiente_documentacion sin importar el estado actual
-                record.sale_order_id.write({
+                expedient = record.sale_order_id
+                
+                # Verificar si el expediente está aprobado y el usuario no es administrador
+                if expedient.expedient_state == 'aprobada':
+                    # Verificar si el usuario actual es administrador
+                    is_admin = self.env.user.has_group('base.group_system') or self.env.user.has_group('base.group_erp_manager')
+                    
+                    if not is_admin:
+                        # Registrar la devolución pero no cambiar el estado si no es administrador
+                        expedient.message_post(
+                            body=_("Devolución registrada el %s. El estado del expediente no se ha modificado porque está aprobado y solo los administradores pueden cambiarlo.") % record.return_date,
+                            subtype_xmlid='mail.mt_note'
+                        )
+                        continue
+                
+                # Cambiar a pendiente_documentacion si es administrador o el expediente no está aprobado
+                expedient.write({
                     'expedient_state': 'pendiente_documentacion'
                 })
                 # Añadir mensaje en el chatter del expediente
-                record.sale_order_id.message_post(
+                expedient.message_post(
                     body=_("Estado cambiado a 'Pendiente de Documentación' debido a la devolución creada el %s") % record.return_date,
                     subtype_xmlid='mail.mt_note'
                 )

@@ -47,9 +47,9 @@ class SaleOrder(models.Model):
     )
 
     # El campo expedient_id se ha eliminado, expedient_number es ahora el identificador único
-    expedient_date = fields.Datetime(
-        string='Start Date & Time',
-        help='Start date and time of the expedient',
+    expedient_date = fields.Date(
+        string='Start Date',
+        help='Start date of the expedient',
     )
     expedient_manager_id = fields.Many2one(
         'res.users',
@@ -177,9 +177,7 @@ class SaleOrder(models.Model):
 
     @api.model_create_multi
     def create(self, vals_list):
-        """Establece fecha de inicio y maneja toda la lógica de expedientes al crear registros"""
-        processed_vals_list = []
-
+        """Establece fecha de inicio al crear expedientes"""
         for vals in vals_list:
             # Si es un expediente prepagado, verificar que tenga relación con el expediente
             if vals.get('expedient_type') == 'pre_paid' and not vals.get('pre_paid_expedient_id'):
@@ -208,35 +206,19 @@ class SaleOrder(models.Model):
                         "Ya existe un expediente con ID de Cliente '%s' y Número de Expediente '%s'."
                     ) % (vals.get('client_id'), vals.get('expedient_number')))
 
-            # Establecer fecha de inicio y otros campos automáticamente para expedientes
-            if vals.get('expedient_type') and vals['expedient_type'] != 'none':
-                # Set expedient manager if not provided
-                if not vals.get('expedient_manager_id'):
-                    vals['expedient_manager_id'] = self.env.user.id
-
-                # Set expedient date if not provided
-                if not vals.get('expedient_date'):
-                    vals['expedient_date'] = fields.Datetime.now()
-
-                # Set initial expedient state
-                if not vals.get('expedient_state'):
-                    vals['expedient_state'] = 'creada'
-
-                # Establecer fecha de inicio
-                if vals.get('expedient_type') in ['post_paid', 'pre_paid']:
-                    # Siempre registrar la fecha y hora exacta de apertura del expediente
-                    vals['expedient_date_start'] = fields.Datetime.now()
-                    # Registrar en el log que se ha creado un expediente con su fecha de apertura
-                    _logger.info(
-                        "Creando expediente tipo %s con fecha de apertura: %s",
-                        vals.get('expedient_type'),
-                        vals['expedient_date_start']
-                    )
-
-            processed_vals_list.append(vals)
+            # Establecer fecha de inicio automáticamente para expedientes
+            if vals.get('expedient_type') in ['post_paid', 'pre_paid']:
+                # Siempre registrar la fecha y hora exacta de apertura del expediente
+                vals['expedient_date_start'] = fields.Datetime.now()
+                # Registrar en el log que se ha creado un expediente con su fecha de apertura
+                _logger.info(
+                    "Creando expediente tipo %s con fecha de apertura: %s",
+                    vals.get('expedient_type'),
+                    vals['expedient_date_start']
+                )
 
         # Crear las órdenes de venta
-        orders = super().create(processed_vals_list)
+        orders = super().create(vals_list)
 
         # Para cada expediente creado, registrar un mensaje en el chatter
         for order in orders:
@@ -247,26 +229,10 @@ class SaleOrder(models.Model):
                     message_type='notification'
                 )
 
-                # Procesamiento post-creación específico para expedientes pre-pagados
-                if order.expedient_type == 'pre_paid':
-                    # Verificar si hay devoluciones previas
-                    if order.return_count > 0 and order.expedient_state in ['creada']:
-                        order.expedient_state = 'pendiente_documentacion'
-                        order.message_post(
-                            body=_("Estado automáticamente cambiado a pendiente de documentación debido a devoluciones existentes"),
-                            message_type='notification'
-                        )
-
         # Confirmar automáticamente los expedientes pre-pagados
-        pre_paid_orders = orders.filtered(lambda o: o.expedient_type == 'pre_paid' and o.state == 'draft')
+        pre_paid_orders = orders.filtered(lambda o: o.expedient_type == 'pre_paid')
         if pre_paid_orders:
-            for order in pre_paid_orders:
-                try:
-                    order.with_context(auto_confirm_prepaid=True).action_confirm()
-                    order.message_post(body=_('Expediente pre-pagado confirmado automáticamente como pedido de venta'))
-                except Exception as e:
-                    order.message_post(body=_('Error al confirmar automáticamente el expediente pre-pagado: %s') % str(e))
-                    _logger.warning("Error auto-confirming pre-paid expedient %s: %s", order.name, str(e))
+            pre_paid_orders.with_context(auto_confirm_prepaid=True).action_confirm()
 
         return orders
 
@@ -401,21 +367,19 @@ class SaleOrder(models.Model):
             now = fields.Datetime.now()
             record.write({'expedient_date_end': now})
 
+            # First confirm the sale order if it's a quotation
+            if record.state in ['draft', 'sent']:
+                record.action_confirm()
+
+            # Then update the expedient state
             record.expedient_state = 'rechazada'
-            if record.expedient_type == 'pre_paid':
-                # Para expedientes pre-pagados, el pedido permanece activo
-                record.message_post(
-                    body=_("Expediente pre-pagado rechazado el %s. Tiempo de resolución: %s (el pedido de venta permanece activo)") %
-                    (fields.Datetime.to_string(now), record.expedient_resolution_time or ''),
-                    message_type='notification'
-                )
-            else:
-                # Para expedientes post-pagados, usar la lógica existente
-                record.message_post(
-                    body=_("Expediente rechazado el %s. Tiempo de resolución: %s") %
-                    (fields.Datetime.to_string(now), record.expedient_resolution_time or ''),
-                    message_type='notification'
-                )
+
+            # Log the action con la fecha de fin
+            record.message_post(
+                body=_("Expediente rechazado el %s. Tiempo de resolución: %s") %
+                (fields.Datetime.to_string(now), record.expedient_resolution_time or ''),
+                message_type='notification'
+            )
 
     def action_expedient_cancelada(self):
         """
@@ -536,9 +500,8 @@ class SaleOrder(models.Model):
         # Update return count
         self.return_count = len(self.expedient_return_history_ids)
 
-        # Para cualquier expediente (pre o post pagado), siempre cambiar a pendiente de documentación
-        if self.expedient_type in ['pre_paid', 'post_paid']:
-            # Siempre cambiamos a pendiente de documentación, sin importar el estado actual
+        # Para expedientes pre-pagados, cambiar automáticamente a pendiente de documentación
+        if self.expedient_type == 'pre_paid' and self.expedient_state not in ['aprobada', 'rechazada']:
             self.expedient_state = 'pendiente_documentacion'
             self.message_post(
                 body=_("Expediente marcado como pendiente de documentación debido a devolución registrada"),
@@ -556,3 +519,102 @@ class SaleOrder(models.Model):
         })
 
         return True
+
+    @api.model
+    def create(self, vals):
+        """Override create to handle expedient creation logic"""
+        # Set expedient manager if not provided
+        if vals.get('expedient_type') and vals['expedient_type'] != 'none':
+            if not vals.get('expedient_manager_id'):
+                vals['expedient_manager_id'] = self.env.user.id
+
+            # Set expedient date if not provided
+            if not vals.get('expedient_date'):
+                vals['expedient_date'] = fields.Date.today()
+
+            # Set initial expedient state
+            if not vals.get('expedient_state'):
+                vals['expedient_state'] = 'creada'
+
+        result = super().create(vals)
+
+        # Para expedientes pre-pagados, verificar si hay devoluciones previas
+        if result.expedient_type == 'pre_paid' and result.return_count > 0:
+            if result.expedient_state in ['creada']:
+                result.expedient_state = 'pendiente_documentacion'
+                result.message_post(
+                    body=_("Estado automáticamente cambiado a pendiente de documentación debido a devoluciones existentes"),
+                    message_type='notification'
+                )
+
+        return result
+
+    @api.model
+    def create(self, vals):
+        """Override create to handle pre-paid expedients auto-confirmation"""
+        record = super().create(vals)
+
+        # Si es un expediente pre-pagado, auto-confirmar
+        if record.expedient_type == 'pre_paid' and record.state == 'draft':
+            try:
+                record.action_confirm()
+                record.message_post(body=_('Expediente pre-pagado confirmado automáticamente como pedido de venta'))
+            except Exception as e:
+                record.message_post(body=_('Error al confirmar automáticamente el expediente pre-pagado: %s') % str(e))
+                _logger.warning("Error auto-confirming pre-paid expedient %s: %s", record.name, str(e))
+
+        return record
+
+    def action_approve_expedient(self):
+        """Approve the expedient and convert to sale order if needed"""
+        for record in self:
+            # Registrar fecha y hora de aprobación
+            now = fields.Datetime.now()
+            record.write({'expedient_date_end': now})
+
+            if record.expedient_type == 'pre_paid':
+                # Para expedientes pre-pagados, solo cambiar estado
+                record.expedient_state = 'aprobada'
+                record.message_post(
+                    body=_("Expediente pre-pagado aprobado el %s. Tiempo de resolución: %s") %
+                    (fields.Datetime.to_string(now), record.expedient_resolution_time or ''),
+                    message_type='notification'
+                )
+                # Si no está confirmado, confirmar ahora
+                if record.state == 'draft':
+                    try:
+                        record.action_confirm()
+                        record.message_post(body=_('Expediente pre-pagado confirmado automáticamente como pedido de venta'))
+                    except Exception as e:
+                        record.message_post(body=_('Error al confirmar automáticamente el expediente pre-pagado: %s') % str(e))
+            else:
+                # Para expedientes post-pagados, usar la lógica existente
+                record.expedient_state = 'aprobada'
+                record.message_post(
+                    body=_("Expediente aprobado el %s. Tiempo de resolución: %s") %
+                    (fields.Datetime.to_string(now), record.expedient_resolution_time or ''),
+                    message_type='notification'
+                )
+
+    def action_reject_expedient(self):
+        """Reject the expedient"""
+        for record in self:
+            # Registrar fecha y hora de rechazo
+            now = fields.Datetime.now()
+            record.write({'expedient_date_end': now})
+
+            record.expedient_state = 'rechazada'
+            if record.expedient_type == 'pre_paid':
+                # Para expedientes pre-pagados, el pedido permanece activo
+                record.message_post(
+                    body=_("Expediente pre-pagado rechazado el %s. Tiempo de resolución: %s (el pedido de venta permanece activo)") %
+                    (fields.Datetime.to_string(now), record.expedient_resolution_time or ''),
+                    message_type='notification'
+                )
+            else:
+                # Para expedientes post-pagados, usar lógica existente
+                record.message_post(
+                    body=_("Expediente rechazado el %s. Tiempo de resolución: %s") %
+                    (fields.Datetime.to_string(now), record.expedient_resolution_time or ''),
+                    message_type='notification'
+                )

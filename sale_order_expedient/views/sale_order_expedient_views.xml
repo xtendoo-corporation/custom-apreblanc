@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <!-- Modificación de vista de kanban para mostrar tiempo de resolución -->
+    <record id="view_sale_order_expedient_kanban" model="ir.ui.view">
+        <field name="name">sale.order.expedient.kanban</field>
+        <field name="model">sale.order</field>
+        <field name="arch" type="xml">
+            <kanban class="o_kanban_mobile" default_group_by="expedient_state">
+                <!-- ...existing code... -->
+                <templates>
+                    <t t-name="kanban-box">
+                        <div t-attf-class="oe_kanban_card oe_kanban_global_click">
+                            <div class="oe_kanban_details">
+                                <!-- ...existing code... -->
+                                <div class="o_kanban_record_bottom">
+                                    <div class="oe_kanban_bottom_left">
+                                        <field name="expedient_state" widget="label_selection" options="{'classes': {'creada': 'info', 'pendiente_documentacion': 'warning', 'aprobada': 'success', 'rechazada': 'danger', 'cancelada': 'muted'}}"/>
+                                    </div>
+                                    <div class="oe_kanban_bottom_right">
+                                        <field name="expedient_resolution_time" widget="label"/>
+                                    </div>
+                                </div>
+                                <!-- ...existing code... -->
+                            </div>
+                        </div>
+                    </t>
+                </templates>
+            </kanban>
+        </field>
+    </record>
+</odoo>

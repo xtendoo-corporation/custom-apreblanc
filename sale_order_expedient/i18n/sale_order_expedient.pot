@@ -1183,3 +1183,26 @@ msgstr ""
 msgid ""
 "Ya existe un expediente con ID de Cliente '%s' y Número de Expediente '%s'."
 msgstr ""
+
+#. module: sale_order_expedient
+#: model:ir.model.fields,field_description:sale_order_expedient.field_sale_order__expedient_date_start
+msgid "Inicio de Expediente"
+msgstr ""
+
+#. module: sale_order_expedient
+#: model:ir.model.fields,field_description:sale_order_expedient.field_sale_order__expedient_date_end
+msgid "Fin de Expediente"
+msgstr ""
+
+#. module: sale_order_expedient
+#: model:ir.model.fields,field_description:sale_order_expedient.field_sale_order__expedient_resolution_time
+msgid "Tiempo de Resolución"
+msgstr ""
+
+#. module: sale_order_expedient
+msgid "Fecha de Inicio"
+msgstr ""
+
+#. module: sale_order_expedient
+msgid "Tiempo de Resolución"
+msgstr ""
