@@ -537,23 +537,17 @@ class SaleOrder(models.Model):
             if not vals.get('expedient_state'):
                 vals['expedient_state'] = 'creada'
 
-        result = super().create(vals)
+        # Llamar al método create original
+        record = super().create(vals)
 
         # Para expedientes pre-pagados, verificar si hay devoluciones previas
-        if result.expedient_type == 'pre_paid' and result.return_count > 0:
-            if result.expedient_state in ['creada']:
-                result.expedient_state = 'pendiente_documentacion'
-                result.message_post(
+        if record.expedient_type == 'pre_paid' and record.return_count > 0:
+            if record.expedient_state in ['creada']:
+                record.expedient_state = 'pendiente_documentacion'
+                record.message_post(
                     body=_("Estado automáticamente cambiado a pendiente de documentación debido a devoluciones existentes"),
                     message_type='notification'
                 )
-
-        return result
-
-    @api.model
-    def create(self, vals):
-        """Override create to handle pre-paid expedients auto-confirmation"""
-        record = super().create(vals)
 
         # Si es un expediente pre-pagado, auto-confirmar
         if record.expedient_type == 'pre_paid' and record.state == 'draft':
