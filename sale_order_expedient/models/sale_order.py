@@ -2,6 +2,7 @@ from odoo import api, fields, models, _, exceptions
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
 import logging
+from odoo.tools.safe_eval import safe_eval
 
 _logger = logging.getLogger(__name__)
 
@@ -618,3 +619,22 @@ class SaleOrder(models.Model):
                     (fields.Datetime.to_string(now), record.expedient_resolution_time or ''),
                     message_type='notification'
                 )
+
+    # Busca métodos como estos y modifica el contexto
+    @api.model
+    def action_view_expedients(self):
+        action = self.env.ref('sale_order_expedient.action_sale_order_expedient').read()[0]
+        # Modifica el contexto para eliminar filtros predefinidos
+        if 'context' in action:
+            ctx = action.get('context', '{}')
+            if isinstance(ctx, str):
+                ctx = safe_eval(ctx)
+            # Eliminar estos filtros del contexto
+            if 'search_default_my_expedients' in ctx:
+                del ctx['search_default_my_expedients']
+            if 'search_default_expedient_filter' in ctx:
+                del ctx['search_default_expedient_filter']
+            if 'search_default_all_expedients' in ctx:
+                del ctx['search_default_all_expedients']
+            action['context'] = str(ctx)
+        return action

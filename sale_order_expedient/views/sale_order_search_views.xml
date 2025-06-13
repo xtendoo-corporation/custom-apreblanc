@@ -16,12 +16,12 @@
                 <field name="client_id"/>
                 <field name="expedient_number"/>
 
-                <!-- Filtros -->
-                <filter string="Mis Expedientes Post-pagados" name="my_expedients" domain="[('expedient_manager_id', '=', uid)]" help="Mostrar solo mis expedientes post-pagados"/>
-                <filter string="Todos los Expedientes Post-pagados" name="all_expedients" domain="[('expedient_type', '=', 'post_paid')]" help="Mostrar todos los expedientes post-pagados"/>
-                <separator/>
-                <filter string="Expedientes Post-pagados" name="expedient_filter" domain="[('expedient_type', '!=', 'none')]"/>
-                <separator/>
+                <!-- Filtros - ELIMINAR ESTOS SI EXISTEN EN OTROS ARCHIVOS -->
+                <!-- <filter string="Mis Expedientes Post-pagados" name="my_expedients" domain="[('expedient_manager_id', '=', uid)]"/> -->
+                <!-- <filter string="Todos los Expedientes Post-pagados" name="all_expedients" domain="[('expedient_type', '=', 'post_paid')]"/> -->
+                <!-- <filter string="Expedientes Post-pagados" name="expedient_filter" domain="[('expedient_type', '!=', 'none')]"/> -->
+
+                <!-- Filtros de estado que sí se mantienen -->
                 <filter string="Created or Pending" name="expedient_state_active"
                        domain="[('expedient_state', 'in', ['creada', 'pendiente_documentacion'])]"/>
                 <separator/>
