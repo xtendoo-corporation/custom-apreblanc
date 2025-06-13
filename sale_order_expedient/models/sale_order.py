@@ -637,10 +637,10 @@ class SaleOrder(models.Model):
                 if 'search_default_all_expedients' in ctx:
                     del ctx['search_default_all_expedients']
 
-                # Usar formato de diccionario directamente en lugar de str()
-                action['context'] = ctx
+                # Convertir el diccionario a una cadena para la acción
+                action['context'] = str(ctx)
             else:
-                # Si ctx no es un diccionario, usar un diccionario vacío
-                action['context'] = {}
+                # Si ctx no es un diccionario, usar una cadena vacía
+                action['context'] = '{}'
 
         return action
