@@ -2,7 +2,6 @@ from odoo import api, fields, models, _, exceptions
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
 import logging
-from odoo.tools.safe_eval import safe_eval
 
 _logger = logging.getLogger(__name__)
 
@@ -537,17 +536,23 @@ class SaleOrder(models.Model):
             if not vals.get('expedient_state'):
                 vals['expedient_state'] = 'creada'
 
-        # Llamar al método create original
-        record = super().create(vals)
+        result = super().create(vals)
 
         # Para expedientes pre-pagados, verificar si hay devoluciones previas
-        if record.expedient_type == 'pre_paid' and record.return_count > 0:
-            if record.expedient_state in ['creada']:
-                record.expedient_state = 'pendiente_documentacion'
-                record.message_post(
+        if result.expedient_type == 'pre_paid' and result.return_count > 0:
+            if result.expedient_state in ['creada']:
+                result.expedient_state = 'pendiente_documentacion'
+                result.message_post(
                     body=_("Estado automáticamente cambiado a pendiente de documentación debido a devoluciones existentes"),
                     message_type='notification'
                 )
+
+        return result
+
+    @api.model
+    def create(self, vals):
+        """Override create to handle pre-paid expedients auto-confirmation"""
+        record = super().create(vals)
 
         # Si es un expediente pre-pagado, auto-confirmar
         if record.expedient_type == 'pre_paid' and record.state == 'draft':
@@ -613,34 +618,3 @@ class SaleOrder(models.Model):
                     (fields.Datetime.to_string(now), record.expedient_resolution_time or ''),
                     message_type='notification'
                 )
-
-    # Busca métodos como estos y modifica el contexto
-    @api.model
-    def action_view_expedients(self):
-        action = self.env.ref('sale_order_expedient.action_sale_order_expedient').read()[0]
-        # Modifica el contexto para eliminar filtros predefinidos
-        if 'context' in action:
-            ctx = action.get('context', '{}')
-            if isinstance(ctx, str):
-                try:
-                    ctx = safe_eval(ctx)
-                except Exception as e:
-                    _logger.error("Error al evaluar el contexto: %s", e)
-                    ctx = {}
-
-            # Eliminar estos filtros del contexto
-            if isinstance(ctx, dict):
-                if 'search_default_my_expedients' in ctx:
-                    del ctx['search_default_my_expedients']
-                if 'search_default_expedient_filter' in ctx:
-                    del ctx['search_default_expedient_filter']
-                if 'search_default_all_expedients' in ctx:
-                    del ctx['search_default_all_expedients']
-
-                # Convertir el diccionario a una cadena para la acción
-                action['context'] = str(ctx)
-            else:
-                # Si ctx no es un diccionario, usar una cadena vacía
-                action['context'] = '{}'
-
-        return action
