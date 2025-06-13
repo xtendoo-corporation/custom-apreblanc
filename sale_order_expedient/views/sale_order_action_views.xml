@@ -7,7 +7,7 @@
     <field name="res_model">sale.order</field>
     <field name="view_mode">tree,form,calendar,pivot,graph,kanban</field>
     <!-- Corrige el contexto con sintaxis incorrecta: -->
-    <field name="context">{ 
+    <field name="context">{
         'search_default_expedient_filter': 1,
         'default_expedient_type': 'post_paid'
     }</field>

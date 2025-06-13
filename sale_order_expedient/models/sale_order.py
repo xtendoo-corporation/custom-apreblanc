@@ -628,13 +628,25 @@ class SaleOrder(models.Model):
         if 'context' in action:
             ctx = action.get('context', '{}')
             if isinstance(ctx, str):
-                ctx = safe_eval(ctx)
+                try:
+                    ctx = safe_eval(ctx)
+                except Exception as e:
+                    _logger.error("Error al evaluar el contexto: %s", e)
+                    ctx = {}
+
             # Eliminar estos filtros del contexto
-            if 'search_default_my_expedients' in ctx:
-                del ctx['search_default_my_expedients']
-            if 'search_default_expedient_filter' in ctx:
-                del ctx['search_default_expedient_filter']
-            if 'search_default_all_expedients' in ctx:
-                del ctx['search_default_all_expedients']
-            action['context'] = str(ctx)
+            if isinstance(ctx, dict):
+                if 'search_default_my_expedients' in ctx:
+                    del ctx['search_default_my_expedients']
+                if 'search_default_expedient_filter' in ctx:
+                    del ctx['search_default_expedient_filter']
+                if 'search_default_all_expedients' in ctx:
+                    del ctx['search_default_all_expedients']
+
+                # Usar formato de diccionario directamente en lugar de str()
+                action['context'] = ctx
+            else:
+                # Si ctx no es un diccionario, usar un diccionario vacío
+                action['context'] = {}
+
         return action
