@@ -47,9 +47,10 @@ class SaleOrder(models.Model):
     )
 
     # El campo expedient_id se ha eliminado, expedient_number es ahora el identificador único
-    expedient_date = fields.Date(
-        string='Start Date',
-        help='Start date of the expedient',
+    expedient_date_start = fields.Datetime(
+        string='Fecha de Inicio del Expediente',
+        default=lambda self: fields.Datetime.now(),  # Esto establecerá automáticamente la fecha y hora actual
+        help='Fecha y hora en que se inició el expediente',
     )
     expedient_manager_id = fields.Many2one(
         'res.users',
@@ -70,19 +71,16 @@ class SaleOrder(models.Model):
     )
 
     # Campos de fecha y hora para control de tiempo
-    expedient_date_start = fields.Datetime(
-        string='Inicio de Expediente',
-        help='Fecha y hora en que se inició el expediente',
-    )
     expedient_date_end = fields.Datetime(
         string='Fin de Expediente',
         help='Fecha y hora en que se finalizó el expediente (aprobación o rechazo)',
     )
+    # Modificar el campo para que sea calculado
     expedient_resolution_time = fields.Char(
         string='Tiempo de Resolución',
         compute='_compute_expedient_resolution_time',
         store=True,
-        help='Tiempo transcurrido desde el inicio hasta la resolución del expediente',
+        help="Tiempo transcurrido entre la creación y la resolución del expediente"
     )
 
     # Current return fields
@@ -124,26 +122,55 @@ class SaleOrder(models.Model):
         for order in self:
             order.return_count = len(order.expedient_return_history_ids)
 
-    @api.depends('expedient_date_start', 'expedient_date_end')
+    @api.depends('date_order', 'expedient_date_end', 'expedient_state')
     def _compute_expedient_resolution_time(self):
-        """Calcula el tiempo transcurrido entre inicio y fin del expediente"""
-        for record in self:
-            if record.expedient_date_start and record.expedient_date_end:
-                # Calcular la diferencia de tiempo
-                delta = relativedelta(record.expedient_date_end, record.expedient_date_start)
+        """Calcula el tiempo transcurrido entre la fecha de inicio y fin del expediente"""
+        for order in self:
+            if order.expedient_type == 'none':
+                order.expedient_resolution_time = False
+                continue
 
-                # Formatear el resultado
-                parts = []
-                if delta.days > 0:
-                    parts.append(f"{delta.days} {'días' if delta.days != 1 else 'día'}")
-                if delta.hours > 0:
-                    parts.append(f"{delta.hours} {'horas' if delta.hours != 1 else 'hora'}")
-                if delta.minutes > 0 and not (delta.days > 0 and delta.hours > 0):
-                    parts.append(f"{delta.minutes} {'minutos' if delta.minutes != 1 else 'minuto'}")
+            # Solo calcular si tenemos ambas fechas y el estado es apropiado
+            if (order.date_order and order.expedient_date_end and
+                order.expedient_state in ['aprobada', 'rechazada']):
 
-                record.expedient_resolution_time = " y ".join(parts) if parts else "0 minutos"
+                start_date = fields.Datetime.from_string(order.date_order)
+                end_date = fields.Datetime.from_string(order.expedient_date_end)
+
+                # Asegurarse de que la fecha de fin es posterior a la de inicio
+                if end_date and start_date and end_date >= start_date:
+                    # Calcular la diferencia
+                    delta = relativedelta(end_date, start_date)
+
+                    # Formatear el resultado en un formato legible
+                    parts = []
+                    if delta.years > 0:
+                        parts.append(f"{delta.years} {'año' if delta.years == 1 else 'años'}")
+                    if delta.months > 0:
+                        parts.append(f"{delta.months} {'mes' if delta.months == 1 else 'meses'}")
+                    if delta.days > 0:
+                        parts.append(f"{delta.days} {'día' if delta.days == 1 else 'días'}")
+                    if delta.hours > 0:
+                        parts.append(f"{delta.hours} {'hora' if delta.hours == 1 else 'horas'}")
+
+                    order.expedient_resolution_time = ", ".join(parts) if parts else "Menos de una hora"
+                else:
+                    order.expedient_resolution_time = "Fecha de fin inválida"
             else:
-                record.expedient_resolution_time = False
+                if order.expedient_state in ['creada', 'pendiente_documentacion']:
+                    order.expedient_resolution_time = "En proceso"
+                else:
+                    order.expedient_resolution_time = False
+
+    # Si es necesario, también podemos actualizar la fecha de fin automáticamente
+    # cuando cambia el estado del expediente
+    @api.onchange('expedient_state')
+    def _onchange_expedient_state(self):
+        """Actualiza la fecha de fin cuando el expediente pasa a estado aprobado o rechazado"""
+        for order in self:
+            if order.expedient_type != 'none' and order.expedient_state in ['aprobada', 'rechazada']:
+                if not order.expedient_date_end:
+                    order.expedient_date_end = fields.Datetime.now()
 
     @api.onchange('expedient_type')
     def _onchange_expedient_type(self):
@@ -152,7 +179,7 @@ class SaleOrder(models.Model):
             # Para prepagados, usamos la relación con el modelo de expedientes prepagados
             self.client_id = False
             self.expedient_number = False
-            self.expedient_date = False
+            self.expedient_date_start = False
             self.expedient_manager_id = False
             self.expedient_state = 'creada'
             self.expedient_notes = False
@@ -160,7 +187,7 @@ class SaleOrder(models.Model):
             # Si no es expediente, limpiar todos los campos
             self.client_id = False
             self.expedient_number = False
-            self.expedient_date = False
+            self.expedient_date_start = False
             self.expedient_manager_id = False
             self.expedient_state = 'creada'
             self.expedient_notes = False
@@ -351,10 +378,15 @@ class SaleOrder(models.Model):
             # Then update the expedient state
             record.expedient_state = 'aprobada'
 
+            # Forzar recálculo del tiempo de resolución
+            record.invalidate_cache(['expedient_resolution_time'])
+            record._compute_expedient_resolution_time()
+
             # Log the action con la fecha de fin
+            resolution_time = record.expedient_resolution_time or 'No disponible'
             record.message_post(
-                body=_("Expediente aprobado el %s. Tiempo de resolución: %s") %
-                (fields.Datetime.to_string(now), record.expedient_resolution_time or ''),
+                body=_("Expediente marcado como %s el %s. Tiempo de resolución: %s") %
+                ('Approved', fields.Datetime.to_string(now), resolution_time),
                 message_type='notification'
             )
 
@@ -529,8 +561,8 @@ class SaleOrder(models.Model):
                 vals['expedient_manager_id'] = self.env.user.id
 
             # Set expedient date if not provided
-            if not vals.get('expedient_date'):
-                vals['expedient_date'] = fields.Date.today()
+            if not vals.get('expedient_date_start'):
+                vals['expedient_date_start'] = fields.Date.today()
 
             # Set initial expedient state
             if not vals.get('expedient_state'):
@@ -549,72 +581,13 @@ class SaleOrder(models.Model):
 
         return result
 
-    @api.model
-    def create(self, vals):
-        """Override create to handle pre-paid expedients auto-confirmation"""
-        record = super().create(vals)
-
-        # Si es un expediente pre-pagado, auto-confirmar
+    def _auto_confirm_prepaid_expedient(self, record):
+        """Helper method to auto confirm pre-paid expedients"""
         if record.expedient_type == 'pre_paid' and record.state == 'draft':
             try:
                 record.action_confirm()
                 record.message_post(body=_('Expediente pre-pagado confirmado automáticamente como pedido de venta'))
             except Exception as e:
-                record.message_post(body=_('Error al confirmar automáticamente el expediente pre-pagado: %s') % str(e))
-                _logger.warning("Error auto-confirming pre-paid expedient %s: %s", record.name, str(e))
-
+                record.message_post(body=_('Error al confirmar automáticamente el expediente pre_pagado: %s') % str(e))
+                _logger.error("Error confirming pre-paid expedient: %s", str(e))
         return record
-
-    def action_approve_expedient(self):
-        """Approve the expedient and convert to sale order if needed"""
-        for record in self:
-            # Registrar fecha y hora de aprobación
-            now = fields.Datetime.now()
-            record.write({'expedient_date_end': now})
-
-            if record.expedient_type == 'pre_paid':
-                # Para expedientes pre-pagados, solo cambiar estado
-                record.expedient_state = 'aprobada'
-                record.message_post(
-                    body=_("Expediente pre-pagado aprobado el %s. Tiempo de resolución: %s") %
-                    (fields.Datetime.to_string(now), record.expedient_resolution_time or ''),
-                    message_type='notification'
-                )
-                # Si no está confirmado, confirmar ahora
-                if record.state == 'draft':
-                    try:
-                        record.action_confirm()
-                        record.message_post(body=_('Expediente pre-pagado confirmado automáticamente como pedido de venta'))
-                    except Exception as e:
-                        record.message_post(body=_('Error al confirmar automáticamente el expediente pre-pagado: %s') % str(e))
-            else:
-                # Para expedientes post-pagados, usar la lógica existente
-                record.expedient_state = 'aprobada'
-                record.message_post(
-                    body=_("Expediente aprobado el %s. Tiempo de resolución: %s") %
-                    (fields.Datetime.to_string(now), record.expedient_resolution_time or ''),
-                    message_type='notification'
-                )
-
-    def action_reject_expedient(self):
-        """Reject the expedient"""
-        for record in self:
-            # Registrar fecha y hora de rechazo
-            now = fields.Datetime.now()
-            record.write({'expedient_date_end': now})
-
-            record.expedient_state = 'rechazada'
-            if record.expedient_type == 'pre_paid':
-                # Para expedientes pre-pagados, el pedido permanece activo
-                record.message_post(
-                    body=_("Expediente pre-pagado rechazado el %s. Tiempo de resolución: %s (el pedido de venta permanece activo)") %
-                    (fields.Datetime.to_string(now), record.expedient_resolution_time or ''),
-                    message_type='notification'
-                )
-            else:
-                # Para expedientes post-pagados, usar lógica existente
-                record.message_post(
-                    body=_("Expediente rechazado el %s. Tiempo de resolución: %s") %
-                    (fields.Datetime.to_string(now), record.expedient_resolution_time or ''),
-                    message_type='notification'
-                )

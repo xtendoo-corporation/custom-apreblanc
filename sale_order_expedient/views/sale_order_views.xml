@@ -11,7 +11,7 @@
                 <field name="expedient_number" optional="show"/>
                 <field name="client_id" optional="show"/>
                 <field name="expedient_manager_id" optional="show" widget="many2one_avatar"/>
-                <field name="expedient_date_start" optional="show" string="Fecha de Inicio"/>
+                <field name="date_order" optional="show" string="Fecha de Inicio"/>
                 <field name="expedient_resolution_time" optional="show" string="Tiempo de Resolución"/>
                 <field name="expedient_state" optional="show" widget="badge"
                        decoration-info="expedient_state == 'creada'"
@@ -74,9 +74,11 @@
                 <group name="expedient_info" string="Información del Expediente Post-pagado"
                        invisible="expedient_type == 'none' or not context.get('show_as_expedient', False)">
                     <group>
-                        <!-- Partner field with standard Odoo address display -->
+                        <!-- Partner field as first field in left column -->
                         <field name="partner_id" readonly="expedient_state in ('aprobada', 'rechazada', 'cancelada')"
                                widget="res_partner_many2one" context="{'show_address': 1}" options="{'always_reload': True}"/>
+                        <field name="client_id" readonly="expedient_state in ('aprobada', 'rechazada', 'cancelada')"/>
+                        <field name="expedient_number" readonly="expedient_state in ('aprobada', 'rechazada', 'cancelada')"/>
                         <field name="partner_invoice_id" readonly="expedient_state in ('aprobada', 'rechazada', 'cancelada')"
                                groups="sale.group_delivery_invoice_address"
                                context="{'default_type':'invoice'}"
@@ -87,15 +89,13 @@
                                context="{'default_type':'delivery'}"
                                widget="res_partner_many2one"
                                options="{'show_address': 1}"/>
-                        <field name="expedient_date" readonly="expedient_state in ('aprobada', 'rechazada', 'cancelada')"/>
                     </group>
                     <group>
                         <field name="expedient_manager_id" readonly="expedient_state in ('aprobada', 'rechazada', 'cancelada')" invisible="expedient_type == 'none'"/>
-                        <field name="expedient_number" readonly="expedient_state in ('aprobada', 'rechazada', 'cancelada')"/>
-                        <field name="client_id" readonly="expedient_state in ('aprobada', 'rechazada', 'cancelada')"/>
-                        <field name="expedient_date_start" readonly="1" string="Fecha de Inicio"/>
-                        <field name="expedient_resolution_time" readonly="1" string="Tiempo de Resolución"/>
+                        <!-- Fecha de inicio moved to right column -->
+                        <field name="date_order" readonly="expedient_state in ('aprobada', 'rechazada', 'cancelada')" string="Fecha de Inicio" widget="datetime"/>
                         <field name="expedient_date_end" readonly="expedient_state in ('aprobada', 'rechazada', 'cancelada')"/>
+                        <field name="expedient_resolution_time" readonly="1" string="Tiempo de Resolución"/>
                     </group>
                     <!-- Adjust notes field to be more flexible -->
                     <separator string="Notas del expediente"/>
@@ -176,10 +176,6 @@
                 <attribute name="readonly">expedient_type == 'post_paid' and expedient_state in ('aprobada', 'rechazada', 'cancelada')</attribute>
             </xpath>
 
-            <xpath expr="//group[@name='expedient_info']//field[@name='expedient_date']" position="attributes">
-                <attribute name="readonly">expedient_type == 'post_paid' and expedient_state in ('aprobada', 'rechazada', 'cancelada')</attribute>
-            </xpath>
-
             <xpath expr="//group[@name='expedient_info']//field[@name='expedient_date_end']" position="attributes">
                 <attribute name="readonly">expedient_type == 'post_paid' and expedient_state in ('aprobada', 'rechazada', 'cancelada')</attribute>
             </xpath>
@@ -210,10 +206,6 @@
             </xpath>
 
             <xpath expr="//group[@name='expedient_info']//field[@name='client_id']" position="attributes">
-                <attribute name="readonly">0</attribute>
-            </xpath>
-
-            <xpath expr="//group[@name='expedient_info']//field[@name='expedient_date']" position="attributes">
                 <attribute name="readonly">0</attribute>
             </xpath>
 
@@ -382,14 +374,14 @@
                     <button string="Crear Expediente Postpago" name="%(action_create_new_expedient)d" type="action"
                             context="{'default_expedient_type': 'post_paid'}" class="btn-primary"/>
                 </control>
-                <field name="expedient_number"/>
-                <field name="client_id"/>
-                <field name="name"/>
                 <field name="partner_id"/>
-                <field name="date_order"/>
-                <field name="expedient_manager_id" widget="many2one_avatar"/>
-                <field name="expedient_date_start" string="Fecha de Inicio"/>
+                <field name="client_id"/>
+                <field name="expedient_number"/>
+                <field name="name"/>
+                <field name="date_order" string="Fecha de Inicio"/>
+                <field name="expedient_date_end"/>
                 <field name="expedient_resolution_time" string="Tiempo de Resolución"/>
+                <field name="expedient_manager_id" widget="many2one_avatar"/>
                 <field name="expedient_state" widget="badge"
                        decoration-info="expedient_state == 'creada'"
                        decoration-success="expedient_state == 'aprobada'"
@@ -397,7 +389,6 @@
                        decoration-muted="expedient_state == 'cancelada'"
                        decoration-warning="expedient_state == 'pendiente_documentacion'"/>
                 <field name="return_count" sum="Total Returns"/>
-                <field name="expedient_date_end"/>
                 <field name="state"/>
             </tree>
         </field>
@@ -470,24 +461,6 @@
               action="action_sale_order_expedient"
               sequence="25"/>
 
-    <!-- Comentar o eliminar esta vista que añade el botón en la cabecera -->
-    <!--
-    <record id="view_order_form_inherit_create_expedient" model="ir.ui.view">
-        <field name="name">sale.order.form.inherit.create.expedient</field>
-        <field name="model">sale.order</field>
-        <field name="inherit_id" ref="sale.view_order_form"/>
-        <field name="arch" type="xml">
-            <xpath expr="//header" position="inside">
-                <button name="%(sale_order_expedient.action_button_create_expedient_wizard)d"
-                        string="Crear Expediente Postpago"
-                        type="action"
-                        class="btn-primary"
-                        invisible="state not in ('draft', 'sent', 'sale')"/>
-            </xpath>
-        </field>
-    </record>
-    -->
-
     <!-- Vista simple para ocultar la pestaña de líneas de pedido -->
     <record id="view_order_form_hide_order_lines" model="ir.ui.view">
         <field name="name">sale.order.form.hide.order.lines</field>
@@ -506,4 +479,10 @@
             </xpath>
         </field>
     </record>
+
+    <!-- Actualizar el atributo readonly del campo expedient_resolution_time en la vista -->
+    <xpath expr="//group[@name='expedient_info']//field[@name='expedient_resolution_time']" position="attributes">
+        <attribute name="readonly">1</attribute>
+    </xpath>
+
 </odoo>
