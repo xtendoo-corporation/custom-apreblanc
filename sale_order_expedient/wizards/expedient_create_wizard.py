@@ -1,4 +1,4 @@
-from odoo import api, fields, models
+from odoo import api, fields, models, _
 from odoo.exceptions import ValidationError
 import logging
 
@@ -14,40 +14,63 @@ class ExpedientCreateWizard(models.TransientModel):
         ('pre_paid', 'Expediente Pre-pagado')
     ], string='Tipo de Expediente Post-pagado', required=True, default=lambda self: self._get_default_expedient_type())
 
-    # ... existing code ...
+    # Campos básicos
+    partner_id = fields.Many2one('res.partner', string='Cliente', required=True)
+    client_id = fields.Char(string='Client ID', required=True)
+    expedient_number = fields.Char(string='Expedient Number', required=True)
+    partner_readonly = fields.Boolean(string='Partner Readonly', default=False)
+
+    # Campos para plantillas
+    sale_order_template_id = fields.Many2one(
+        'sale.order.template',
+        string='Plantilla',
+        domain="[('is_expedient_template', '=', True)]",
+        required=True
+    )
+
+    # Campo para el expediente pre-pagado
+    pre_paid_expedient_id = fields.Many2one(
+        'pre.paid.expedient',
+        string='Expediente Prepagado',
+        domain="[('partner_id', '=', partner_id), ('state', '=', 'active')]"
+    )
+
+    # Campo para el monto total (necesario para validación de saldo)
+    amount_total = fields.Monetary(string='Importe Total', currency_field='currency_id')
+    currency_id = fields.Many2one('res.currency', string='Moneda', default=lambda self: self.env.company.currency_id.id)
 
     @api.model
     def _get_default_expedient_type(self):
         """Obtener el tipo de expediente desde el contexto"""
         return self.env.context.get('default_expedient_type', 'post_paid')
 
-    # ... existing code ...
-
     @api.onchange('expedient_type')
     def _onchange_expedient_type(self):
         """Limpiar campos específicos cuando cambia el tipo de expediente"""
-        # Este método podría ya no ser necesario si el tipo no cambia,
-        # pero lo dejamos por compatibilidad
+        # Comportamiento silencioso sin ventanas de advertencia
         if self.expedient_type == 'post_paid':
-            # Limpiar campos específicos de prepago
-            pass
-        elif self.expedient_type == 'pre_paid':
-            # Limpiar campos específicos de postpago
-            pass
+            self.pre_paid_expedient_id = False
 
-    # ... existing code ...
+    @api.onchange('sale_order_template_id')
+    def _onchange_sale_order_template_id(self):
+        """Cargar datos de la plantilla"""
+        if not self.sale_order_template_id:
+            self.partner_readonly = False
+            return
+
+        template = self.sale_order_template_id
+
+        # Determinar si debemos cargar el cliente de la plantilla
+        if template.partner_id:
+            self.partner_id = template.partner_id
+            self.partner_readonly = True
 
     def action_create_expedient(self):
         """Crear el expediente según el tipo seleccionado"""
         self.ensure_one()
-        if self.expedient_type == 'post_paid':
-            # Lógica para crear expediente post-pagado
-            # ... existing code ...
-            return {'type': 'ir.actions.act_window_close'}
-        elif self.expedient_type == 'pre_paid':
-            # Lógica para crear expediente pre-pagado
-            # ... existing code ...
-            return {'type': 'ir.actions.act_window_close'}
+
+        # Redirigir a la función adecuada según el tipo de expediente
+        return self.create_expedient()
 
     def create_expedient(self):
         """Create expedient based on type"""
@@ -88,16 +111,6 @@ class ExpedientCreateWizard(models.TransientModel):
 
     def _create_pre_paid_expedient(self):
         """Create pre-paid expedient and automatically convert to sale order"""
-        # Verificar que hay un expediente prepagado seleccionado
-        if not self.pre_paid_expedient_id:
-            raise ValidationError(_('Para expedientes prepagados, debe seleccionar un expediente prepagado existente.'))
-
-        # Verificar saldo suficiente
-        if self.pre_paid_expedient_id.current_balance < self.amount_total:
-            raise ValidationError(_(
-                'No hay saldo suficiente en el expediente prepagado. Saldo actual: %.2f, Importe del pedido: %.2f'
-            ) % (self.pre_paid_expedient_id.current_balance, self.amount_total))
-
         # Crear el pedido de venta
         sale_order_vals = {
             'partner_id': self.partner_id.id,
@@ -105,29 +118,89 @@ class ExpedientCreateWizard(models.TransientModel):
             'expedient_number': self.expedient_number,
             'expedient_type': 'pre_paid',
             'expedient_state': 'creada',
-            'pre_paid_expedient_id': self.pre_paid_expedient_id.id,
             'expedient_manager_id': self.env.user.id,
-            'expedient_date': fields.Date.today(),
+            'expedient_date_start': fields.Datetime.now(),
+            'sale_order_template_id': self.sale_order_template_id.id,
+        }
+
+        # Si se ha seleccionado un expediente pre-pagado, usarlo
+        if hasattr(self, 'pre_paid_expedient_id') and self.pre_paid_expedient_id:
+            sale_order_vals['pre_paid_expedient_id'] = self.pre_paid_expedient_id.id
+
+        sale_order = self.env['sale.order'].create(sale_order_vals)
+
+        # Agregar líneas desde la plantilla
+        if self.sale_order_template_id:
+            for template_line in self.sale_order_template_id.sale_order_template_line_ids:
+                product = template_line.product_id
+                line_vals = {
+                    'order_id': sale_order.id,
+                    'product_id': product.id,
+                    'name': template_line.name or product.name,
+                    'product_uom_qty': template_line.product_uom_qty,
+                    'product_uom': template_line.product_uom_id.id,
+                    'price_unit': product.list_price,  # Usar precio del producto
+                }
+                # Añadir campos opcionales solo si existen
+                if hasattr(template_line, 'discount'):
+                    line_vals['discount'] = template_line.discount
+                if hasattr(template_line, 'display_type'):
+                    line_vals['display_type'] = template_line.display_type
+                
+                self.env['sale.order.line'].create(line_vals)
+        
+        # Copiar también otros datos de la plantilla
+        if hasattr(self.sale_order_template_id, 'note') and self.sale_order_template_id.note:
+            sale_order.note = self.sale_order_template_id.note
+            
+        # Verificar si payment_term_id existe antes de intentar acceder
+        if hasattr(self.sale_order_template_id, 'payment_term_id') and self.sale_order_template_id.payment_term_id:
+            sale_order.payment_term_id = self.sale_order_template_id.payment_term_id.id
+
+        return sale_order
+
+    def _create_post_paid_expedient(self):
+        """Create post-paid expedient"""
+        # Crear el pedido de venta para expediente post-pagado
+        sale_order_vals = {
+            'partner_id': self.partner_id.id,
+            'client_id': self.client_id,
+            'expedient_number': self.expedient_number,
+            'expedient_type': 'post_paid',
+            'expedient_state': 'creada',
+            'expedient_manager_id': self.env.user.id,
+            'expedient_date_start': fields.Datetime.now(),
+            'sale_order_template_id': self.sale_order_template_id.id,
         }
 
         sale_order = self.env['sale.order'].create(sale_order_vals)
 
-        # Agregar líneas desde la plantilla si existe
+        # Agregar líneas desde la plantilla
         if self.sale_order_template_id:
             for template_line in self.sale_order_template_id.sale_order_template_line_ids:
-                self.env['sale.order.line'].create({
+                product = template_line.product_id
+                line_vals = {
                     'order_id': sale_order.id,
-                    'product_id': template_line.product_id.id,
+                    'product_id': product.id,
+                    'name': template_line.name or product.name,
                     'product_uom_qty': template_line.product_uom_qty,
-                    'price_unit': template_line.price_unit,
-                    'name': template_line.name or template_line.product_id.name,
-                })
+                    'product_uom': template_line.product_uom_id.id,
+                    'price_unit': product.list_price,  # Usar precio del producto
+                }
+                # Añadir campos opcionales solo si existen
+                if hasattr(template_line, 'discount'):
+                    line_vals['discount'] = template_line.discount
+                if hasattr(template_line, 'display_type'):
+                    line_vals['display_type'] = template_line.display_type
+                
+                self.env['sale.order.line'].create(line_vals)
 
-        # Actualizar saldo del expediente prepagado
-        self.pre_paid_expedient_id.current_balance -= self.amount_total
-
-        # Marcar estado como aprobada ya que es pre-pagado
-        sale_order.expedient_state = 'aprobada'
-        sale_order.message_post(body=_('Expediente pre-pagado aprobado'))
+        # Copiar también otros datos de la plantilla
+        if hasattr(self.sale_order_template_id, 'note') and self.sale_order_template_id.note:
+            sale_order.note = self.sale_order_template_id.note
+            
+        # Verificar si payment_term_id existe antes de intentar acceder
+        if hasattr(self.sale_order_template_id, 'payment_term_id') and self.sale_order_template_id.payment_term_id:
+            sale_order.payment_term_id = self.sale_order_template_id.payment_term_id.id
 
         return sale_order

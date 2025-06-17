@@ -6,17 +6,13 @@
         <field name="model">sale.order</field>
         <field name="arch" type="xml">
             <tree string="Expedientes Post-pagados">
-                <control>
-                    <create string="Nuevo Expediente Post-pagado" context="{'default_expedient_type': 'post_paid'}"/>
-                    <button string="Crear Expediente Post-pagado" name="%(action_create_new_expedient)d" type="action"
-                            context="{'default_expedient_type': 'post_paid'}" class="btn-primary"/>
-                </control>
                 <field name="name"/>
                 <field name="partner_id"/>
                 <field name="date_order"/>
                 <field name="expedient_number"/>
                 <field name="client_id"/>
                 <field name="expedient_manager_id" widget="many2one_avatar"/>
+                <field name="is_expedient_admin" invisible="1"/>
                 <field name="expedient_state" widget="badge"
                        decoration-info="expedient_state == 'creada'"
                        decoration-success="expedient_state == 'aprobada'"
@@ -38,16 +34,7 @@
         <field name="view_mode">tree,form</field>
         <field name="view_id" ref="view_expedient_tree_custom"/>
         <field name="domain">[('expedient_type', '=', 'post_paid')]</field>
-        <field name="context">{
-            'default_expedient_type': 'post_paid',
-            'search_default_expedient_type': 'post_paid',
-            'show_as_expedient': True
-        }</field>
-        <field name="help" type="html">
-            <p class="o_view_nocontent_smiling_face">
-                Crea un nuevo expediente post-pagado
-            </p>
-        </field>
+        <field name="context">{'default_expedient_type': 'post_paid'}</field>
     </record>
 
     <!-- Elemento de menú para Expedientes Post-pagados -->

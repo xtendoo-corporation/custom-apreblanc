@@ -1,115 +1,51 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <!-- Vista Tree para Expedientes Pre-pagados -->
-    <record id="view_sale_order_prepaid_tree" model="ir.ui.view">
-        <field name="name">sale.order.prepaid.tree</field>
-        <field name="model">sale.order</field>
-        <field name="arch" type="xml">
-            <tree string="Expedientes Pre-pagados">
-                <control>
-                    <create string="Nuevo Expediente Pre-pagado" context="{'default_expedient_type': 'pre_paid'}"/>
-                    <button string="Crear Expediente Pre-pagado" name="%(action_create_new_expedient)d" type="action"
-                            context="{'default_expedient_type': 'pre_paid'}" class="btn-primary"/>
-                </control>
-                <field name="partner_id"/>
-                <field name="client_id"/>
-                <field name="expedient_number"/>
-                <field name="name"/>
-                <field name="pre_paid_expedient_id"/>
-                <field name="date_order" string="Fecha de Inicio" widget="datetime"/>
-                <field name="expedient_date_end"/>
-                <field name="expedient_resolution_time" optional="show"/>
-                <field name="expedient_manager_id"/>
-                <field name="return_count" string="Devoluciones"/>
-                <field name="expedient_state" widget="badge"
-                       decoration-info="expedient_state=='creada'"
-                       decoration-warning="expedient_state=='pendiente_documentacion'"
-                       decoration-success="expedient_state=='aprobada'"
-                       decoration-danger="expedient_state=='rechazada'"
-                       decoration-muted="expedient_state=='cancelada'"/>
-            </tree>
-        </field>
-    </record>
+    <data>
+        <!-- Vista Tree para Expedientes Pre-pagados (siempre son pedidos de venta) -->
+        <record id="view_sale_order_prepaid_tree" model="ir.ui.view">
+            <field name="name">sale.order.prepaid.tree</field>
+            <field name="model">sale.order</field>
+            <field name="arch" type="xml">
+                <tree string="Pedidos de Venta Pre-pagados">
+                    <!-- Nota: Cambiado de "Expedientes Pre-pagados" a "Pedidos de Venta Pre-pagados" -->
+                    <field name="partner_id"/>
+                    <field name="client_id"/>
+                    <field name="expedient_number"/>
+                    <field name="name"/>
+                    <field name="pre_paid_expedient_id"/>
+                    <field name="date_order" string="Fecha de Inicio"/>
+                </tree>
+            </field>
+        </record>
 
-    <!-- Vista de búsqueda específica para expedientes prepagados -->
-    <record id="view_sale_order_prepaid_search" model="ir.ui.view">
-        <field name="name">sale.order.prepaid.search</field>
-        <field name="model">sale.order</field>
-        <field name="arch" type="xml">
-            <search string="Buscar Expedientes Pre-pagados">
-                <!-- Campos estándar de Sale Order -->
-                <field name="name" string="Pedido" filter_domain="[('name','ilike',self)]"/>
-                <field name="partner_id" operator="child_of"/>
-                <field name="user_id"/>
-                <field name="order_line" string="Producto" filter_domain="[('order_line.product_id', 'ilike', self)]"/>
+        <!-- Acción para Expedientes Pre-pagados -->
+        <record id="action_sale_order_prepaid" model="ir.actions.act_window">
+            <field name="name">Pedidos de Venta Pre-pagados</field>
+            <field name="res_model">sale.order</field>
+            <field name="view_mode">tree,form</field>
+            <field name="view_id" ref="view_sale_order_prepaid_tree"/>
+            <field name="domain">[('expedient_type', '=', 'pre_paid')]</field>
+            <field name="context">{
+                'default_expedient_type': 'pre_paid',
+                'search_default_expedient_state_active': 1,
+                'show_as_expedient': True
+            }</field>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    Crear un nuevo pedido de venta pre-pagado
+                </p>
+                <p>
+                    <b>IMPORTANTE:</b> Los expedientes pre-pagados se convierten automáticamente en
+                    pedidos de venta confirmados al crearse. No pasan por la fase de presupuesto.
+                </p>
+            </field>
+        </record>
 
-                <!-- Campos específicos de expediente -->
-                <field name="client_id"/>
-                <field name="expedient_number"/>
-                <field name="pre_paid_expedient_id"/>
-
-                <!-- Filtros de estado -->
-                <separator/>
-                <filter string="Creados o Pendientes" name="expedient_state_active"
-                       domain="[('expedient_state', 'in', ['creada', 'pendiente_documentacion'])]"/>
-                <separator/>
-                <filter string="Creados" name="expedient_state_creada" domain="[('expedient_state', '=', 'creada')]"/>
-                <filter string="Pendiente Documentación" name="expedient_state_pendiente" domain="[('expedient_state', '=', 'pendiente_documentacion')]"/>
-                <filter string="Aprobados" name="expedient_state_aprobada" domain="[('expedient_state', '=', 'aprobada')]"/>
-                <filter string="Rechazados" name="expedient_state_rechazada" domain="[('expedient_state', '=', 'rechazada')]"/>
-                <filter string="Cancelados" name="expedient_state_cancelada" domain="[('expedient_state', '=', 'cancelada')]"/>
-
-                <!-- Agrupar Por -->
-                <group expand="0" string="Agrupar Por">
-                    <filter string="Vendedor" name="salesperson" domain="[]" context="{'group_by': 'user_id'}"/>
-                    <filter string="Cliente" name="customer" domain="[]" context="{'group_by': 'partner_id'}"/>
-                    <filter string="ID de Cliente" name="client" domain="[]" context="{'group_by': 'client_id'}"/>
-                    <filter string="Estado del Expediente" name="expedient_state_group" domain="[]" context="{'group_by': 'expedient_state'}"/>
-                    <filter string="Fecha de Pedido" name="order_month" domain="[]" context="{'group_by': 'date_order'}"/>
-                    <filter string="Estado" name="status" domain="[]" context="{'group_by': 'state'}"/>
-                </group>
-                <!-- Eliminado el searchpanel que causaba el error -->
-            </search>
-        </field>
-    </record>
-
-    <!-- Acción para Expedientes Pre-pagados (actualizada para usar la vista de búsqueda) -->
-    <record id="action_sale_order_prepaid" model="ir.actions.act_window">
-        <field name="name">Expedientes Pre-pagados</field>
-        <field name="res_model">sale.order</field>
-        <field name="view_mode">tree,form</field>
-        <field name="view_id" ref="view_sale_order_prepaid_tree"/>
-        <field name="domain">[('expedient_type', '=', 'pre_paid')]</field>
-        <field name="context">{
-            'default_expedient_type': 'pre_paid',
-            'search_default_expedient_state_active': 1,
-            'show_as_expedient': True
-        }</field>
-        <field name="search_view_id" ref="view_sale_order_prepaid_search"/>
-        <field name="help" type="html">
-            <p class="o_view_nocontent_smiling_face">
-                Crear un nuevo expediente pre-pagado
-            </p>
-            <p>
-                Los expedientes pre-pagados se confirman automáticamente como órdenes de venta
-                y están vinculados a expedientes prepagados existentes con saldo disponible.
-            </p>
-        </field>
-    </record>
-
-    <!-- Agregar acción para crear expedientes prepagados desde el wizard -->
-    <record id="action_create_prepaid_expedient_wizard" model="ir.actions.act_window">
-        <field name="name">Crear Expediente Pre-pagado</field>
-        <field name="res_model">expedient.create.wizard</field>
-        <field name="view_mode">form</field>
-        <field name="target">new</field>
-        <field name="context">{'default_expedient_type': 'pre_paid'}</field>
-    </record>
-
-    <!-- Elemento de menú para Expedientes Pre-pagados -->
-    <menuitem id="menu_sale_order_prepaid"
-              name="Expedientes Pre-pagados"
-              parent="sale.sale_order_menu"
-              action="action_sale_order_prepaid"
-              sequence="25"/>
+        <!-- Menú para Expedientes Pre-pagados -->
+        <menuitem id="menu_sale_order_prepaid"
+                  name="Pedidos de Venta Pre-pagados"
+                  parent="sale.sale_order_menu"
+                  action="action_sale_order_prepaid"
+                  sequence="25"/>
+    </data>
 </odoo>

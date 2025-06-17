@@ -973,3 +973,38 @@ msgstr "Fecha de Inicio"
 #. module: sale_order_expedient
 msgid "Tiempo de Resolución"
 msgstr "Tiempo de Resolución"
+
+#. module: sale_order_expedient
+#: model:ir.model.fields,field_description:sale_order_expedient.field_sale_order__is_expedient_admin
+msgid "Es Administrador de Expedientes"
+msgstr "Es Administrador de Expedientes"
+
+#. module: sale_order_expedient
+#: code:addons/sale_order_expedient/models/sale_order.py:0
+#, python-format
+msgid "No tiene permisos para cambiar el estado de expedientes que están aprobados o rechazados. Solo un administrador puede realizar esta acción."
+msgstr "No tiene permisos para cambiar el estado de expedientes que están aprobados o rechazados. Solo un administrador puede realizar esta acción."
+
+#. module: sale_order_expedient
+#: code:addons/sale_order_expedient/models/sale_order.py:0
+#, python-format
+msgid "No tiene permisos para modificar expedientes que están aprobados o rechazados. Solo un administrador puede realizar esta acción. Campos que intentó modificar: %s"
+msgstr "No tiene permisos para modificar expedientes que están aprobados o rechazados. Solo un administrador puede realizar esta acción. Campos que intentó modificar: %s"
+
+#. module: sale_order_expedient
+#: code:addons/sale_order_expedient/models/sale_order.py:0
+#, python-format
+msgid "No tiene permisos para aprobar expedientes que ya fueron rechazados. Solo un administrador puede realizar esta acción."
+msgstr "No tiene permisos para aprobar expedientes que ya fueron rechazados. Solo un administrador puede realizar esta acción."
+
+#. module: sale_order_expedient
+#: code:addons/sale_order_expedient/models/sale_order.py:0
+#, python-format
+msgid "No tiene permisos para rechazar expedientes que ya fueron aprobados. Solo un administrador puede realizar esta acción."
+msgstr "No tiene permisos para rechazar expedientes que ya fueron aprobados. Solo un administrador puede realizar esta acción."
+
+#. module: sale_order_expedient
+#: code:addons/sale_order_expedient/models/sale_order.py:0
+#, python-format
+msgid "No tiene permisos para cancelar expedientes que ya fueron aprobados o rechazados. Solo un administrador puede realizar esta acción."
+msgstr "No tiene permisos para cancelar expedientes que ya fueron aprobados o rechazados. Solo un administrador puede realizar esta acción."

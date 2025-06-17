@@ -1,54 +1,37 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <!-- Form view for expedient creation wizard -->
+    <!-- Vista de formulario para el wizard de creación de expedientes -->
     <record id="view_expedient_create_wizard_form" model="ir.ui.view">
         <field name="name">expedient.create.wizard.form</field>
         <field name="model">expedient.create.wizard</field>
         <field name="arch" type="xml">
-            <form string="Create Expedient">
-                <sheet>
-                    <group>
-                        <!-- Ocultar el campo de tipo de expediente ya que viene del contexto -->
-                        <field name="expedient_type" invisible="1"/>
-                    </group>
+            <form string="Crear Expediente">
+                <!-- Campos ocultos para manejar lógica interna -->
+                <field name="expedient_type" invisible="1"/>
+                <field name="partner_readonly" invisible="1"/>
 
-                    <group>
-                        <group>
-                            <field name="sale_order_template_id" options="{'no_create': True}"/>
-                            <field name="partner_readonly" invisible="1"/>
-                            <field name="partner_id"
-                                   options="{'no_create': True}"
-                                   readonly="partner_readonly"
-                                   placeholder="Se completará automáticamente con la plantilla seleccionada"/>
-                            <field name="client_id" required="1"/>
-                            <field name="expedient_number" required="1"/>
-                            <field name="currency_id" invisible="1"/>
-                        </group>
-                        <group>
-                        </group>
-                    </group>
-                </sheet>
+                <group>
+                    <field name="sale_order_template_id" options="{'no_create': True}"/>
+                    <field name="partner_id" options="{'no_create': True}" required="1"/>
+                    <field name="client_id"/>
+                    <field name="expedient_number"/>
+                </group>
+
                 <footer>
-                    <button name="action_create_expedient"
-                            string="Create"
-                            type="object"
-                            class="btn-primary"
-                            data-hotkey="q"/>
-                    <button string="Cancel"
-                            class="btn-secondary"
-                            special="cancel"
-                            data-hotkey="z"/>
+                    <button string="Crear" name="action_create_expedient" type="object" class="btn-primary"/>
+                    <button string="Cancelar" class="btn-secondary" special="cancel"/>
                 </footer>
             </form>
         </field>
     </record>
 
-    <!-- Action to open the expedient creation wizard -->
+    <!-- Acción para abrir el wizard -->
     <record id="action_create_new_expedient" model="ir.actions.act_window">
-        <field name="name">Create Expedient</field>
+        <field name="name">Crear Expediente</field>
         <field name="res_model">expedient.create.wizard</field>
         <field name="view_mode">form</field>
-        <field name="view_id" ref="view_expedient_create_wizard_form"/>
         <field name="target">new</field>
+        <field name="view_id" ref="view_expedient_create_wizard_form"/>
+        <field name="context">{'default_partner_id': active_id if context.get('active_model') == 'res.partner' else False}</field>
     </record>
 </odoo>

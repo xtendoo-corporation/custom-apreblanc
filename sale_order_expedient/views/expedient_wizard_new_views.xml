@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Vista del formulario para el nuevo wizard -->
+    <record id="view_sale_order_expedient_wizard_form" model="ir.ui.view">
+        <field name="name">sale.order.expedient.wizard.form</field>
+        <field name="model">sale.order.expedient.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Crear Expediente">
+                <field name="expedient_type" invisible="1"/>
+                <field name="partner_readonly" invisible="1"/>
+
+                <group>
+                    <field name="sale_order_template_id" options="{'no_create': True}" required="1"/>
+                    <field name="partner_id" options="{'no_create': True, 'no_open': True}" readonly="1" force_save="1"/>
+                    <field name="client_id"/>
+                    <field name="expedient_number"/>
+                </group>
+
+                <!-- Mensaje informativo -->
+                <div class="alert alert-info" role="alert">
+                    <p><strong>Nota:</strong> El cliente se determina automáticamente según la plantilla seleccionada.</p>
+                </div>
+
+                <footer>
+                    <button string="Crear" name="action_create_expedient" type="object" class="btn-primary"/>
+                    <button string="Cancelar" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <!-- Nueva acción para abrir el wizard -->
+    <record id="action_sale_order_expedient_wizard" model="ir.actions.act_window">
+        <field name="name">Crear Expediente</field>
+        <field name="type">ir.actions.act_window</field>
+        <field name="res_model">sale.order.expedient.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+        <field name="view_id" ref="view_sale_order_expedient_wizard_form"/>
+    </record>
+
+    <!-- Añadir entrada de menú para la nueva acción -->
+    <menuitem id="menu_sale_order_expedient_wizard"
+              name="Crear Expediente"
+              parent="sale.sale_order_menu"
+              action="action_sale_order_expedient_wizard"
+              sequence="10"/>
+</odoo>

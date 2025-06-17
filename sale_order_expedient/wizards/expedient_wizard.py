@@ -6,376 +6,125 @@ class ExpedientCreateWizard(models.TransientModel):
     _name = 'expedient.create.wizard'
     _description = 'Wizard to create expedients'
 
+    # Campos básicos
     partner_id = fields.Many2one(
         'res.partner',
-        string='Customer',
+        string='Cliente',
         required=True,
-        domain=[('customer_rank', '>', 0)]
-    )
-
-    # Campo computado para determinar si partner_id debe ser readonly
-    partner_readonly = fields.Boolean(
-        compute='_compute_partner_readonly',
-        store=False
-    )
-
-    sale_order_template_id = fields.Many2one(
-        'sale.order.template',
-        string='Quotation Template',
-        domain=lambda self: self._get_template_domain()
-    )
-
-    expedient_number = fields.Char(
-        string='Expedient Number',
-        required=True,
-        help="Expedient number - Unique identifier for this expedient"
-    )
-
-    client_id = fields.Char(
-        string='Client ID',
-        required=True,
-        help="Client identifier - primary key field",
+        default=lambda self: self._get_default_partner()
     )
 
     expedient_type = fields.Selection([
         ('post_paid', 'Post-pagado'),
         ('pre_paid', 'Pre-pagado'),
-    ], string='Tipo de Expediente Post-pagado',
-        default='post_paid',
-        required=True,
-        help='Tipo de expediente post-pagado')
+    ], string='Tipo de Expediente', default='post_paid', required=True)
 
-    currency_id = fields.Many2one(
-        'res.currency',
-        string='Moneda',
-        default=lambda self: self.env.company.currency_id.id,
-        invisible=1
+    client_id = fields.Char(string='Client ID', required=True)
+    expedient_number = fields.Char(string='Expedient Number', required=True)
+    partner_readonly = fields.Boolean(string='Partner Readonly', default=False)
+
+    # Plantilla obligatoria
+    sale_order_template_id = fields.Many2one(
+        'sale.order.template',
+        string='Plantilla',
+        domain="[('is_expedient_template', '=', True)]",
+        required=True,
+        default=lambda self: self._get_default_template()
     )
 
-    @api.depends('sale_order_template_id')
-    def _compute_partner_readonly(self):
-        """Compute if partner field should be readonly"""
-        for record in self:
-            record.partner_readonly = bool(record.sale_order_template_id)
+    @api.model
+    def _get_default_partner(self):
+        """Obtener partner por defecto desde el contexto o el usuario actual"""
+        # Intentar obtener del contexto
+        partner_id = self.env.context.get('default_partner_id')
+        if partner_id:
+            return partner_id
 
-    @api.onchange('expedient_type')
-    def _onchange_expedient_type(self):
-        """Actualizar campos según tipo de expediente manteniendo acceso a plantillas"""
-        # Permitimos elegir plantillas independientemente del tipo de expediente
-        return {'domain': {'sale_order_template_id': self._get_template_domain()}}
+        # Si no hay en contexto, usar la compañía del usuario
+        return self.env.company.partner_id.id
+
+    @api.model
+    def _get_default_template(self):
+        """Obtener plantilla por defecto desde el contexto"""
+        return self.env.context.get('default_sale_order_template_id', False)
 
     @api.onchange('sale_order_template_id')
     def _onchange_sale_order_template_id(self):
-        """Auto-fill the customer based on the selected template configuration"""
-        if self.sale_order_template_id:
-            if self.sale_order_template_id.partner_id:
-                # Set the partner and make the field readonly
-                self.partner_id = self.sale_order_template_id.partner_id
-            else:
-                # Clear partner and show warning if template has no customer
-                self.partner_id = False
-                return {
-                    'warning': {
-                        'title': _('Template without Customer'),
-                        'message': _('The selected template does not have a customer configured. Please select a different template.')
-                    }
-                }
-        else:
-            # If no template selected, clear partner
-            self.partner_id = False
+        """Cargar datos de la plantilla"""
+        if not self.sale_order_template_id:
+            self.partner_readonly = False
+            return
 
-    @api.onchange('expedient_number', 'client_id', 'expedient_type')
-    def _onchange_expedient_client(self):
-        """Check if combination of client_id and expedient_number already exists"""
-        if self.expedient_number and self.client_id:
-            # Buscar según el tipo de expediente
-            if self.expedient_type == 'pre_paid':
-                existing = self.env['pre.paid.expedient'].search([
-                    ('client_id', '=', self.client_id),
-                    ('expedient_number', '=', self.expedient_number)
-                ], limit=1)
-            else:
-                existing = self.env['sale.order'].search([
-                    ('client_id', '=', self.client_id),
-                    ('expedient_number', '=', self.expedient_number),
-                    ('expedient_type', '=', 'post_paid')
-                ], limit=1)
+        template = self.sale_order_template_id
 
-            if existing:
-                return {'warning': {
-                    'title': _('Duplicate Expedient'),
-                    'message': _('An expedient with this Client ID and Expedient Number combination already exists.')
-                }}
-
-    def _get_template_domain(self):
-        """Get domain for template selection based on user access"""
-        return [
-            ('active', '=', True),
-            '|',
-            ('allowed_user_ids', '=', False),
-            ('allowed_user_ids', 'in', [self.env.user.id])
-        ]
+        # Determinar si debemos cargar el cliente de la plantilla
+        if template.partner_id:
+            self.partner_id = template.partner_id
+            self.partner_readonly = True
 
     def action_create_expedient(self):
+        """Crear expediente"""
         self.ensure_one()
 
-        # Check for duplicates before creation based on expedient type
-        if self.expedient_type == 'pre_paid':
-            existing = self.env['pre.paid.expedient'].search([
-                ('client_id', '=', self.client_id),
-                ('expedient_number', '=', self.expedient_number)
-            ], limit=1)
+        # Validar que el partner esté configurado
+        if not self.partner_id:
+            raise ValidationError(_("Debe seleccionar un cliente para el expediente."))
 
-            if existing:
-                raise ValidationError(_("An expedient with this Client ID and Expedient Number combination already exists."))
-
-            # Crear expediente prepagado
-            return self._create_pre_paid_expedient()
-        else:
-            # Verificación para expedientes post-pagados
-            existing = self.env['sale.order'].search([
-                ('client_id', '=', self.client_id),
-                ('expedient_number', '=', self.expedient_number),
-                ('expedient_type', '=', 'post_paid')
-            ], limit=1)
-
-            if existing:
-                raise ValidationError(_("An expedient with this Client ID and Expedient Number combination already exists."))
-
-            # Crear expediente post-pagado
-            return self._create_post_paid_expedient()
-
-    def _create_pre_paid_expedient(self):
-        """Crear un expediente prepagado como sale.order"""
-        # Primero crear o buscar el expediente prepagado base
-        pre_paid_expedient_vals = {
+        # Valores comunes para todos los expedientes
+        vals = {
             'partner_id': self.partner_id.id,
-            'expedient_number': self.expedient_number,
+            'expedient_type': self.expedient_type,
             'client_id': self.client_id,
-            'date_created': fields.Date.today(),
-            'initial_balance': 0.0,
-            'current_balance': 0.0,
-            'state': 'active',
+            'expedient_number': self.expedient_number,
+            'expedient_manager_id': self.env.user.id,
+            'sale_order_template_id': self.sale_order_template_id.id,
         }
 
-        # Calcular saldo si hay plantilla
+        # Crear el expediente (sale.order)
+        expedient = self.env['sale.order'].create(vals)
+        
+        # Aplicar la plantilla: copiar todas las líneas de productos
         if self.sale_order_template_id:
-            total_amount = 0.0
+            # Copiar líneas de productos
             for line in self.sale_order_template_id.sale_order_template_line_ids:
-                # Obtener precio y cantidad verificando los nombres de campo disponibles
-                price = 0.0
-                qty = 1.0
-                discount = 0.0
-
-                # Verificar campo para precio
-                if hasattr(line, 'price_unit'):
-                    price = line.price_unit
-                elif hasattr(line, 'product_id') and line.product_id:
-                    price = line.product_id.list_price
-
-                # Verificar campo para cantidad
-                if hasattr(line, 'product_uom_qty'):
-                    qty = line.product_uom_qty
-
-                # Verificar campo para descuento
+                # Obtener datos del producto para el precio
+                product = line.product_id
+                
+                # Crear línea adaptada a la estructura correcta
+                line_vals = {
+                    'order_id': expedient.id,
+                    'product_id': product.id,
+                    'name': line.name or product.name,
+                    'product_uom_qty': line.product_uom_qty,
+                    'product_uom': line.product_uom_id.id,
+                    # Usar el precio del producto en lugar del de la línea
+                    'price_unit': product.list_price,
+                    # Solo usar campos que existan
+                    'display_type': line.display_type,
+                }
+                
+                # Añadir descuento solo si el objeto tiene ese atributo
                 if hasattr(line, 'discount'):
-                    discount = line.discount
+                    line_vals['discount'] = line.discount
+                
+                self.env['sale.order.line'].create(line_vals)
+        
+            # Copiar también la nota si existe
+            if hasattr(self.sale_order_template_id, 'note') and self.sale_order_template_id.note:
+                expedient.note = self.sale_order_template_id.note
+                
+            # Verificar si existe payment_term_id antes de intentar acceder
+            if hasattr(self.sale_order_template_id, 'payment_term_id') and self.sale_order_template_id.payment_term_id:
+                expedient.payment_term_id = self.sale_order_template_id.payment_term_id.id
 
-                # Calcular importe de línea
-                line_amount = price * qty * (1 - (discount / 100.0))
-                total_amount += line_amount
-
-            if total_amount > 0:
-                pre_paid_expedient_vals['initial_balance'] = total_amount
-                pre_paid_expedient_vals['current_balance'] = total_amount
-
-        # Crear el expediente prepagado base
-        pre_paid_expedient = self.env['pre.paid.expedient'].create(pre_paid_expedient_vals)
-
-        # Ahora crear la orden de venta prepagada
-        sale_order_vals = {
-            'partner_id': self.partner_id.id,
-            'expedient_type': 'pre_paid',
-            'expedient_date_start': fields.Datetime.now(),  # Cambiado de expedient_date a expedient_date_start
-            'expedient_manager_id': self.env.user.id,
-            'client_id': self.client_id,
-            'expedient_number': self.expedient_number,
-            'pre_paid_expedient_id': pre_paid_expedient.id,
-        }
-
-        # Aplicar plantilla si está seleccionada
-        if self.sale_order_template_id:
-            sale_order_vals['sale_order_template_id'] = self.sale_order_template_id.id
-
-        # Crear la orden de venta
-        new_order = self.env['sale.order'].create(sale_order_vals)
-
-        # Aplicar datos de la plantilla después de la creación
-        if self.sale_order_template_id:
-            template = self.sale_order_template_id
-
-            # Apply template data to the order
-            template_values = {}
-            if hasattr(template, 'note') and template.note:
-                template_values['note'] = template.note
-            if hasattr(template, 'require_signature') and template.require_signature:
-                template_values['require_signature'] = template.require_signature
-            if hasattr(template, 'require_payment') and template.require_payment:
-                template_values['require_payment'] = template.require_payment
-            if hasattr(template, 'validity_days') and template.validity_days:
-                template_values['validity_days'] = template.validity_days
-
-            if template_values:
-                new_order.write(template_values)
-
-            # Create order lines from template
-            if hasattr(template, 'sale_order_template_line_ids'):
-                for template_line in template.sale_order_template_line_ids:
-                    # Start with the mandatory fields
-                    line_values = {
-                        'order_id': new_order.id,
-                    }
-
-                    # Safely add name - using product name as fallback
-                    if hasattr(template_line, 'name') and template_line.name:
-                        line_values['name'] = template_line.name
-                    elif hasattr(template_line, 'product_id') and template_line.product_id:
-                        line_values['name'] = template_line.product_id.name
-                    else:
-                        line_values['name'] = _("Template Line")
-
-                    # Safely add quantity
-                    if hasattr(template_line, 'product_uom_qty'):
-                        line_values['product_uom_qty'] = template_line.product_uom_qty
-                    else:
-                        line_values['product_uom_qty'] = 1.0
-
-                    # Safely add price - omit if not available
-                    if hasattr(template_line, 'price_unit'):
-                        line_values['price_unit'] = template_line.price_unit
-
-                    # Add product if it exists
-                    if hasattr(template_line, 'product_id') and template_line.product_id:
-                        line_values['product_id'] = template_line.product_id.id
-
-                        # If no price was found in template, use product price
-                        if 'price_unit' not in line_values:
-                            line_values['price_unit'] = template_line.product_id.list_price
-
-                    # Add UOM if it exists
-                    if hasattr(template_line, 'product_uom_id') and template_line.product_uom_id:
-                        line_values['product_uom'] = template_line.product_uom_id.id
-                    elif hasattr(template_line, 'product_id') and template_line.product_id.uom_id:
-                        line_values['product_uom'] = template_line.product_id.uom_id.id
-
-                    # Add discount if it exists
-                    if hasattr(template_line, 'discount'):
-                        line_values['discount'] = template_line.discount
-
-                    # Create the order line with all collected values
-                    self.env['sale.order.line'].create(line_values)
-
+        # Retornar acción para abrir el expediente creado
         return {
+            'name': _('Expediente creado'),
             'type': 'ir.actions.act_window',
-            'name': _('Expediente Pre-pagado'),
-            'res_model': 'sale.order',
-            'res_id': new_order.id,
             'view_mode': 'form',
-            'target': 'current',
-            'context': {'show_as_expedient': True}
-        }
-
-    def _create_post_paid_expedient(self):
-        """Crear un expediente post-pagado (original)"""
-        # Always create as expedient from the wizard
-        values = {
-            'partner_id': self.partner_id.id,
-            'expedient_type': 'post_paid',
-            'expedient_date_start': fields.Datetime.now(),  # Cambiado de expedient_date a expedient_date_start
-            'expedient_manager_id': self.env.user.id,
-            'client_id': self.client_id,
-            'expedient_number': self.expedient_number,
-        }
-
-        # Apply template if selected
-        if self.sale_order_template_id:
-            values['sale_order_template_id'] = self.sale_order_template_id.id
-
-        # Create the order
-        new_order = self.env['sale.order'].create(values)
-
-        # Apply template after creation if template was selected
-        if self.sale_order_template_id:
-            template = self.sale_order_template_id
-
-            # Apply template data to the order
-            template_values = {}
-            if hasattr(template, 'note') and template.note:
-                template_values['note'] = template.note
-            if hasattr(template, 'require_signature') and template.require_signature:
-                template_values['require_signature'] = template.require_signature
-            if hasattr(template, 'require_payment') and template.require_payment:
-                template_values['require_payment'] = template.require_payment
-            if hasattr(template, 'validity_days') and template.validity_days:
-                template_values['validity_days'] = template.validity_days
-
-            if template_values:
-                new_order.write(template_values)
-
-            # Create order lines from template
-            if hasattr(template, 'sale_order_template_line_ids'):
-                for template_line in template.sale_order_template_line_ids:
-                    # Start with the mandatory fields
-                    line_values = {
-                        'order_id': new_order.id,
-                    }
-
-                    # Safely add name - using product name as fallback
-                    if hasattr(template_line, 'name') and template_line.name:
-                        line_values['name'] = template_line.name
-                    elif hasattr(template_line, 'product_id') and template_line.product_id:
-                        line_values['name'] = template_line.product_id.name
-                    else:
-                        line_values['name'] = _("Template Line")
-
-                    # Safely add quantity
-                    if hasattr(template_line, 'product_uom_qty'):
-                        line_values['product_uom_qty'] = template_line.product_uom_qty
-                    else:
-                        line_values['product_uom_qty'] = 1.0
-
-                    # Safely add price - omit if not available
-                    if hasattr(template_line, 'price_unit'):
-                        line_values['price_unit'] = template_line.price_unit
-
-                    # Add product if it exists
-                    if hasattr(template_line, 'product_id') and template_line.product_id:
-                        line_values['product_id'] = template_line.product_id.id
-
-                        # If no price was found in template, use product price
-                        if 'price_unit' not in line_values:
-                            line_values['price_unit'] = template_line.product_id.list_price
-
-                    # Add UOM if it exists
-                    if hasattr(template_line, 'product_uom_id') and template_line.product_uom_id:
-                        line_values['product_uom'] = template_line.product_uom_id.id
-                    elif hasattr(template_line, 'product_id') and template_line.product_id.uom_id:
-                        line_values['product_uom'] = template_line.product_id.uom_id.id
-
-                    # Add discount if it exists
-                    if hasattr(template_line, 'discount'):
-                        line_values['discount'] = template_line.discount
-
-                    # Create the order line with all collected values
-                    self.env['sale.order.line'].create(line_values)
-
-        return {
-            'type': 'ir.actions.act_window',
-            'name': _('Expedient'),
             'res_model': 'sale.order',
-            'res_id': new_order.id,
-            'view_mode': 'form',
+            'res_id': expedient.id,
+            'context': {'show_as_expedient': True},
             'target': 'current',
-            'context': {'show_as_expedient': True}
         }
 

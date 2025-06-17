@@ -1,62 +1,104 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <!-- Inherit from sale.order.template form view to add partner_id field -->
-    <record id="view_sale_order_template_form_inherit" model="ir.ui.view">
-        <field name="name">sale.order.template.form.inherit</field>
-        <field name="model">sale.order.template</field>
-        <field name="inherit_id" ref="sale_management.sale_order_template_view_form"/>
-        <field name="arch" type="xml">
-            <data>
-                <!-- Remove the old position of partner_id field -->
-                <field name="company_id" position="after">
-                    <!-- This line is empty because we're moving the field elsewhere -->
+    <data>
+        <!-- Vista heredada simplificada -->
+        <record id="view_sale_order_template_form_inherit" model="ir.ui.view">
+            <field name="name">sale.order.template.form.inherit</field>
+            <field name="model">sale.order.template</field>
+            <field name="inherit_id" ref="sale_management.sale_order_template_view_form"/>
+            <field name="arch" type="xml">
+                <!-- Asegurarnos de que los campos usados en expresiones estén presentes -->
+                <xpath expr="//sheet" position="inside">
+                    <field name="partner_id" invisible="1"/>
+                </xpath>
+
+                <!-- Añadir campo para marcar como plantilla de expediente -->
+                <field name="name" position="after">
+                    <label for="is_expedient_template" string="¿Es plantilla para expedientes?"/>
+                    <field name="is_expedient_template" nolabel="1"/>
                 </field>
 
-                <!-- Position partner_id and allowed_user_ids fields after the title -->
-                <xpath expr="//div[hasclass('oe_title')]" position="after">
-                    <group>
-                        <group>
-                            <field name="partner_id" options="{'no_create': True}" string="Cliente"/>
-                        </group>
-                        <group>
-                            <field name="allowed_user_ids" widget="many2many_tags"
-                                   placeholder="Añadir usuarios permitidos"
-                                   string="Usuarios con acceso"
-                                   help="Solo los usuarios seleccionados podrán ver y usar esta plantilla. Si está vacío, ningún usuario tendrá acceso."/>
-                        </group>
+                <!-- Añadir grupo de campos para plantillas de expediente -->
+                <xpath expr="//group[1]" position="after">
+                    <group string="Configuración de Expediente" invisible="not is_expedient_template">
+                        <field name="partner_id"
+                               required="is_expedient_template"
+                               options="{'no_create': True}"
+                               string="Cliente del Expediente"/>
+                        <field name="allowed_group_ids"
+                               required="is_expedient_template"
+                               widget="many2many_tags"
+                               options="{'no_create': True}"
+                               string="Grupos de Usuarios Autorizados"/>
                     </group>
                 </xpath>
 
-                <!-- Fix for Odoo 17: Use xpath to find sheet and add button at the top -->
+                <!-- Añadir pestaña de control de acceso -->
+                <xpath expr="//notebook" position="inside">
+                    <page string="Control de Acceso" name="access_control" invisible="not is_expedient_template">
+                        <group>
+                            <field name="allowed_group_ids" widget="many2many_tags" options="{'no_create': True}"/>
+                        </group>
+                        <div class="alert alert-info mt-3">
+                            <p><strong>Nota:</strong> Configure qué grupos de usuarios pueden usar esta plantilla. Si no selecciona ningún grupo, todos los usuarios podrán usarla.</p>
+                            <p><strong>Cliente:</strong> No olvide seleccionar el cliente para esta plantilla de expediente en la parte superior del formulario.</p>
+                        </div>
+                    </page>
+                </xpath>
+
+                <!-- Añadir una alerta informativa cuando es plantilla de expediente sin cliente -->
                 <xpath expr="//sheet" position="inside">
-                    <div class="oe_button_box" name="button_box" style="margin-top: 10px;" invisible="id == False">
-                        <!-- Fix: Reference the existing action instead of the missing one -->
-                        <button name="%(sale_order_expedient.action_create_new_expedient)d"
-                                type="action"
-                                string="Create Expedient"
-                                class="btn-primary"
-                                context="{'default_sale_order_template_id': active_id}"/>
+                    <div class="alert alert-warning" role="alert" invisible="not is_expedient_template or partner_id">
+                        <p><strong>Importante:</strong> Las plantillas de expediente deben tener un cliente seleccionado. Por favor, complete el campo Cliente en la parte superior del formulario.</p>
                     </div>
                 </xpath>
-            </data>
-        </field>
-    </record>
 
-    <!-- Añadir un filtro de búsqueda para ver todas las plantillas -->
-    <record id="view_sale_order_template_search_inherit" model="ir.ui.view">
-        <field name="name">sale.order.template.search.inherit</field>
-        <field name="model">sale.order.template</field>
-        <field name="inherit_id" ref="sale_management.sale_order_template_view_search"/>
-        <field name="arch" type="xml">
-            <search>
-                <filter string="Mis Plantillas" name="my_templates" domain="['|', ('allowed_user_ids', '=', False), ('allowed_user_ids', 'in', uid)]"/>
-                <filter string="Todas las Plantillas" name="all_templates" domain="[]" context="{'show_all_templates': True}"/>
-            </search>
-        </field>
-    </record>
+                <!-- Añadir una alerta informativa -->
+                <xpath expr="//sheet" position="inside">
+                    <div class="alert alert-info mt-3" invisible="not is_expedient_template">
+                        <p><strong>Configuración de Expediente:</strong></p>
+                        <ul>
+                            <li><strong>Cliente:</strong> El cliente que se asignará automáticamente al crear expedientes con esta plantilla.</li>
+                            <li><strong>Grupos de Usuarios:</strong> Solo los usuarios que pertenezcan a alguno de estos grupos podrán ver y usar esta plantilla.</li>
+                        </ul>
+                    </div>
+                </xpath>
+            </field>
+        </record>
 
-    <!-- Modificar la acción para incluir el contexto -->
-    <record id="sale_management.sale_order_template_action" model="ir.actions.act_window">
-        <field name="context">{'search_default_my_templates': 1}</field>
-    </record>
+        <!-- Vista de árbol destacando cliente y grupo para plantillas -->
+        <record id="view_sale_order_template_tree_inherit" model="ir.ui.view">
+            <field name="name">sale.order.template.tree.inherit</field>
+            <field name="model">sale.order.template</field>
+            <field name="inherit_id" ref="sale_management.sale_order_template_view_tree"/>
+            <field name="arch" type="xml">
+                <field name="name" position="after">
+                    <field name="is_expedient_template"/>
+                    <field name="partner_id" string="Cliente del Expediente"/>
+                </field>
+            </field>
+        </record>
+
+        <!-- Acción para abrir plantillas de expedientes -->
+        <record id="action_sale_order_expedient_templates" model="ir.actions.act_window">
+            <field name="name">Plantillas de Expedientes</field>
+            <field name="type">ir.actions.act_window</field>
+            <field name="res_model">sale.order.template</field>
+            <field name="view_mode">tree,form</field>
+            <field name="domain">[('is_expedient_template', '=', True)]</field>
+            <field name="context">{'default_is_expedient_template': True}</field>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    Crea una nueva plantilla para expedientes
+                </p>
+            </field>
+        </record>
+
+        <!-- Menú para plantillas de expedientes -->
+        <menuitem id="menu_sale_order_expedient_templates"
+                  name="Plantillas de Expedientes"
+                  parent="sale.menu_sale_config"
+                  action="action_sale_order_expedient_templates"
+                  sequence="40"/>
+    </data>
 </odoo>

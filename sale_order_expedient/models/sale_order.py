@@ -83,6 +83,21 @@ class SaleOrder(models.Model):
         help="Tiempo transcurrido entre la creación y la resolución del expediente"
     )
 
+    # Añadir campo para verificar si usuario es administrador
+    is_expedient_admin = fields.Boolean(
+        string='Es Administrador de Expedientes',
+        compute='_compute_is_expedient_admin',
+        store=False,
+    )
+
+    @api.depends()
+    def _compute_is_expedient_admin(self):
+        """Determina si el usuario actual es administrador y puede modificar expedientes finalizados"""
+        # Usar el nuevo grupo definido en security.xml
+        is_admin = self.env.user.has_group('sale_order_expedient.group_expedient_admin') or self.env.user.has_group('base.group_system')
+        for record in self:
+            record.is_expedient_admin = is_admin
+
     # Current return fields
     return_reason_id = fields.Many2one(
         'expedient.return.reason',
@@ -204,7 +219,7 @@ class SaleOrder(models.Model):
 
     @api.model_create_multi
     def create(self, vals_list):
-        """Establece fecha de inicio al crear expedientes"""
+        """Establece fecha de inicio al crear expedientes y confirma los pre-pagados"""
         for vals in vals_list:
             # Si es un expediente prepagado, verificar que tenga relación con el expediente
             if vals.get('expedient_type') == 'pre_paid' and not vals.get('pre_paid_expedient_id'):
@@ -256,59 +271,145 @@ class SaleOrder(models.Model):
                     message_type='notification'
                 )
 
-        # Confirmar automáticamente los expedientes pre-pagados
+        # Confirmar automáticamente los expedientes pre-pagados (SIEMPRE son pedidos, nunca presupuestos)
         pre_paid_orders = orders.filtered(lambda o: o.expedient_type == 'pre_paid')
         if pre_paid_orders:
-            pre_paid_orders.with_context(auto_confirm_prepaid=True).action_confirm()
+            _logger.info("Confirmando automáticamente %s expedientes pre-pagados", len(pre_paid_orders))
+            for order in pre_paid_orders:
+                # Verificar que el expediente pre-pagado tenga saldo suficiente
+                if order.pre_paid_expedient_id and order.amount_total > order.pre_paid_expedient_id.current_balance:
+                    order.message_post(
+                        body=_("ADVERTENCIA: No hay saldo suficiente en el expediente pre-pagado. "
+                              "Saldo actual: %.2f, Importe del pedido: %.2f. "
+                              "El pedido se ha confirmado pero debe revisarse.") %
+                              (order.pre_paid_expedient_id.current_balance, order.amount_total),
+                        message_type='notification'
+                    )
+                else:
+                    order.message_post(
+                        body=_("Expediente pre-pagado confirmado automáticamente como PEDIDO DE VENTA"),
+                        message_type='notification'
+                    )
+
+                # Forzar la confirmación independientemente del contexto
+                try:
+                    # Siempre confirmar, sin depender del contexto
+                    order.with_context(auto_confirm_prepaid=True).action_confirm()
+
+                    # Asegurar que se marque como aprobado
+                    if order.expedient_state != 'aprobada':
+                        order.write({
+                            'expedient_state': 'aprobada',
+                            'expedient_date_end': fields.Datetime.now()
+                        })
+                except Exception as e:
+                    order.message_post(
+                        body=_("Error al confirmar automáticamente el expediente pre-pagado: %s") % str(e),
+                        message_type='notification'
+                    )
+                    _logger.error("Error confirming pre-paid expedient %s: %s", order.name, str(e))
 
         return orders
 
     def write(self, vals):
         """
-        Override write to handle expedient state changes and set the end date automatically
-        when the state changes to 'aprobada' or 'rechazada'.
+        Override write to prevent modifications on approved/rejected expedients
+        unless the user is an administrator.
         """
-        # Para depuración
-        _logger.info("Método write llamado con valores: %s", vals)
+        # Verificar si hay expedientes en estado final que se están intentando modificar
+        locked_expedients = self.filtered(lambda r: r.expedient_type in ['post_paid', 'pre_paid'] and
+                                         r.expedient_state in ['aprobada', 'rechazada'] and
+                                         not self.env.user.has_group('sale_order_expedient.group_expedient_admin') and
+                                         not self.env.user.has_group('base.group_system'))
 
-        # Si se está cambiando el estado a aprobada, rechazada o cancelada,
-        # registrar automáticamente la fecha y hora de finalización
-        if 'expedient_state' in vals and vals['expedient_state'] in ['aprobada', 'rechazada', 'cancelada']:
-            _logger.info("Detectado cambio a estado final: %s", vals['expedient_state'])
+        # Si hay expedientes bloqueados y se intenta cambiar campos sensibles
+        if locked_expedients and any(field for field in vals.keys() if field not in ['message_follower_ids', 'activity_ids', 'message_ids']):
+            # Lista de campos que siempre se pueden cambiar (relacionados con mensajería, actividades, etc.)
+            always_writable = ['message_follower_ids', 'activity_ids', 'message_ids',
+                             'message_main_attachment_id', 'website_message_ids']
 
-            # Forzar la actualización de fecha_fin independientemente de si ya está en vals
-            now = fields.Datetime.now()
-            vals['expedient_date_end'] = now
-            _logger.info("Estableciendo fecha de fin: %s", now)
+            # Filtrar solo los campos que realmente están intentando modificar (no los de mensajería)
+            restricted_fields = [field for field in vals.keys() if field not in always_writable]
 
-        # Ejecutar el write original
-        result = super().write(vals)
+            if restricted_fields:
+                # Verificar si se está intentando cambiar el estado del expediente
+                if 'expedient_state' in vals:
+                    raise exceptions.AccessError(_(
+                        "No tiene permisos para cambiar el estado de expedientes que están aprobados o rechazados. "
+                        "Solo un administrador puede realizar esta acción."
+                    ))
+                else:
+                    raise exceptions.AccessError(_(
+                        "No tiene permisos para modificar expedientes que están aprobados o rechazados. "
+                        "Solo un administrador puede realizar esta acción. "
+                        "Campos que intentó modificar: %s"
+                    ) % ", ".join(restricted_fields))
 
-        # Verificar cambios de estado después del write para logging y mensajes
-        if 'expedient_state' in vals and vals['expedient_state'] in ['aprobada', 'rechazada', 'cancelada']:
-            for record in self:
-                # Verificar si la fecha de fin está establecida
-                if not record.expedient_date_end:
-                    _logger.warning("Fecha de fin no establecida después del cambio de estado para expediente %s", record.name)
-                    # Forzar actualización directa
-                    record._cr.execute(
-                        "UPDATE sale_order SET expedient_date_end = %s WHERE id = %s",
-                        (fields.Datetime.now(), record.id)
-                    )
-                    # Invalidar caché para que vea el cambio
-                    record.invalidate_cache(['expedient_date_end'])
-                    _logger.info("Fecha de fin forzada para expediente %s", record.name)
+        # Si está intentando cambiar el estado del expediente a un estado anterior
+        if 'expedient_state' in vals and any(record.expedient_state in ['aprobada', 'rechazada'] for record in self):
+            # Verificar si el usuario no es administrador
+            if not self.env.user.has_group('base.group_system') and not self.env.user.has_group('sales_team.group_sale_manager'):
+                raise exceptions.AccessError(_(
+                    "No tiene permisos para cambiar el estado de expedientes aprobados o rechazados. "
+                    "Solo un administrador puede realizar esta acción."
+                ))
 
-                # Registrar mensaje en el chatter con la fecha de fin
-                if record.expedient_date_end and not self.env.context.get('skip_expedient_end_date_message'):
-                    estado = dict(self._fields['expedient_state'].selection).get(vals['expedient_state'])
-                    record.with_context(skip_expedient_end_date_message=True).message_post(
-                        body=_("Expediente marcado como %s el %s. Tiempo de resolución: %s") %
-                        (estado, fields.Datetime.to_string(record.expedient_date_end), record.expedient_resolution_time or ''),
-                        message_type='notification'
-                    )
+        # Ejecutar el write original si no hay restricciones
+        return super().write(vals)
 
-        return result
+    # Override de los métodos de cambio de estado para verificar permisos
+    def action_expedient_pendiente_documentacion(self):
+        """Set expedient as pending documentation and track the change"""
+        # Verificar si algún expediente está en estado final y el usuario no es administrador
+        locked_expedients = self.filtered(lambda r: r.expedient_state in ['aprobada', 'rechazada'] and
+                                         not r.is_expedient_admin)
+        if locked_expedients:
+            raise exceptions.AccessError(_(
+                "No tiene permisos para cambiar el estado de expedientes aprobados o rechazados. "
+                "Solo un administrador puede realizar esta acción."
+            ))
+
+        # Continuar con la acción original
+        return super().action_expedient_pendiente_documentacion()
+
+    def action_expedient_aprobada(self):
+        """Approve the expedient and convert quotation to sale order."""
+        # Los expedientes rechazados no pueden cambiar a aprobados a menos que sea administrador
+        locked_expedients = self.filtered(lambda r: r.expedient_state == 'rechazada' and
+                                         not r.is_expedient_admin)
+        if locked_expedients:
+            raise exceptions.AccessError(_(
+                "No tiene permisos para aprobar expedientes que ya fueron rechazados. "
+                "Solo un administrador puede realizar esta acción."
+            ))
+
+        return super().action_expedient_aprobada()
+
+    def action_expedient_rechazada(self):
+        """Reject the expedient and convert quotation to sale order."""
+        # Los expedientes aprobados no pueden cambiar a rechazados a menos que sea administrador
+        locked_expedients = self.filtered(lambda r: r.expedient_state == 'aprobada' and
+                                         not r.is_expedient_admin)
+        if locked_expedients:
+            raise exceptions.AccessError(_(
+                "No tiene permisos para rechazar expedientes que ya fueron aprobados. "
+                "Solo un administrador puede realizar esta acción."
+            ))
+
+        return super().action_expedient_rechazada()
+
+    def action_expedient_cancelada(self):
+        """Cancel the expedient and optionally the linked sale order."""
+        # Los expedientes aprobados/rechazados no pueden cancelarse a menos que sea administrador
+        locked_expedients = self.filtered(lambda r: r.expedient_state in ['aprobada', 'rechazada'] and
+                                         not r.is_expedient_admin)
+        if locked_expedients:
+            raise exceptions.AccessError(_(
+                "No tiene permisos para cancelar expedientes que ya fueron aprobados o rechazados. "
+                "Solo un administrador puede realizar esta acción."
+            ))
+
+        return super().action_expedient_cancelada()
 
     # Añadir un constraint para forzar la fecha de fin cuando el estado es final
     @api.constrains('expedient_state')
@@ -501,18 +602,17 @@ class SaleOrder(models.Model):
         # Continuar con la confirmación normal
         result = super().action_confirm()
 
-        # Check if we need to change expedient state
-        expedient_state = self.env.context.get('set_expedient_state')
-
-        # After confirmation, update the expedient state if needed
-        if expedient_state and self.expedient_type != 'none':  # Reemplazamos is_expedient
-            self.write({'expedient_state': expedient_state})
-            # Post a message in the chatter
-            state_name = dict(self._fields['expedient_state'].selection).get(expedient_state)
-            self.message_post(
-                body=_("Expedient marked as %s and converted to sale order") % state_name,
-                message_type='notification'
-            )
+        # Los expedientes pre-pagados siempre deben estar en estado 'aprobada'
+        pre_paid_orders = self.filtered(lambda o: o.expedient_type == 'pre_paid')
+        if pre_paid_orders:
+            for order in pre_paid_orders:
+                if order.expedient_state != 'aprobada':
+                    order.expedient_state = 'aprobada'
+                    order.expedient_date_end = fields.Datetime.now()
+                    order.message_post(
+                        body=_("Expediente pre-pagado marcado como aprobado automáticamente"),
+                        message_type='notification'
+                    )
 
         return result
 

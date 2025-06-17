@@ -1,23 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <data noupdate="1">
-        <!-- Sequence for expedients -->
+        <!-- Secuencia para números de expediente -->
         <record id="seq_sale_order_expedient" model="ir.sequence">
-            <field name="name">Expedient Sequence</field>
+            <field name="name">Expedient Number Sequence</field>
             <field name="code">sale.order.expedient</field>
             <field name="prefix">EXP/%(year)s/</field>
             <field name="padding">4</field>
             <field name="company_id" eval="False"/>
-        </record>
-
-        <!-- Sequence for Pre-paid Expedient -->
-        <record id="sequence_pre_paid_expedient" model="ir.sequence">
-            <field name="name">Pre-paid Expedient Sequence</field>
-            <field name="code">pre.paid.expedient</field>
-            <field name="prefix">PPE</field>
-            <field name="padding">4</field>
-            <field name="number_next">1</field>
-            <field name="number_increment">1</field>
         </record>
     </data>
 </odoo>

@@ -1,13 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <data noupdate="1">
-        <!-- Cron job para actualizar fechas de fin faltantes -->
-        <record id="ir_cron_update_missing_expedient_end_dates" model="ir.cron">
-            <field name="name">Actualizar fechas de fin faltantes en expedientes</field>
-            <field name="model_id" ref="model_sale_order"/>
+        <!-- Tarea programada para comprobar expedientes sin fecha fin -->
+        <record id="ir_cron_check_expedient_end_dates" model="ir.cron">
+            <field name="name">Check and Update Missing Expedient End Dates</field>
+            <field name="model_id" ref="sale.model_sale_order"/>
             <field name="state">code</field>
             <field name="code">model._cron_update_missing_expedient_end_dates()</field>
-            <field name="user_id" ref="base.user_root"/>
             <field name="interval_number">1</field>
             <field name="interval_type">days</field>
             <field name="numbercall">-1</field>
