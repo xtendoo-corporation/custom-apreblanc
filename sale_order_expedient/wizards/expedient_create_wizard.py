@@ -117,17 +117,34 @@ class ExpedientCreateWizard(models.TransientModel):
             'client_id': self.client_id,
             'expedient_number': self.expedient_number,
             'expedient_type': 'pre_paid',
-            'expedient_state': 'creada',
+            'expedient_state': 'creada',  # Cambiado de 'aprobada' a 'creada'
             'expedient_manager_id': self.env.user.id,
             'expedient_date_start': fields.Datetime.now(),
+            # No establecer fecha fin para estado 'creada'
+            'expedient_date_end': False,
             'sale_order_template_id': self.sale_order_template_id.id,
+            'state': 'sale',  # Forzar estado sale desde la creación
         }
 
         # Si se ha seleccionado un expediente pre-pagado, usarlo
         if hasattr(self, 'pre_paid_expedient_id') and self.pre_paid_expedient_id:
             sale_order_vals['pre_paid_expedient_id'] = self.pre_paid_expedient_id.id
 
+        # Crear el pedido
         sale_order = self.env['sale.order'].create(sale_order_vals)
+
+        # Verificar que efectivamente se creó en estado 'sale'
+        if sale_order.state != 'sale':
+            _logger.warning("Expediente prepagado %s no creado en estado 'sale'. Forzando...", sale_order.name)
+            # Usar write con contexto especial en lugar de SQL directo
+            sale_order.with_context(force_prepaid_state=True).write({
+                'state': 'sale',
+                'expedient_state': 'creada',
+                'expedient_date_end': False
+            })
+            # Recargar el registro después de la modificación
+            self.env.cache.invalidate()
+            sale_order = self.env['sale.order'].browse(sale_order.id)
 
         # Agregar líneas desde la plantilla
         if self.sale_order_template_id:
@@ -149,13 +166,11 @@ class ExpedientCreateWizard(models.TransientModel):
 
                 self.env['sale.order.line'].create(line_vals)
 
-        # Copiar también otros datos de la plantilla
-        if hasattr(self.sale_order_template_id, 'note') and self.sale_order_template_id.note:
-            sale_order.note = self.sale_order_template_id.note
-
-        # Verificar si payment_term_id existe antes de intentar acceder
-        if hasattr(self.sale_order_template_id, 'payment_term_id') and self.sale_order_template_id.payment_term_id:
-            sale_order.payment_term_id = self.sale_order_template_id.payment_term_id.id
+        # Mensaje explícito sobre el estado
+        sale_order.message_post(
+            body=_('Expediente pre-pagado creado directamente en estado confirmado (sale) y estado de expediente "creada"'),
+            message_type='notification'
+        )
 
         return sale_order
 

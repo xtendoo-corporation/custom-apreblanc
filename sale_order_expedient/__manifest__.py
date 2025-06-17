@@ -15,6 +15,7 @@
         # Datos
         'data/ir_sequence_data.xml',
         'data/ir_cron.xml',
+        'data/cron_data.xml',
 
         # Wizards
         'wizards/expedient_wizard_views.xml',
