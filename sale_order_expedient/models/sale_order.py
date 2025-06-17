@@ -226,7 +226,7 @@ class SaleOrder(models.Model):
         """Establece fecha de inicio al crear expedientes y confirma los pre-pagados"""
         # Mantener un registro de expedientes prepagados para procesar después
         prepaid_ids = []
-        
+
         for vals in vals_list:
             # Si es un expediente prepagado, FORZAR estado 'sale' desde el inicio
             if vals.get('expedient_type') == 'pre_paid':
@@ -235,7 +235,7 @@ class SaleOrder(models.Model):
                 vals['expedient_state'] = 'creada'
                 vals['expedient_date_end'] = False
                 _logger.info("Creando expediente prepagado directamente en estado 'sale' con expedient_state 'creada'")
-            
+
             # Gestión del número de expediente según su tipo
             if vals.get('expedient_type') == 'post_paid' and not vals.get('expedient_number'):
                 vals['expedient_number'] = self.env['ir.sequence'].next_by_code('sale.order.expedient')
@@ -305,7 +305,7 @@ class SaleOrder(models.Model):
                               (order.pre_paid_expedient_id.current_balance, order.amount_total),
                         message_type='notification'
                     )
-                
+
                 # SIEMPRE confirmar, usando múltiples métodos si es necesario
                 try:
                     # Preservar el estado del expediente como 'creada' mientras se confirma como pedido de venta
@@ -343,7 +343,7 @@ class SaleOrder(models.Model):
         # Si se está forzando un estado de expediente prepagado, permitirlo
         if self.env.context.get('force_prepaid_state') or self.env.context.get('bypass_prepaid_checks') or self.env.context.get('bypass_all_constraints'):
             return super().write(vals)
-            
+
         # Verificar si hay expedientes en estado final que se están intentando modificar
         locked_expedients = self.filtered(lambda r: r.expedient_type in ['post_paid', 'pre_paid'] and
                                          r.expedient_state in ['aprobada', 'rechazada'] and
@@ -712,17 +712,17 @@ class SaleOrder(models.Model):
         # Para expedientes prepagados, SIEMPRE confirmar sin validaciones
         pre_paid_orders = self.filtered(lambda o: o.expedient_type == 'pre_paid')
         regular_orders = self - pre_paid_orders
-        
+
         result = True
-        
+
         # Procesar órdenes regulares con validaciones normales
         if regular_orders:
             result = super(SaleOrder, regular_orders).action_confirm()
-        
+
         # Para expedientes prepagados, FORZAR estado 'sale' sin importar nada más
         for order in pre_paid_orders:
             _logger.info("Confirmando expediente prepagado %s", order.name)
-            
+
             # PRIMERA OPCIÓN: Método estándar con try/except
             try:
                 # Intentar confirmación estándar (solo para state, no cambiar expedient_state)
@@ -733,7 +733,7 @@ class SaleOrder(models.Model):
                     order.write({'expedient_state': 'creada', 'expedient_date_end': False})
             except Exception as e:
                 _logger.error("Error en confirmación estándar: %s. Aplicando método de respaldo.", str(e))
-                
+
                 # SEGUNDA OPCIÓN: Método de respaldo con escritura directa
                 try:
                     # Forzar todos los valores críticos
@@ -748,12 +748,12 @@ class SaleOrder(models.Model):
                     )
                 except Exception as e2:
                     _logger.error("Error en método de respaldo: %s. Aplicando método de emergencia.", str(e2))
-                    
+
                     # TERCERA OPCIÓN: Método de emergencia con SQL directo (siempre funcionará)
                     try:
                         self.env.cr.execute(
-                            """UPDATE sale_order 
-                               SET state = 'sale', 
+                            """UPDATE sale_order
+                               SET state = 'sale',
                                    expedient_state = 'creada',
                                    expedient_date_end = NULL,
                                    write_date = NOW() AT TIME ZONE 'UTC'
@@ -764,7 +764,7 @@ class SaleOrder(models.Model):
                         )
                     except Exception as e3:
                         _logger.critical("¡Error crítico al confirmar expediente prepagado! %s", str(e3))
-        
+
         # Los expedientes pre-pagados siempre deben estar en estado 'creada'
         for order in pre_paid_orders:
             if order.expedient_state != 'creada':
@@ -776,7 +776,7 @@ class SaleOrder(models.Model):
                     body=_("Expediente pre-pagado restaurado a estado 'creada' automáticamente"),
                     message_type='notification'
                 )
-        
+
         return result
 
     def action_register_return(self):
@@ -844,19 +844,19 @@ class SaleOrder(models.Model):
         # For pre-paid expedients, force the state to 'sale' immediately
         if order.expedient_type == 'pre_paid':
             _logger.info("Forzando estado 'sale' para expediente prepagado %s al ser creado", order.name)
-            
+
             # Usar write con contexto especial en lugar de SQL directo
             order.with_context(force_prepaid_state=True).write({
                 'state': 'sale',
                 'expedient_state': 'creada',
                 'expedient_date_end': False
             })
-            
+
             # Verificar si el cambio se aplicó correctamente
             # Usar self.env.cache.invalidate() en lugar de order.invalidate_cache()
             self.env.cache.invalidate()
             order = self.browse(order.id)  # Obtener registro fresco
-            
+
             if order.state != 'sale' or order.expedient_state != 'creada':
                 _logger.warning(
                     "El expediente prepagado %s no está en estado correcto después de creación. "
@@ -869,24 +869,24 @@ class SaleOrder(models.Model):
                     'expedient_state': 'creada',
                     'expedient_date_end': False
                 })
-            
+
             order.message_post(
                 body=_("Expediente pre-pagado creado como pedido de venta confirmado con estado de expediente 'creada'"),
                 message_type='notification'
             )
-            
+
             # Procesamiento post-creación específico para expedientes pre-pagados
             if order.pre_paid_expedient_id:
                 # Verificar saldo solo para advertir, no para bloquear
                 if order.amount_total > order.pre_paid_expedient_id.current_balance:
                     order.message_post(
-                        body=_("ADVERTENCIA: El saldo disponible (%.2f) es menor que el importe del pedido (%.2f)") % 
+                        body=_("ADVERTENCIA: El saldo disponible (%.2f) es menor que el importe del pedido (%.2f)") %
                              (order.pre_paid_expedient_id.current_balance, order.amount_total),
                         message_type='notification'
                     )
-            
+
             return order
-        
+
         # Para cada expediente creado, registrar un mensaje en el chatter
         if order.expedient_type in ['post_paid', 'pre_paid']:
             order.message_post(
@@ -894,7 +894,7 @@ class SaleOrder(models.Model):
                 fields.Datetime.to_string(order.expedient_date_start),
                 message_type='notification'
             )
-    
+
         return order
 
     @api.model
@@ -907,14 +907,14 @@ class SaleOrder(models.Model):
             ('state', '!=', 'sale'),
             ('expedient_state', '!=', 'creada')
         ])
-                
+
         if broken_expedients:
             _logger.warning("Encontrados %s expedientes prepagados en estado incorrecto. Corrigiendo...", len(broken_expedients))
             for expedient in broken_expedients:
                 # Usar write con contexto especial en lugar de SQL directo
                 expedient.with_context(force_prepaid_state=True).write({
-                    'state': 'sale', 
-                    'expedient_state': 'creada', 
+                    'state': 'sale',
+                    'expedient_state': 'creada',
                     'expedient_date_end': False
                 })
                 expedient.message_post(
@@ -943,7 +943,7 @@ class SaleOrder(models.Model):
             ('expedient_state', 'in', ['aprobada', 'rechazada']),
             ('state', '!=', 'sale')
         ])
-        
+
         if expedients:
             _logger.info("Encontrados %s expedientes en estado final que no están en 'sale'", len(expedients))
             for expedient in expedients:
