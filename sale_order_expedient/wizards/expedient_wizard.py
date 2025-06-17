@@ -82,14 +82,14 @@ class ExpedientCreateWizard(models.TransientModel):
 
         # Crear el expediente (sale.order)
         expedient = self.env['sale.order'].create(vals)
-        
+
         # Aplicar la plantilla: copiar todas las líneas de productos
         if self.sale_order_template_id:
             # Copiar líneas de productos
             for line in self.sale_order_template_id.sale_order_template_line_ids:
                 # Obtener datos del producto para el precio
                 product = line.product_id
-                
+
                 # Crear línea adaptada a la estructura correcta
                 line_vals = {
                     'order_id': expedient.id,
@@ -102,17 +102,17 @@ class ExpedientCreateWizard(models.TransientModel):
                     # Solo usar campos que existan
                     'display_type': line.display_type,
                 }
-                
+
                 # Añadir descuento solo si el objeto tiene ese atributo
                 if hasattr(line, 'discount'):
                     line_vals['discount'] = line.discount
-                
+
                 self.env['sale.order.line'].create(line_vals)
-        
+
             # Copiar también la nota si existe
             if hasattr(self.sale_order_template_id, 'note') and self.sale_order_template_id.note:
                 expedient.note = self.sale_order_template_id.note
-                
+
             # Verificar si existe payment_term_id antes de intentar acceder
             if hasattr(self.sale_order_template_id, 'payment_term_id') and self.sale_order_template_id.payment_term_id:
                 expedient.payment_term_id = self.sale_order_template_id.payment_term_id.id

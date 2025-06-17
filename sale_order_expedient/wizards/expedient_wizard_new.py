@@ -44,11 +44,11 @@ class ExpedientWizardNew(models.TransientModel):
     def action_create_expedient(self):
         """Crear expediente desde el wizard"""
         self.ensure_one()
-        
+
         # Validaciones básicas
         if not self.partner_id:
             raise ValidationError(_("Se requiere un cliente para crear el expediente. La plantilla seleccionada debe tener un cliente asociado."))
-        
+
         # Valores comunes para todos los expedientes
         vals = {
             'partner_id': self.partner_id.id,
@@ -58,17 +58,17 @@ class ExpedientWizardNew(models.TransientModel):
             'expedient_manager_id': self.env.user.id,
             'sale_order_template_id': self.sale_order_template_id.id,
         }
-        
+
         # Crear el expediente (sale.order)
         expedient = self.env['sale.order'].create(vals)
-        
+
         # Implementación mejorada para copiar líneas de la plantilla
         if self.sale_order_template_id:
             # 1. Preparar líneas de productos desde la plantilla
             for line in self.sale_order_template_id.sale_order_template_line_ids:
                 # Obtener el producto para acceder a sus datos
                 product = line.product_id
-                
+
                 # Preparar valores de línea con campos que existen
                 order_line_vals = {
                     'order_id': expedient.id,
@@ -79,22 +79,22 @@ class ExpedientWizardNew(models.TransientModel):
                     'price_unit': product.list_price,  # Usar precio del producto
                     'display_type': line.display_type,
                 }
-                
+
                 # Añadir descuento solo si existe
                 if hasattr(line, 'discount'):
                     order_line_vals['discount'] = line.discount
-                    
+
                 # Crear la línea directamente
                 self.env['sale.order.line'].create(order_line_vals)
-        
+
             # 2. Copiar campos adicionales de la plantilla
             if hasattr(self.sale_order_template_id, 'note') and self.sale_order_template_id.note:
                 expedient.note = self.sale_order_template_id.note
-                
+
             # 3. Copiar términos de pago si existen
             if hasattr(self.sale_order_template_id, 'payment_term_id') and self.sale_order_template_id.payment_term_id:
                 expedient.payment_term_id = self.sale_order_template_id.payment_term_id.id
-            
+
             # 4. Copiar opciones de producto si existen
             if hasattr(self.sale_order_template_id, 'sale_order_template_option_ids'):
                 for option in self.sale_order_template_id.sale_order_template_option_ids:
@@ -106,7 +106,7 @@ class ExpedientWizardNew(models.TransientModel):
                         'uom_id': option.uom_id.id,
                     }
                     self.env['sale.order.option'].create(option_vals)
-    
+
         # Retornar acción para abrir el expediente creado
         return {
             'name': _('Expediente creado'),

@@ -146,13 +146,13 @@ class ExpedientCreateWizard(models.TransientModel):
                     line_vals['discount'] = template_line.discount
                 if hasattr(template_line, 'display_type'):
                     line_vals['display_type'] = template_line.display_type
-                
+
                 self.env['sale.order.line'].create(line_vals)
-        
+
         # Copiar también otros datos de la plantilla
         if hasattr(self.sale_order_template_id, 'note') and self.sale_order_template_id.note:
             sale_order.note = self.sale_order_template_id.note
-            
+
         # Verificar si payment_term_id existe antes de intentar acceder
         if hasattr(self.sale_order_template_id, 'payment_term_id') and self.sale_order_template_id.payment_term_id:
             sale_order.payment_term_id = self.sale_order_template_id.payment_term_id.id
@@ -192,13 +192,13 @@ class ExpedientCreateWizard(models.TransientModel):
                     line_vals['discount'] = template_line.discount
                 if hasattr(template_line, 'display_type'):
                     line_vals['display_type'] = template_line.display_type
-                
+
                 self.env['sale.order.line'].create(line_vals)
 
         # Copiar también otros datos de la plantilla
         if hasattr(self.sale_order_template_id, 'note') and self.sale_order_template_id.note:
             sale_order.note = self.sale_order_template_id.note
-            
+
         # Verificar si payment_term_id existe antes de intentar acceder
         if hasattr(self.sale_order_template_id, 'payment_term_id') and self.sale_order_template_id.payment_term_id:
             sale_order.payment_term_id = self.sale_order_template_id.payment_term_id.id
