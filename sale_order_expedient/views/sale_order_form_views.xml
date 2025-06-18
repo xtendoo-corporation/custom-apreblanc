@@ -61,6 +61,18 @@
                            nolabel="1"/>
                 </div>
             </xpath>
+
+            <!-- Usar un XPath más específico para encontrar dónde añadir los campos -->
+            <xpath expr="//field[@name='expedient_number']" position="after">
+                <field name="create_date" readonly="1" string="Fecha de Creación" invisible="expedient_type == 'none'"/>
+                <field name="expedient_start_date" string="Fecha de Inicio" invisible="expedient_type == 'none'" required="expedient_type != 'none'"/>
+            </xpath>
+
+            <!-- Añadir los campos de complejidad y número de personas -->
+            <xpath expr="//field[@name='client_id']" position="after">
+                <field name="complejidad_proyecto" invisible="expedient_type == 'none'" required="expedient_type != 'none'"/>
+                <field name="numero_personas" invisible="expedient_type == 'none'" required="expedient_type != 'none'"/>
+            </xpath>
         </field>
     </record>
 </odoo>

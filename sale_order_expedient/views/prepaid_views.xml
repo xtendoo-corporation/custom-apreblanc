@@ -15,9 +15,12 @@
                     <group>
                         <group>
                             <field name="sale_order_template_id"/>
-                            <field name="partner_id" required="1" readonly="1"/>
+                            <field name="partner_id" required="1"/>
+                            <!-- Usar widget Many2one si client_id es Many2one -->
                             <field name="client_id" required="1"/>
                             <field name="expedient_number" required="1"/>
+                            <field name="complejidad_proyecto"/>
+                            <field name="numero_personas"/>
                             <field name="currency_id" invisible="1"/>
                         </group>
                         <group>
