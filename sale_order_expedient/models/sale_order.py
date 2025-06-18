@@ -140,7 +140,7 @@ class SaleOrder(models.Model):
     return_count = fields.Integer(
         string='Return Count',
         compute='_compute_return_count',
-        store=False
+        store=True  # Cambiar a True para permitir su uso en vistas pivot
     )
 
     # Add a locked field to fix the view error

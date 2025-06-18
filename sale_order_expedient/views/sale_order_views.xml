@@ -184,12 +184,30 @@
         </field>
     </record>
 
-    <!-- Actualizar la acción para expedientes -->
+    <!-- Vista Pivot para análisis de expedientes -->
+    <record id="view_sale_order_expedient_pivot" model="ir.ui.view">
+        <field name="name">sale.order.expedient.pivot</field>
+        <field name="model">sale.order</field>
+        <field name="arch" type="xml">
+            <pivot string="Análisis de Expedientes" display_quantity="true" disable_linking="true">
+                <field name="expedient_manager_id" type="row"/>
+                <field name="expedient_date_end" type="col"/>
+                <field name="expedient_state" type="col"/>
+                <field name="parts_involved" type="measure"/>
+                <field name="account_numbers" type="measure"/>
+                <field name="amount_total" type="measure"/>
+                <field name="date_order" interval="month" type="col"/>
+                <field name="expedient_type" type="row"/>
+            </pivot>
+        </field>
+    </record>
+
+    <!-- Actualizar la acción para expedientes para incluir la vista pivot -->
     <record id="action_sale_order_expedient" model="ir.actions.act_window">
         <field name="name">Expedientes Postpago</field>
         <field name="type">ir.actions.act_window</field>
         <field name="res_model">sale.order</field>
-        <field name="view_mode">tree,form</field>
+        <field name="view_mode">tree,form,pivot</field>
         <field name="view_id" ref="view_expedient_tree_custom"/>
         <field name="domain">[('expedient_type', '=', 'post_paid')]</field>
         <field name="context">{
@@ -203,6 +221,31 @@
             </p>
         </field>
     </record>
+
+    <!-- Acción específica para la vista pivot -->
+    <record id="action_sale_order_expedient_analysis" model="ir.actions.act_window">
+        <field name="name">Análisis de Expedientes</field>
+        <field name="type">ir.actions.act_window</field>
+        <field name="res_model">sale.order</field>
+        <field name="view_mode">pivot</field>
+        <field name="view_id" ref="view_sale_order_expedient_pivot"/>
+        <field name="domain">[('expedient_type', 'in', ['post_paid', 'pre_paid'])]</field>
+        <field name="context">{
+            'search_default_expedient_manager_id': 1,
+        }</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Aquí podrá analizar el rendimiento de los expedientes por responsable
+            </p>
+        </field>
+    </record>
+
+    <!-- Menú para el análisis de expedientes -->
+    <menuitem id="menu_sale_order_expedient_analysis"
+              name="Análisis de Expedientes"
+              parent="sale.menu_sale_report"
+              action="action_sale_order_expedient_analysis"
+              sequence="30"/>
 
     <!-- Menú para expedientes con la acción configurada -->
     <menuitem id="menu_sale_order_expedient"
