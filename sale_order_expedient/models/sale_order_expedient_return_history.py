@@ -39,23 +39,16 @@ class SaleOrderExpedientReturnHistory(models.Model):
     def create(self, vals_list):
         records = super().create(vals_list)
 
-        # Actualizar el contador de devoluciones directamente sin método
-        for record in records:
-            if record.sale_order_id:
-                # Actualizar directamente el contador
-                count = len(record.sale_order_id.expedient_return_history_ids)
-                record.sale_order_id.return_count = count
-
         # Cambiar el estado de los expedientes a "pendiente de documentación" SIEMPRE que haya una devolución
         for record in records:
             if record.sale_order_id and record.sale_order_id.expedient_type in ['post_paid', 'pre_paid']:
                 expedient = record.sale_order_id
-
+                
                 # Verificar si el expediente está aprobado y el usuario no es administrador
                 if expedient.expedient_state == 'aprobada':
                     # Verificar si el usuario actual es administrador
                     is_admin = self.env.user.has_group('base.group_system') or self.env.user.has_group('base.group_erp_manager')
-
+                    
                     if not is_admin:
                         # Registrar la devolución pero no cambiar el estado si no es administrador
                         expedient.message_post(
@@ -63,7 +56,7 @@ class SaleOrderExpedientReturnHistory(models.Model):
                             subtype_xmlid='mail.mt_note'
                         )
                         continue
-
+                
                 # Cambiar a pendiente_documentacion si es administrador o el expediente no está aprobado
                 expedient.write({
                     'expedient_state': 'pendiente_documentacion'
@@ -77,15 +70,8 @@ class SaleOrderExpedientReturnHistory(models.Model):
         return records
 
     def write(self, vals):
-        result = super().write(vals)
-
-        # Si cambia la orden relacionada, actualizar contadores
-        if 'sale_order_id' in vals:
-            # Actualizar contadores de las órdenes anteriores y nuevas
-            sale_orders = self.mapped('sale_order_id')
-            for order in sale_orders:
-                if order:
-                    order.return_count = len(order.expedient_return_history_ids)
+        """Override write to add tracking message when return history is updated."""
+        result = super(SaleOrderExpedientReturnHistory, self).write(vals)
 
         # Track significant changes
         if any(field in vals for field in ['return_reason_id', 'return_date', 'notes']):
@@ -96,14 +82,11 @@ class SaleOrderExpedientReturnHistory(models.Model):
         return result
 
     def unlink(self):
-        # Guardar las órdenes de venta antes de eliminar
-        sale_orders = self.mapped('sale_order_id')
-
-        result = super().unlink()
-
-        # Actualizar contadores directamente
-        for order in sale_orders:
-            if order:
-                order.return_count = len(order.expedient_return_history_ids)
-
-        return result
+        """Override unlink to add tracking message when return history is deleted."""
+        for record in self:
+            if record.sale_order_id:
+                record.sale_order_id.message_post(
+                    body=_("Return history entry deleted: %s") % (record.return_reason_id.name or _("Unknown reason")),
+                    message_type='notification'
+                )
+        return super(SaleOrderExpedientReturnHistory, self).unlink()

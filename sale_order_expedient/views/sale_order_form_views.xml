@@ -18,8 +18,7 @@
                             <field name="partner_id" required="1"/>
                             <field name="client_id" required="1"/>
                             <field name="expedient_number" required="1"/>
-                            <!-- Eliminamos el campo que causa el error -->
-                            <!-- <field name="currency_id" invisible="1"/> -->
+                            <field name="currency_id" invisible="1"/>
                         </group>
                         <group>
                         </group>
@@ -50,8 +49,7 @@
         <field name="model">sale.order</field>
         <field name="inherit_id" ref="sale.view_order_form"/>
         <field name="arch" type="xml">
-            <!-- Reemplazar el XPath problemático por uno más confiable -->
-            <xpath expr="//sheet" position="before">
+            <xpath expr="//div[@class='o_pager']" position="before">
                 <!-- Status bar unificada para todos los expedientes -->
                 <div class="position-absolute top-0 end-0 mt-3 me-3" invisible="expedient_type == 'none'">
                     <field name="expedient_state"
@@ -62,19 +60,6 @@
                            class="expedient_statusbar"
                            nolabel="1"/>
                 </div>
-            </xpath>
-
-            <!-- Corregir los XPath problemáticos - usar referencias a campos existentes -->
-            <!-- En lugar de buscar campos que no existen, añadirlos en ubicaciones conocidas -->
-            <xpath expr="//field[@name='partner_id']" position="after">
-                <!-- Añadir campos de expediente en una ubicación conocida -->
-                <field name="expedient_type" invisible="1"/>
-                <field name="client_id" attrs="{'invisible': [('expedient_type', '=', 'none')], 'required': [('expedient_type', '!=', 'none')]}"/>
-                <field name="expedient_number" attrs="{'invisible': [('expedient_type', '=', 'none')], 'required': [('expedient_type', '!=', 'none')]}"/>
-                <field name="create_date" readonly="1" string="Fecha de Creación" attrs="{'invisible': [('expedient_type', '=', 'none')]}"/>
-                <field name="expedient_start_date" string="Fecha de Inicio" attrs="{'invisible': [('expedient_type', '=', 'none')], 'required': [('expedient_type', '!=', 'none')]}"/>
-                <field name="complejidad_proyecto" attrs="{'invisible': [('expedient_type', '=', 'none')], 'required': [('expedient_type', '!=', 'none')]}"/>
-                <field name="numero_personas" attrs="{'invisible': [('expedient_type', '=', 'none')], 'required': [('expedient_type', '!=', 'none')]}"/>
             </xpath>
         </field>
     </record>
