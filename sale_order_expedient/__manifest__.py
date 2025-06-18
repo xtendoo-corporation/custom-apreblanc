@@ -9,7 +9,7 @@
     'depends': ['sale', 'sale_management', 'mail'],
     'data': [
         # Seguridad primero
-        'security/security.xml',  # Archivo de seguridad
+        'security/expedient_security.xml',  # Cambiado de security.xml a expedient_security.xml
         'security/ir.model.access.csv',
 
         # Datos

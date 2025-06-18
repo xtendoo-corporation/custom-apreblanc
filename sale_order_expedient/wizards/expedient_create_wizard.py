@@ -20,6 +20,9 @@ class ExpedientCreateWizard(models.TransientModel):
     expedient_number = fields.Char(string='Expedient Number', required=True)
     partner_readonly = fields.Boolean(string='Partner Readonly', default=False)
 
+    # Añadir campo currency_id para resolver el error
+    currency_id = fields.Many2one('res.currency', string='Moneda', default=lambda self: self.env.company.currency_id.id)
+
     # Campos para plantillas
     sale_order_template_id = fields.Many2one(
         'sale.order.template',
@@ -37,7 +40,6 @@ class ExpedientCreateWizard(models.TransientModel):
 
     # Campo para el monto total (necesario para validación de saldo)
     amount_total = fields.Monetary(string='Importe Total', currency_field='currency_id')
-    currency_id = fields.Many2one('res.currency', string='Moneda', default=lambda self: self.env.company.currency_id.id)
 
     @api.model
     def _get_default_expedient_type(self):

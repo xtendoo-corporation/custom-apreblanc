@@ -30,28 +30,34 @@
         </field>
     </record>
 
-    <!-- Nueva Vista Pivot para análisis de expedientes -->
+    <!-- Nueva Vista Pivot para análisis de expedientes mejorada -->
     <record id="view_expedient_pivot" model="ir.ui.view">
         <field name="name">sale.order.expedient.pivot</field>
         <field name="model">sale.order</field>
         <field name="arch" type="xml">
             <pivot string="Análisis de Expedientes">
+                <!-- Filas: Responsable del expediente como principal -->
+                <field name="expedient_manager_id" type="row"/>
                 <field name="partner_id" type="row"/>
+
+                <!-- Columnas: Tipo de expediente y estado -->
+                <field name="expedient_type" type="col"/>
                 <field name="expedient_state" type="col"/>
-                <field name="create_date" interval="month" type="col"/>
-                <field name="numero_personas" type="measure"/>
-                <field name="amount_total" type="measure"/>
-                <field name="__count" string="Nº Expedientes" type="measure"/>
+
+                <!-- Medidas: Métricas clave -->
+                <field name="return_count" type="measure" string="Devoluciones" aggregate="sum"/>
+                <field name="numero_personas" type="measure" aggregate="sum"/>
+                <field name="amount_total" type="measure" aggregate="sum"/>
             </pivot>
         </field>
     </record>
 
-    <!-- Acción para Expedientes Post-pagados -->
+    <!-- Acción para Expedientes (modificar para incluir ambos tipos) -->
     <record id="action_sale_order_expedient" model="ir.actions.act_window">
-        <field name="name">Expedientes Post-pagados</field>
+        <field name="name">Expedientes</field>
         <field name="res_model">sale.order</field>
         <field name="view_mode">tree,pivot,form</field>
-        <field name="domain">[('expedient_type', '=', 'post_paid')]</field>
+        <field name="domain">[('expedient_type', 'in', ['post_paid', 'pre_paid'])]</field>
         <field name="context">{'default_expedient_type': 'post_paid'}</field>
     </record>
 
