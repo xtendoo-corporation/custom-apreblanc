@@ -17,37 +17,32 @@ class SaleOrder(models.Model):
          'The combination of Client ID and Expedient Number must be unique!')
     ]
 
-    # Nuevos campos para expedientes
     parts_involved = fields.Integer(
         string='Partes Implicadas',
         default=1,
         help='Número de partes implicadas en el expediente'
     )
-
     expedient_difficulty = fields.Selection([
         ('simple', 'Simple'),
         ('complex', 'Complejo')
-    ], string='Dificultad del Expediente', 
-       default='simple',
-       help='Nivel de dificultad del expediente'
+    ],
+        string='Dificultad',
+        default='simple',
+        help='Nivel de dificultad del expediente',
     )
-
     account_numbers = fields.Integer(
         string='Números de Cuentas',
         default=1,
         help='Número de cuentas relacionadas con el expediente'
     )
-
-    # Campos existentes
     expedient_type = fields.Selection([
         ('none', 'None'),
         ('pre_paid', 'Pre-pagado'),
         ('post_paid', 'Post-pagado'),
-    ], string='Tipo de Expediente',
+    ],
+        string='Tipo de Expediente',
         default='none',
         help='Tipo de expediente de pre pago o post pago')
-
-    # Expedient fields
     expedient_number = fields.Char(
         string='Expedient Number',
         copy=False,
@@ -60,8 +55,6 @@ class SaleOrder(models.Model):
         index=True,
         help="Client identifier - part of the primary key along with Expedient Number"
     )
-
-    # Relación con expedientes prepagados
     pre_paid_expedient_id = fields.Many2one(
         'pre.paid.expedient',
         string='Expediente Prepagado',

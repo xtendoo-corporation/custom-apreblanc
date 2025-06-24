@@ -273,12 +273,17 @@
                     <field name="expedient_date_end"/>
                     <field name="expedient_resolution_time" string="Tiempo de Resolución"/>
                     <field name="expedient_manager_id" widget="many2one_avatar"/>
-                    <field name="expedient_state" widget="badge"
+                    <field name="expedient_state"
+                           widget="badge"
                            decoration-info="expedient_state == 'creada'"
                            decoration-success="expedient_state == 'aprobada'"
                            decoration-danger="expedient_state == 'rechazada'"
                            decoration-muted="expedient_state == 'cancelada'"
                            decoration-warning="expedient_state == 'pendiente_documentacion'"/>
+                    <field name="expedient_difficulty"
+                           widget="badge"
+                           decoration-info="expedient_difficulty == 'simple'"
+                           decoration-success="expedient_state == 'complex'"/>
                     <field name="expedient_type" optional="show"/>
                     <field name="parts_involved" optional="show"/>
                     <field name="account_numbers" optional="show"/>
