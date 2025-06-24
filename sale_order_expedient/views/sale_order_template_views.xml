@@ -7,61 +7,17 @@
             <field name="model">sale.order.template</field>
             <field name="inherit_id" ref="sale_management.sale_order_template_view_form"/>
             <field name="arch" type="xml">
-                <!-- Asegurarnos de que los campos usados en expresiones estén presentes -->
-                <xpath expr="//sheet" position="inside">
-                    <field name="partner_id" invisible="1"/>
-                </xpath>
-
-                <!-- Añadir campo para marcar como plantilla de expediente -->
-                <field name="name" position="after">
-                    <label for="is_expedient_template" string="¿Es plantilla para expedientes?"/>
-                    <field name="is_expedient_template" nolabel="1"/>
-                </field>
-
                 <!-- Añadir grupo de campos para plantillas de expediente -->
                 <xpath expr="//group[1]" position="after">
-                    <group string="Configuración de Expediente" invisible="not is_expedient_template">
+                    <group string="Configuración de Expediente">
                         <field name="partner_id"
-                               required="is_expedient_template"
                                options="{'no_create': True}"
                                string="Cliente del Expediente"/>
                         <field name="allowed_group_ids"
-                               required="is_expedient_template"
                                widget="many2many_tags"
                                options="{'no_create': True}"
                                string="Grupos de Usuarios Autorizados"/>
                     </group>
-                </xpath>
-
-                <!-- Añadir pestaña de control de acceso -->
-                <xpath expr="//notebook" position="inside">
-                    <page string="Control de Acceso" name="access_control" invisible="not is_expedient_template">
-                        <group>
-                            <field name="allowed_group_ids" widget="many2many_tags" options="{'no_create': True}"/>
-                        </group>
-                        <div class="alert alert-info mt-3">
-                            <p><strong>Nota:</strong> Configure qué grupos de usuarios pueden usar esta plantilla. Si no selecciona ningún grupo, todos los usuarios podrán usarla.</p>
-                            <p><strong>Cliente:</strong> No olvide seleccionar el cliente para esta plantilla de expediente en la parte superior del formulario.</p>
-                        </div>
-                    </page>
-                </xpath>
-
-                <!-- Añadir una alerta informativa cuando es plantilla de expediente sin cliente -->
-                <xpath expr="//sheet" position="inside">
-                    <div class="alert alert-warning" role="alert" invisible="not is_expedient_template or partner_id">
-                        <p><strong>Importante:</strong> Las plantillas de expediente deben tener un cliente seleccionado. Por favor, complete el campo Cliente en la parte superior del formulario.</p>
-                    </div>
-                </xpath>
-
-                <!-- Añadir una alerta informativa -->
-                <xpath expr="//sheet" position="inside">
-                    <div class="alert alert-info mt-3" invisible="not is_expedient_template">
-                        <p><strong>Configuración de Expediente:</strong></p>
-                        <ul>
-                            <li><strong>Cliente:</strong> El cliente que se asignará automáticamente al crear expedientes con esta plantilla.</li>
-                            <li><strong>Grupos de Usuarios:</strong> Solo los usuarios que pertenezcan a alguno de estos grupos podrán ver y usar esta plantilla.</li>
-                        </ul>
-                    </div>
                 </xpath>
             </field>
         </record>
@@ -73,7 +29,6 @@
             <field name="inherit_id" ref="sale_management.sale_order_template_view_tree"/>
             <field name="arch" type="xml">
                 <field name="name" position="after">
-                    <field name="is_expedient_template"/>
                     <field name="partner_id" string="Cliente del Expediente"/>
                 </field>
             </field>
@@ -85,8 +40,7 @@
             <field name="type">ir.actions.act_window</field>
             <field name="res_model">sale.order.template</field>
             <field name="view_mode">tree,form</field>
-            <field name="domain">[('is_expedient_template', '=', True)]</field>
-            <field name="context">{'default_is_expedient_template': True}</field>
+            <field name="domain">[]</field>
             <field name="help" type="html">
                 <p class="o_view_nocontent_smiling_face">
                     Crea una nueva plantilla para expedientes
@@ -94,11 +48,65 @@
             </field>
         </record>
 
+        <!-- Menú principal para la configuración de Expedientes -->
+        <menuitem id="menu_expedient_configuration"
+                  name="Expedientes"
+                  parent="sale.menu_sale_config"
+                  sequence="39"/>
+
         <!-- Menú para plantillas de expedientes -->
         <menuitem id="menu_sale_order_expedient_templates"
-                  name="Plantillas de Expedientes"
-                  parent="sale.menu_sale_config"
+                  name="Plantillas"
+                  parent="menu_expedient_configuration"
                   action="action_sale_order_expedient_templates"
-                  sequence="40"/>
+                  sequence="10"/>
+
+        <!-- Vistas para expedient.return.reason -->
+        <record id="view_expedient_return_reason_tree" model="ir.ui.view">
+            <field name="name">expedient.return.reason.tree</field>
+            <field name="model">expedient.return.reason</field>
+            <field name="arch" type="xml">
+                <tree editable="bottom">
+                    <field name="name"/>
+                    <field name="description"/>
+                    <field name="active" widget="boolean_toggle"/>
+                </tree>
+            </field>
+        </record>
+
+        <record id="view_expedient_return_reason_form" model="ir.ui.view">
+            <field name="name">expedient.return.reason.form</field>
+            <field name="model">expedient.return.reason</field>
+            <field name="arch" type="xml">
+                <form>
+                    <sheet>
+                        <div class="oe_button_box" name="button_box">
+                            <button name="toggle_active" type="object" class="oe_stat_button" icon="fa-archive">
+                                <field name="active" widget="boolean_button"/>
+                            </button>
+                        </div>
+                        <group>
+                            <field name="name"/>
+                            <field name="description"/>
+                        </group>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+
+        <!-- Acción para razones de devolución -->
+        <record id="action_expedient_return_reason" model="ir.actions.act_window">
+            <field name="name">Return Reasons</field>
+            <field name="res_model">expedient.return.reason</field>
+            <field name="view_mode">tree,form</field>
+        </record>
+
+        <!-- Menú para razones de devolución -->
+        <menuitem id="menu_expedient_return_reason"
+                  name="Return Reasons"
+                  parent="menu_expedient_configuration"
+                  action="action_expedient_return_reason"
+                  sequence="50"/>
+
     </data>
 </odoo>

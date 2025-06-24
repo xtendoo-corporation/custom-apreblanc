@@ -27,7 +27,6 @@ class ExpedientCreateWizard(models.TransientModel):
     sale_order_template_id = fields.Many2one(
         'sale.order.template',
         string='Plantilla',
-        domain="[('is_expedient_template', '=', True)]",
         required=True,
         default=lambda self: self._get_default_template()
     )
@@ -127,4 +126,3 @@ class ExpedientCreateWizard(models.TransientModel):
             'context': {'show_as_expedient': True},
             'target': 'current',
         }
-

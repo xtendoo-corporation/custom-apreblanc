@@ -3,6 +3,10 @@
 
 from odoo import fields, models, api, _
 from odoo.exceptions import ValidationError
+from odoo.osv import expression
+import logging
+
+_logger = logging.getLogger(__name__)
 
 
 class SaleOrderTemplate(models.Model):
@@ -11,10 +15,9 @@ class SaleOrderTemplate(models.Model):
     partner_id = fields.Many2one(
         'res.partner',
         string='Customer',
-        domain=[('customer_rank', '>', 0)],
+        required=True,
         help='Default customer for this quotation template'
     )
-
     allowed_group_ids = fields.Many2many(
         'res.groups',
         'sale_template_groups_rel',
@@ -23,19 +26,11 @@ class SaleOrderTemplate(models.Model):
         string='Allowed Groups',
         help='If groups are selected, only users belonging to these groups will be able to use this template.'
     )
-
-    is_expedient_template = fields.Boolean(
-        string='Is Expedient Template',
-        help='Indicates if this template is for expedients',
-        default=False
-    )
-
     can_use_template = fields.Boolean(
         string='Can Use Template',
         compute='_compute_can_use_template',
         help='Indicates if the current user can use this template'
     )
-
     is_restricted = fields.Boolean(
         string='Restringida',
         compute='_compute_is_restricted',
@@ -47,15 +42,7 @@ class SaleOrderTemplate(models.Model):
     def _compute_can_use_template(self):
         """Determine if the current user can use this template based on groups"""
         current_user = self.env.user
-        is_admin = current_user.has_group('base.group_system')
-
         for template in self:
-            # Administrators can always use all templates
-            if is_admin:
-                template.can_use_template = True
-                continue
-
-            # If no groups are assigned, everyone can use it
             if not template.allowed_group_ids:
                 template.can_use_template = True
                 continue
@@ -70,85 +57,44 @@ class SaleOrderTemplate(models.Model):
         for template in self:
             template.is_restricted = bool(template.allowed_group_ids)
 
-    @api.model
-    def search_read(self, domain=None, fields=None, offset=0, limit=None, order=None):
-        """Override search_read to filter templates by allowed users"""
-        if domain is None:
-            domain = []
+    def _search(self, domain, offset=0, limit=None, order=None, access_rights_uid=None):
+        """Sobrescribe _search para forzar el filtrado por grupos autorizados"""
+        # Verificar si el usuario es administrador (tiene acceso a Ajustes)
+        current_user = self.env.user
+        is_admin = current_user.has_group('base.group_system')
 
-        # Add user access filter
-        user_domain = [
+        # Los administradores pueden ver todas las plantillas
+        if is_admin:
+            return super()._search(domain, offset=offset, limit=limit, order=order, access_rights_uid=access_rights_uid)
+
+        # Para usuarios normales, aplicar filtro por grupos permitidos
+        user_groups_ids = current_user.groups_id.ids
+
+        # Crear un dominio que filtre según grupos permitidos
+        # 1. Plantillas sin grupos asignados (accesibles para todos)
+        # 2. O plantillas donde el usuario pertenece a algún grupo permitido
+        group_domain = [
             '|',
-            ('allowed_user_ids', '=', False),  # No restrictions
-            ('allowed_user_ids', 'in', [self.env.user.id])  # Current user is allowed
+            ('allowed_group_ids', '=', False),  # Sin restricciones - accesible para todos
+            ('allowed_group_ids', 'in', user_groups_ids)  # Usuario pertenece a algún grupo permitido
         ]
-        domain = domain + user_domain
 
-        return super().search_read(domain, fields, offset, limit, order)
+        # Combinar el dominio original con nuestro dominio de filtrado por grupos
+        if domain:
+            domain = expression.AND([domain, group_domain])
+        else:
+            domain = group_domain
+
+        # Ahora dejar que la implementación estándar maneje la búsqueda con el dominio combinado
+        return super()._search(domain, offset=offset, limit=limit, order=order, access_rights_uid=access_rights_uid)
 
     @api.model
-    def search(self, domain, offset=0, limit=None, order=None, count=False):
-        """Override search to filter templates by allowed users"""
-        if domain is None:
-            domain = []
+    def name_search(self, name='', args=None, operator='ilike', limit=100):
+        """Override name_search to enforce access restriction."""
+        # Call search with bypass_group_check=False to ensure filtering
+        domain = args or []
+        if name:
+            domain = expression.AND([domain, [('name', operator, name)]])
 
-        # Add user access filter
-        user_domain = [
-            '|',
-            ('allowed_user_ids', '=', False),  # No restrictions
-            ('allowed_user_ids', 'in', [self.env.user.id])  # Current user is allowed
-        ]
-        domain = domain + user_domain
-
-        return super().search(domain, offset, limit, order, count)
-
-    @api.onchange('is_expedient_template')
-    def _onchange_is_expedient_template(self):
-        """Mostrar mensaje cuando se marca como plantilla de expediente"""
-        if self.is_expedient_template:
-            return {
-                'warning': {
-                    'title': 'Plantilla de Expediente',
-                    'message': 'Recuerde que debe seleccionar un cliente para esta plantilla de expediente.'
-                }
-            }
-
-    @api.constrains('is_expedient_template', 'partner_id')
-    def _check_expedient_template_partner(self):
-        """Verificar que las plantillas de expediente tengan un cliente seleccionado"""
-        for template in self:
-            if template.is_expedient_template and not template.partner_id:
-                raise models.ValidationError('Las plantillas de expediente deben tener un cliente seleccionado.')
-
-    is_expedient_template = fields.Boolean(
-        string='Plantilla de Expediente',
-        help='Marcar si esta plantilla se utilizará para crear expedientes',
-        default=False
-    )
-
-    # Redefinir partner_id para hacerlo obligatorio cuando es plantilla de expediente
-    partner_id = fields.Many2one(
-        'res.partner',
-        string='Cliente',
-        help='Cliente asociado a esta plantilla de expediente'
-    )
-
-    # Campo para definir grupos permitidos para esta plantilla
-    allowed_group_ids = fields.Many2many(
-        'res.groups',
-        'sale_template_groups_rel',
-        'template_id',
-        'group_id',
-        string='Grupos Permitidos',
-        help='Solo los usuarios que pertenezcan a estos grupos podrán usar esta plantilla'
-    )
-
-    @api.constrains('is_expedient_template', 'partner_id', 'allowed_group_ids')
-    def _check_expedient_template_required_fields(self):
-        """Verificar que las plantillas de expediente tengan los campos obligatorios"""
-        for template in self:
-            if template.is_expedient_template:
-                if not template.partner_id:
-                    raise ValidationError(_('Las plantillas de expediente deben tener un cliente seleccionado.'))
-                if not template.allowed_group_ids:
-                    raise ValidationError(_('Las plantillas de expediente deben tener al menos un grupo de usuarios asignado.'))
+        ids = self.search(domain, limit=limit).ids
+        return self.browse(ids).name_get()

@@ -20,7 +20,6 @@ class ExpedientWizardNew(models.TransientModel):
     sale_order_template_id = fields.Many2one(
         'sale.order.template',
         string='Plantilla',
-        domain="[('is_expedient_template', '=', True)]",
         required=True
     )
 

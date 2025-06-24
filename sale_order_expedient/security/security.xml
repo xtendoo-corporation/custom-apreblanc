@@ -8,13 +8,6 @@
             <field name="implied_ids" eval="[(4, ref('sales_team.group_sale_manager'))]"/>
         </record>
 
-        <!-- Grupo para administradores de plantillas (más información) -->
-        <record id="group_template_admin" model="res.groups">
-            <field name="name">Template Administrators</field>
-            <field name="category_id" ref="base.module_category_sales_sales"/>
-            <field name="comment">Users in this group can manage all quotation templates for expedients</field>
-        </record>
-
         <!-- Regla de acceso para expedientes aprobados/rechazados -->
         <record id="expedient_readonly_rule" model="ir.rule">
             <field name="name">Only admins can modify approved/rejected expedients</field>

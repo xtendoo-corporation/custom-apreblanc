@@ -6,3 +6,5 @@ access_expedient_return_reason_manager,access.expedient.return.reason.manager,mo
 access_sale_order_template_inherit,access.sale.order.template.inherit,sale_management.model_sale_order_template,sales_team.group_sale_salesman,1,1,0,0
 access_pre_paid_expedient,access_pre_paid_expedient,model_pre_paid_expedient,sales_team.group_sale_salesman,1,1,1,0
 access_pre_paid_expedient_manager,access_pre_paid_expedient_manager,model_pre_paid_expedient,sales_team.group_sale_manager,1,1,1,1
+access_sale_order_expedient_wizard_user,sale.order.expedient.wizard.user,model_sale_order_expedient_wizard,base.group_user,1,1,1,0
+access_sale_order_expedient_wizard_manager,sale.order.expedient.wizard.manager,model_sale_order_expedient_wizard,sales_team.group_sale_manager,1,1,1,1

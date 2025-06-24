@@ -10,7 +10,8 @@
     'data': [
         # Seguridad primero
         'security/security.xml',  # Archivo de seguridad
-        'security/ir.model.access.csv',
+        'security/sale_order_template_security.xml',  # Nueva regla de seguridad para plantillas
+        'security/ir.model.access.csv',  # Archivo principal de reglas de acceso
 
         # Datos
         'data/ir_sequence_data.xml',
@@ -22,12 +23,10 @@
         'wizards/expedient_create_wizard_views.xml',
 
         # Vistas de modelos base
-        'views/expedient_return_reason_views.xml',
         'views/sale_order_template_views.xml',
         'views/expedient_views.xml',  # Primero cargar vistas base de expedientes
         'views/sale_order_views.xml',  # Luego las vistas de sale.order
         'views/sale_order_template_wizard_views.xml',
-        'views/sale_order_prepaid_views.xml',
         'views/expedient_wizard_new_views.xml',
     ],
     'assets': {

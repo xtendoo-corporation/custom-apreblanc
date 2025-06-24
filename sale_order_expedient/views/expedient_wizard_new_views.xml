@@ -29,7 +29,7 @@
         </field>
     </record>
 
-    <!-- Nueva acción para abrir el wizard -->
+    <!-- Nueva acción para abrir el wizard
     <record id="action_sale_order_expedient_wizard" model="ir.actions.act_window">
         <field name="name">Crear Expediente</field>
         <field name="type">ir.actions.act_window</field>
@@ -38,11 +38,13 @@
         <field name="target">new</field>
         <field name="view_id" ref="view_sale_order_expedient_wizard_form"/>
     </record>
+    -->
 
-    <!-- Añadir entrada de menú para la nueva acción -->
+    <!-- Añadir entrada de menú para la nueva acción
     <menuitem id="menu_sale_order_expedient_wizard"
               name="Crear Expediente"
               parent="sale.sale_order_menu"
               action="action_sale_order_expedient_wizard"
               sequence="10"/>
+    -->
 </odoo>
