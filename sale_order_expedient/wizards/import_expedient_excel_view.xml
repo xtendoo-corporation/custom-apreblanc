@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <!-- Formulario para el asistente de importación de expedientes -->
+    <record id="view_import_expedient_excel_form" model="ir.ui.view">
+        <field name="name">import.expedient.excel.form</field>
+        <field name="model">import.expedient.excel</field>
+        <field name="arch" type="xml">
+            <form string="Importar Expedientes desde Excel">
+                <header>
+                    <field name="state" widget="statusbar"/>
+                </header>
+                <sheet>
+                    <div invisible="state != 'draft'">
+                        <group>
+                            <field name="excel_file" filename="file_name"/>
+                            <field name="file_name" invisible="1"/>
+                            <field name="update_existing"/>
+                        </group>
+                        <div class="alert alert-info" role="alert">
+                            <p><strong>Instrucciones:</strong></p>
+                            <p>1. Seleccione un archivo Excel que contenga los datos de expedientes.</p>
+                            <p>2. El archivo debe tener las columnas F (Client ID) y G (Expedient Number) que forman la clave primaria compuesta.</p>
+                            <p>3. La combinación de Client ID y Expedient Number debe ser única en el sistema.</p>
+                        </div>
+                    </div>
+                    <div invisible="state != 'done'">
+                        <group>
+                            <group>
+                                <field name="import_total"/>
+                                <field name="import_created"/>
+                                <field name="import_updated"/>
+                            </group>
+                            <group>
+                                <field name="import_skipped"/>
+                                <field name="import_failed"/>
+                            </group>
+                        </group>
+                        <notebook>
+                            <page string="Log de Importación">
+                                <field name="import_log" readonly="1"/>
+                            </page>
+                        </notebook>
+                    </div>
+                </sheet>
+                <footer>
+                    <div invisible="state != 'draft'">
+                        <button string="Importar" name="action_import_excel" type="object" class="oe_highlight"/>
+                        <button string="Cancelar" special="cancel" class="btn-secondary"/>
+                    </div>
+                    <div invisible="state != 'done'">
+                        <button string="Cerrar" special="cancel" class="btn-primary"/>
+                    </div>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <!-- Acción para abrir el asistente -->
+    <record id="action_import_expedient_excel" model="ir.actions.act_window">
+        <field name="name">Importar Expedientes Excel</field>
+        <field name="res_model">import.expedient.excel</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+
+    <!-- Elemento de menú para acceder al asistente -->
+    <menuitem id="menu_import_expedient_excel"
+              name="Importar Expedientes Excel"
+              parent="sale.menu_sale_config"
+              action="action_import_expedient_excel"
+              sequence="100"/>
+
+    <!-- Botón en la vista de lista de órdenes de venta -->
+    <record id="action_sale_order_import_excel_button" model="ir.actions.act_window">
+        <field name="name">Importar desde Excel</field>
+        <field name="res_model">import.expedient.excel</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+
+    <record id="sale_order_list_view_import_button" model="ir.ui.view">
+        <field name="name">sale.order.list.import.button</field>
+        <field name="model">sale.order</field>
+        <field name="inherit_id" ref="sale.view_order_tree"/>
+        <field name="arch" type="xml">
+            <xpath expr="//tree" position="attributes">
+                <attribute name="banner_route">/import_expedient/excel</attribute>
+                <attribute name="js_class">import_expedient_excel_button</attribute>
+            </xpath>
+        </field>
+    </record>
+</odoo>

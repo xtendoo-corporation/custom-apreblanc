@@ -20,6 +20,11 @@ class ExpedientCreateWizard(models.TransientModel):
     expedient_number = fields.Char(string='Expedient Number', required=True)
     partner_readonly = fields.Boolean(string='Partner Readonly', default=False)
 
+    # Campos faltantes que aparecen en la vista
+    expedient_date = fields.Date(string='Fecha de Expediente')
+    expedient_deadline = fields.Date(string='Fecha límite')
+    expedient_manager_id = fields.Many2one('res.users', string='Responsable')
+
     # Campos para plantillas
     sale_order_template_id = fields.Many2one(
         'sale.order.template',

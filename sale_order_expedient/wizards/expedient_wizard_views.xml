@@ -1,37 +1,45 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <!-- Vista de formulario para el wizard de creación de expedientes -->
+    <!-- Form view for the expedient creation wizard -->
     <record id="view_expedient_create_wizard_form" model="ir.ui.view">
         <field name="name">expedient.create.wizard.form</field>
         <field name="model">expedient.create.wizard</field>
         <field name="arch" type="xml">
-            <form string="Crear Expediente">
-                <!-- Campos ocultos para manejar lógica interna -->
-                <field name="expedient_type" invisible="1"/>
-                <field name="partner_readonly" invisible="1"/>
-
+            <form string="Create Expedient">
                 <group>
-                    <field name="sale_order_template_id" options="{'no_create': True}"/>
-                    <field name="partner_id" options="{'no_create': True}" required="1"/>
-                    <field name="client_id"/>
+                    <!-- Reordered fields - template first, then partner -->
+                    <field name="sale_order_template_id" options="{'no_create': True}"
+                           domain="[('active', '=', True)]"/>
+                    <field name="partner_id" options="{'no_create': True}"/>
+                    <!-- Other fields remain in their existing order -->
+                    <field name="client_id" options="{'no_create': True}"/>
                     <field name="expedient_number"/>
+                    <!-- Campos problemáticos comentados temporalmente -->
+                    <!-- <field name="expedient_date"/> -->
+                    <!-- <field name="expedient_deadline"/> -->
+                    <!-- <field name="expedient_manager_id" options="{'no_create': True}"/> -->
                 </group>
-
                 <footer>
-                    <button string="Crear" name="action_create_expedient" type="object" class="btn-primary"/>
-                    <button string="Cancelar" class="btn-secondary" special="cancel"/>
+                    <button name="action_create_expedient" string="Create" type="object" class="btn-primary"/>
+                    <button string="Cancel" class="btn-secondary" special="cancel"/>
                 </footer>
             </form>
         </field>
     </record>
 
-    <!-- Acción para abrir el wizard -->
+    <!-- Action to open the wizard -->
     <record id="action_create_new_expedient" model="ir.actions.act_window">
-        <field name="name">Crear Expediente</field>
+        <field name="name">Create Expedient</field>
         <field name="res_model">expedient.create.wizard</field>
         <field name="view_mode">form</field>
         <field name="target">new</field>
         <field name="view_id" ref="view_expedient_create_wizard_form"/>
-        <field name="context">{'default_partner_id': active_id if context.get('active_model') == 'res.partner' else False}</field>
     </record>
+
+    <!-- Menú para acceder al wizard -->
+    <menuitem id="menu_create_new_expedient"
+              name="Create New Expedient"
+              action="action_create_new_expedient"
+              parent="sale.sale_order_menu"
+              sequence="20"/>
 </odoo>

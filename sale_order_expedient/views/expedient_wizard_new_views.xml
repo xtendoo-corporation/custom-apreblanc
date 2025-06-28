@@ -2,8 +2,8 @@
 <odoo>
     <!-- Vista del formulario para el nuevo wizard -->
     <record id="view_sale_order_expedient_wizard_form" model="ir.ui.view">
-        <field name="name">sale.order.expedient.wizard.form</field>
-        <field name="model">sale.order.expedient.wizard</field>
+        <field name="name">expedient.create.wizard.form</field>
+        <field name="model">expedient.create.wizard</field>
         <field name="arch" type="xml">
             <form string="Crear Expediente">
                 <field name="expedient_type" invisible="1"/>

@@ -7,6 +7,9 @@
     'website': 'https://www.xtendoo.es',
     'license': 'AGPL-3',
     'depends': ['sale', 'sale_management', 'mail'],
+    'external_dependencies': {
+        'python': ['xlrd'],
+    },
     'data': [
         # Seguridad primero
         'security/security.xml',  # Archivo de seguridad
@@ -19,8 +22,10 @@
         'data/cron_data.xml',
 
         # Wizards
-        'wizards/expedient_wizard_views.xml',
+        'wizards/create_expedient_wizard.xml',
         'wizards/expedient_create_wizard_views.xml',
+        'wizards/expedient_wizard_views.xml',
+        'wizards/import_expedient_excel_view.xml',  # Nuevo asistente de importación Excel
 
         # Vistas de modelos base
         'views/sale_order_template_views.xml',
