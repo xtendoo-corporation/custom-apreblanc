@@ -14,13 +14,21 @@
                         <group>
                             <field name="excel_file" filename="file_name"/>
                             <field name="file_name" invisible="1"/>
-                            <field name="update_existing"/>
+                            <field name="expedient_type" options="{'no_create': True, 'no_open': True}"/>
                         </group>
+
+                        <!-- Barra de progreso -->
+                        <div invisible="progress == 0">
+                            <field name="progress" widget="progressbar" class="mb-3"/>
+                            <field name="progress_text" readonly="1" class="oe_read_only"/>
+                        </div>
+
                         <div class="alert alert-info" role="alert">
                             <p><strong>Instrucciones:</strong></p>
                             <p>1. Seleccione un archivo Excel que contenga los datos de expedientes.</p>
                             <p>2. El archivo debe tener las columnas F (Client ID) y G (Expedient Number) que forman la clave primaria compuesta.</p>
                             <p>3. La combinación de Client ID y Expedient Number debe ser única en el sistema.</p>
+                            <p>4. La columna 2 se utilizará como nombre del cliente.</p>
                         </div>
                     </div>
                     <div invisible="state != 'done'">

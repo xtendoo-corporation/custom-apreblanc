@@ -42,7 +42,8 @@ class SaleOrder(models.Model):
     ],
         string='Tipo de Expediente',
         default='none',
-        help='Tipo de expediente de pre pago o post pago')
+        help='Tipo de expediente de pre pago o post pago'
+    )
     expedient_number = fields.Char(
         string='Expedient Number',
         copy=False,
