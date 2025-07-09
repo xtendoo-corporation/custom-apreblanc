@@ -63,6 +63,13 @@ class SaleOrder(models.Model):
         help='Relación con expediente prepagado',
     )
 
+    # Nuevo campo para fecha de recepción
+    date_reception = fields.Date(
+        string='Fecha de Recepción',
+        copy=False,
+        help='Fecha de recepción del expediente'
+    )
+
     # El campo expedient_id se ha eliminado, expedient_number es ahora el identificador único
     expedient_date_start = fields.Datetime(
         string='Fecha de Inicio del Expediente',
@@ -98,6 +105,36 @@ class SaleOrder(models.Model):
         compute='_compute_expedient_resolution_time',
         store=True,
         help="Tiempo transcurrido entre la creación y la resolución del expediente"
+    )
+
+    # Nuevos campos solicitados
+    person_to_study = fields.Char(
+        string='Persona a Estudiar',
+        help='Persona que está siendo estudiada en el expediente'
+    )
+
+    person_type = fields.Selection([
+        ('fisica', 'Física'),
+        ('juridica', 'Jurídica')
+    ],
+        string='Tipo de Persona',
+        help='Indica si la persona a estudiar es física o jurídica'
+    )
+
+    # Campos HTML para información detallada
+    request = fields.Html(
+        string='Petición',
+        help='Detalles de la petición del expediente'
+    )
+
+    summary = fields.Html(
+        string='Resumen',
+        help='Resumen del expediente'
+    )
+
+    authorization = fields.Html(
+        string='Autorización',
+        help='Detalles de la autorización del expediente'
     )
 
     # Añadir campo para verificar si usuario es administrador

@@ -20,6 +20,7 @@
         'data/ir_sequence_data.xml',
         'data/ir_cron.xml',
         'data/cron_data.xml',
+        'data/expedient_return_reason_data.xml',  # Datos iniciales para motivos de devolución
 
         # Wizards
         'wizards/create_expedient_wizard.xml',

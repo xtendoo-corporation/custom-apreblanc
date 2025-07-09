@@ -16,6 +16,14 @@ class ImportExpedientExcel(models.TransientModel):
     excel_file = fields.Binary(string='Archivo Excel', required=True)
     file_name = fields.Char(string='Nombre del archivo')
 
+    # Campo para seleccionar el cliente al que se asignarán todos los expedientes
+    partner_id = fields.Many2one(
+        'res.partner',
+        string='Cliente',
+        required=True,
+        help='Cliente al que se asignarán todos los expedientes importados'
+    )
+
     # Opciones de importación
     expedient_type = fields.Selection([
         ('post_paid', 'Post-pagado'),
@@ -105,8 +113,18 @@ class ImportExpedientExcel(models.TransientModel):
                         })
                         self.env.cr.commit()  # Forzar actualización de la UI
 
-                    # Obtener el nombre del cliente de la columna 2 (índice 1)
-                    partner_name = sheet.cell_value(row_index, 1)
+                    # Columna B (índice 1): Ahora es "person_to_study" en lugar del nombre del cliente
+                    person_to_study = sheet.cell_value(row_index, 1)
+
+                    # Columna D (índice 3): Procesar el tipo de persona (PF/PJ)
+                    person_type_value = sheet.cell_value(row_index, 3)
+                    person_type = False
+                    if isinstance(person_type_value, str):
+                        person_type_value = person_type_value.upper().strip()
+                        if person_type_value == 'PF':
+                            person_type = 'fisica'
+                        elif person_type_value == 'PJ':
+                            person_type = 'juridica'
 
                     # Obtener la dificultad del expediente de la columna E (índice 4)
                     expedient_difficulty = sheet.cell_value(row_index, 4)
@@ -115,8 +133,8 @@ class ImportExpedientExcel(models.TransientModel):
                     client_id = sheet.cell_value(row_index, 5)  # Columna F (índice 5)
                     expedient_number = sheet.cell_value(row_index, 6)  # Columna G (índice 6)
 
-                    if not client_id or not expedient_number or not partner_name:
-                        log_messages.append(f"Fila {row_index + 1}: Omitida - Falta Client ID, Expedient Number o nombre del cliente")
+                    if not client_id or not expedient_number:
+                        log_messages.append(f"Fila {row_index + 1}: Omitida - Falta Client ID o Expedient Number")
                         skipped += 1
                         continue
 
@@ -125,21 +143,8 @@ class ImportExpedientExcel(models.TransientModel):
                         client_id = str(int(client_id))
                     if isinstance(expedient_number, (int, float)):
                         expedient_number = str(int(expedient_number))
-                    if isinstance(partner_name, (int, float)):
-                        partner_name = str(int(partner_name))
-
-                    # Buscar el cliente por nombre
-                    partner = self.env['res.partner'].search([('name', '=', partner_name)], limit=1)
-
-                    # Si no existe, crear nuevo partner como compañía
-                    if not partner:
-                        partner_vals = {
-                            'name': partner_name,
-                            'is_company': True,
-                            'company_type': 'company',
-                        }
-                        partner = self.env['res.partner'].create(partner_vals)
-                        log_messages.append(f"Fila {row_index + 1}: Cliente '{partner_name}' creado")
+                    if isinstance(person_to_study, (int, float)):
+                        person_to_study = str(int(person_to_study))
 
                     # Verificar si ya existe un registro con esta clave compuesta
                     existing_order = self.env['sale.order'].search([
@@ -149,11 +154,13 @@ class ImportExpedientExcel(models.TransientModel):
 
                     # Preparar los valores para crear/actualizar
                     vals = {
-                        'partner_id': partner.id,  # Usar el partner encontrado o creado
+                        'partner_id': self.partner_id.id,  # Usar el partner seleccionado en el wizard
                         'client_id': client_id,
                         'expedient_number': expedient_number,
                         'expedient_type': self.expedient_type,  # Usar el tipo seleccionado por el usuario
                         'expedient_state': 'creada',
+                        'person_to_study': person_to_study,  # Nuevo campo de persona a estudiar
+                        'person_type': person_type,  # Tipo de persona (física/jurídica)
                     }
 
                     # Procesar la dificultad del expediente (columna E)
@@ -240,16 +247,38 @@ class ImportExpedientExcel(models.TransientModel):
                             except Exception as e:
                                 _logger.warning(f"Error al procesar fecha expedient_date_end como string: {e}")
 
-                    # Obtener valor de columna N: expedient_notes (índice 13)
+                    # Obtener valor de columna N: request (índice 13)
                     if sheet.ncols > 13:
-                        notes_value = sheet.cell_value(row_index, 13)
-                        if isinstance(notes_value, str) and notes_value.strip():
-                            vals['expedient_notes'] = notes_value
-                            log_messages.append(f"Fila {row_index + 1}: Notas del expediente capturadas")
-                        elif isinstance(notes_value, (int, float)):
+                        request_value = sheet.cell_value(row_index, 13)
+                        if isinstance(request_value, str) and request_value.strip():
+                            vals['request'] = request_value
+                            log_messages.append(f"Fila {row_index + 1}: Petición del expediente capturada")
+                        elif isinstance(request_value, (int, float)):
                             # Convertir a string si es un número
-                            vals['expedient_notes'] = str(notes_value)
-                            log_messages.append(f"Fila {row_index + 1}: Notas del expediente (convertidas de número) capturadas")
+                            vals['request'] = str(request_value)
+                            log_messages.append(f"Fila {row_index + 1}: Petición del expediente (convertida de número) capturada")
+
+                    # Obtener valor de columna O: summary (índice 14)
+                    if sheet.ncols > 14:
+                        summary_value = sheet.cell_value(row_index, 14)
+                        if isinstance(summary_value, str) and summary_value.strip():
+                            vals['summary'] = summary_value
+                            log_messages.append(f"Fila {row_index + 1}: Resumen del expediente capturado")
+                        elif isinstance(summary_value, (int, float)):
+                            # Convertir a string si es un número
+                            vals['summary'] = str(summary_value)
+                            log_messages.append(f"Fila {row_index + 1}: Resumen del expediente (convertido de número) capturado")
+
+                    # Obtener valor de columna P: authorization (índice 15)
+                    if sheet.ncols > 15:
+                        authorization_value = sheet.cell_value(row_index, 15)
+                        if isinstance(authorization_value, str) and authorization_value.strip():
+                            vals['authorization'] = authorization_value
+                            log_messages.append(f"Fila {row_index + 1}: Autorización del expediente capturada")
+                        elif isinstance(authorization_value, (int, float)):
+                            # Convertir a string si es un número
+                            vals['authorization'] = str(authorization_value)
+                            log_messages.append(f"Fila {row_index + 1}: Autorización del expediente (convertida de número) capturada")
 
                     # Otras columnas que se pueden mapear
                     try:

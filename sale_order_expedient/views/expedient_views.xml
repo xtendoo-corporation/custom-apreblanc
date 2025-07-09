@@ -8,6 +8,7 @@
             <tree string="Expedientes Post-pagados">
                 <field name="name"/>
                 <field name="partner_id"/>
+                <field name="person_to_study"/>
                 <field name="date_order"/>
                 <field name="expedient_number"/>
                 <field name="client_id"/>
