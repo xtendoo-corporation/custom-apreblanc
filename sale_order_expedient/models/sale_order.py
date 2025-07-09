@@ -17,6 +17,8 @@ class SaleOrder(models.Model):
          'The combination of Client ID and Expedient Number must be unique!')
     ]
 
+    date_reception = fields.Datetime(string='Fecha de Recepción')
+
     parts_involved = fields.Integer(
         string='Partes Implicadas',
         default=1,

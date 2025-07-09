@@ -89,7 +89,7 @@
                     <group>
                         <field name="expedient_manager_id" readonly="expedient_state in ['aprobada', 'rechazada'] and not is_expedient_admin"/>
                         <!-- Fecha de inicio moved to right column -->
-                        <field name="date_recepcion" readonly="expedient_state in ['aprobada', 'rechazada'] and not is_expedient_admin" string="Fecha de Recepción" widget="datetime"/>
+                        <field name="date_reception" readonly="expedient_state in ['aprobada', 'rechazada'] and not is_expedient_admin" string="Fecha de Recepción" widget="datetime"/>
                         <field name="date_order" readonly="expedient_state in ['aprobada', 'rechazada'] and not is_expedient_admin" string="Fecha de Inicio" widget="datetime"/>
                         <field name="expedient_date_end" readonly="expedient_state in ['aprobada', 'rechazada'] and not is_expedient_admin"/>
                         <field name="expedient_resolution_time" readonly="1" string="Tiempo de Resolución"/>

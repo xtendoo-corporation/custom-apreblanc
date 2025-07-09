@@ -181,15 +181,35 @@ class ImportExpedientExcel(models.TransientModel):
                         if 'expedient_difficulty' in vals:
                             log_messages.append(f"Fila {row_index + 1}: Dificultad establecida a '{vals['expedient_difficulty']}'")
 
-                    # Obtener valor de columna I: date_order (índice 8)
+                    # Obtener valor de columna I: date_reception (índice 8)
                     if sheet.ncols > 8:
-                        date_order_value = sheet.cell_value(row_index, 8)
+                        date_reception_value = sheet.cell_value(row_index, 8)
+                        if isinstance(date_reception_value, (int, float)) and date_reception_value:
+                            # Convertir el número de Excel a fecha
+                            try:
+                                date_reception = xlrd.xldate.xldate_as_datetime(date_reception_value, book.datemode)
+                                vals['date_reception'] = fields.Datetime.to_string(date_reception)
+                                log_messages.append(
+                                    f"Fila {row_index + 1}: Fecha de recepción establecida a '{date_reception}'")
+                            except Exception as e:
+                                _logger.warning(f"Error al convertir fecha date_reception: {e}")
+                        elif isinstance(date_reception_value, str) and date_reception_value.strip():
+                            # Intentar procesar como string de fecha (formato ISO)
+                            try:
+                                vals['date_reception'] = date_reception_value
+                                log_messages.append(f"Fila {row_index + 1}: Fecha de recepción (texto) establecida")
+                            except Exception as e:
+                                _logger.warning(f"Error al procesar fecha date_reception como string: {e}")
+                    # Obtener valor de columna I: date_order (índice 8)
+                    if sheet.ncols > 9:
+                        date_order_value = sheet.cell_value(row_index, 9)
                         if isinstance(date_order_value, (int, float)) and date_order_value:
                             # Convertir el número de Excel a fecha
                             try:
                                 date_order = xlrd.xldate.xldate_as_datetime(date_order_value, book.datemode)
                                 vals['date_order'] = fields.Datetime.to_string(date_order)
-                                log_messages.append(f"Fila {row_index + 1}: Fecha de pedido establecida a '{date_order}'")
+                                log_messages.append(
+                                    f"Fila {row_index + 1}: Fecha de pedido establecida a '{date_order}'")
                             except Exception as e:
                                 _logger.warning(f"Error al convertir fecha date_order: {e}")
                         elif isinstance(date_order_value, str) and date_order_value.strip():
