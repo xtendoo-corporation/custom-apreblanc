@@ -14,6 +14,7 @@
                 <field name="client_id"/>
                 <field name="expedient_manager_id" widget="many2one_avatar"/>
                 <field name="is_expedient_admin" invisible="1"/>
+                <field name="person_to_study" optional="hide"/>
                 <field name="expedient_state" widget="badge"
                        decoration-info="expedient_state == 'creada'"
                        decoration-success="expedient_state == 'aprobada'"
