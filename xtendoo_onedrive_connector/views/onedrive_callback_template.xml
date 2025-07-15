@@ -1,0 +1,22 @@
+<odoo>
+    <template id="onedrive_callback_template">
+        <t t-if="code">
+            <div style="margin: 40px auto; max-width: 600px; padding: 30px; border: 1px solid #ddd; border-radius: 8px; background: #fafbfc;">
+                <h2>¡Código de autorización recibido!</h2>
+                <p>Copia este código y úsalo para obtener el <b>refresh_token</b> en el siguiente paso del proceso OAuth2.</p>
+                <div style="background: #f5f5f5; padding: 10px; border-radius: 4px; word-break: break-all;">
+                    <b>code:</b>
+                    <span t-esc="code"/>
+                </div>
+                <p style="margin-top: 20px; color: #888;">Puedes cerrar esta ventana.</p>
+            </div>
+        </t>
+        <t t-if="not code">
+            <div style="margin: 40px auto; max-width: 600px; padding: 30px; border: 1px solid #ddd; border-radius: 8px; background: #fafbfc;">
+                <h2>No se recibió ningún código de autorización</h2>
+                <p>Vuelve a intentarlo o revisa la configuración de la aplicación en Azure.</p>
+            </div>
+        </t>
+    </template>
+</odoo>
+

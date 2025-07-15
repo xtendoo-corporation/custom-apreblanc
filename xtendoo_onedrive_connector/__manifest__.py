@@ -8,7 +8,8 @@
     "depends": ["base"],
     "data": [
         "security/ir.model.access.csv",
-        "views/onedrive_document_views.xml"
+        "views/onedrive_document_views.xml",
+        "views/onedrive_callback_template.xml"
     ],
     "installable": "true",
     "application": "true",

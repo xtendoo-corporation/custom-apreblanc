@@ -11,18 +11,31 @@
                     <field name="onedrive_tenant_id"/>
                     <field name="onedrive_redirect_uri"/>
                     <field name="onedrive_refresh_token"/>
+                    <button name="action_get_onedrive_auth_url" type="object" string="Obtener URL de autorización OneDrive" class="btn-primary"/>
                 </group>
             </form>
+        </field>
+    </record>
+
+    <record id="view_onedrive_settings_tree" model="ir.ui.view">
+        <field name="name">onedrive.settings.tree</field>
+        <field name="model">onedrive.settings</field>
+        <field name="arch" type="xml">
+            <tree string="Configuraciones OneDrive">
+                <field name="onedrive_client_id"/>
+                <field name="onedrive_tenant_id"/>
+                <field name="onedrive_redirect_uri"/>
+                <field name="onedrive_refresh_token"/>
+            </tree>
         </field>
     </record>
 
     <record id="action_onedrive_settings" model="ir.actions.act_window">
         <field name="name">Configuración OneDrive</field>
         <field name="res_model">onedrive.settings</field>
-        <field name="view_mode">form</field>
+        <field name="view_mode">tree,form</field>
         <field name="target">current</field>
     </record>
 
     <menuitem id="menu_onedrive_settings" name="OneDrive" parent="base.menu_administration" action="action_onedrive_settings" sequence="100"/>
 </odoo>
-
