@@ -11,7 +11,6 @@
                     <field name="onedrive_tenant_id"/>
                     <field name="onedrive_redirect_uri"/>
                     <field name="onedrive_refresh_token"/>
-                    <button name="action_get_onedrive_auth_url" type="object" string="Obtener URL de autorización OneDrive" class="btn-primary"/>
                 </group>
             </form>
         </field>

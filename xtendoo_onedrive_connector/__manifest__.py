@@ -10,7 +10,7 @@
         "security/ir.model.access.csv",
         "views/onedrive_document_views.xml",
         "views/onedrive_callback_template.xml",
-        "views/res_config_settings_views.xml"
+        "views/onedrive_menu_views.xml"
     ],
     "installable": "true",
     "application": "true",

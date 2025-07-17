@@ -1,51 +1,41 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <record id="view_onedrive_document_tree" model="ir.ui.view">
-        <field name="name">onedrive.document.tree</field>
-        <field name="model">onedrive.document</field>
+    <record id="view_onedrive_settings_form" model="ir.ui.view">
+        <field name="name">onedrive.settings.form</field>
+        <field name="model">onedrive.settings</field>
         <field name="arch" type="xml">
-            <tree string="Documentos OneDrive">
-                <field name="name"/>
-                <field name="is_folder"/>
-                <field name="mime_type"/>
-                <field name="size"/>
-                <field name="last_modified"/>
-                <button name="navigate_to_folder" type="object" icon="fa-folder-open" title="Abrir carpeta"/>
-                <button name="download_file" type="object" icon="fa-download" title="Descargar archivo"/>
-            </tree>
-        </field>
-    </record>
-
-    <record id="view_onedrive_document_form" model="ir.ui.view">
-        <field name="name">onedrive.document.form</field>
-        <field name="model">onedrive.document</field>
-        <field name="arch" type="xml">
-            <form string="Documento OneDrive">
-                <sheet>
-                    <group>
-                        <field name="name"/>
-                        <field name="is_folder"/>
-                        <field name="mime_type"/>
-                        <field name="size"/>
-                        <field name="last_modified"/>
-                        <field name="file_url"/>
-                        <field name="parent_id"/>
-                        <field name="onedrive_id"/>
-                        <field name="created_at"/>
-                        <field name="thumbnail"/>
-                    </group>
-                </sheet>
+            <form string="Configuración OneDrive">
+                <group>
+                    <field name="onedrive_client_id"/>
+                    <field name="onedrive_client_secret" password="True"/>
+                    <field name="onedrive_tenant_id"/>
+                    <field name="onedrive_redirect_uri"/>
+                    <field name="onedrive_refresh_token"/>
+                    <button name="action_get_onedrive_auth_url" type="object" string="Obtener URL de autorización OneDrive" class="btn-primary"/>
+                </group>
             </form>
         </field>
     </record>
 
-    <record id="action_onedrive_document" model="ir.actions.act_window">
-        <field name="name">Documentos OneDrive</field>
-        <field name="res_model">onedrive.document</field>
-        <field name="view_mode">tree,form</field>
+    <record id="view_onedrive_settings_tree" model="ir.ui.view">
+        <field name="name">onedrive.settings.tree</field>
+        <field name="model">onedrive.settings</field>
+        <field name="arch" type="xml">
+            <tree string="Configuraciones OneDrive">
+                <field name="onedrive_client_id"/>
+                <field name="onedrive_tenant_id"/>
+                <field name="onedrive_redirect_uri"/>
+                <field name="onedrive_refresh_token"/>
+            </tree>
+        </field>
     </record>
 
-    <menuitem id="menu_onedrive_root" name="OneDrive" sequence="100"/>
-    <menuitem id="menu_onedrive_documents" name="Documentos" parent="menu_onedrive_root" action="action_onedrive_document" sequence="10"/>
-</odoo>
+    <record id="action_onedrive_settings" model="ir.actions.act_window">
+        <field name="name">Configuración OneDrive</field>
+        <field name="res_model">onedrive.settings</field>
+        <field name="view_mode">tree,form</field>
+        <field name="target">current</field>
+    </record>
 
+    <menuitem id="menu_onedrive_settings" name="OneDrive" parent="base.menu_administration" action="action_onedrive_settings" sequence="100"/>
+</odoo>
