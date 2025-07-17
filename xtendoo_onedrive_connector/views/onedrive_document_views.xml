@@ -38,4 +38,58 @@
     </record>
 
     <menuitem id="menu_onedrive_settings" name="OneDrive" parent="base.menu_administration" action="action_onedrive_settings" sequence="100"/>
+
+    <record id="view_onedrive_document_tree" model="ir.ui.view">
+        <field name="name">onedrive.document.tree</field>
+        <field name="model">onedrive.document</field>
+        <field name="arch" type="xml">
+            <tree string="Documentos OneDrive">
+                <field name="name"/>
+                <field name="onedrive_id"/>
+                <field name="file_url"/>
+                <field name="file_size"/>
+                <field name="file_type"/>
+                <field name="owner"/>
+                <field name="last_modified"/>
+                <button name="action_download_file" type="object" icon="fa-download" string="Descargar"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="view_onedrive_document_form" model="ir.ui.view">
+        <field name="name">onedrive.document.form</field>
+        <field name="model">onedrive.document</field>
+        <field name="arch" type="xml">
+            <form string="Documento OneDrive">
+                <sheet>
+                    <group>
+                        <field name="name"/>
+                        <field name="onedrive_id"/>
+                        <field name="file_url"/>
+                        <field name="file_size"/>
+                        <field name="file_type"/>
+                        <field name="owner"/>
+                        <field name="last_modified"/>
+                        <field name="file_data"/>
+                        <field name="upload_file"/>
+                        <field name="upload_filename"/>
+                    </group>
+                    <footer>
+                        <button name="action_download_file" type="object" string="Descargar archivo" class="btn-primary"/>
+                        <button name="action_upload_file" type="object" string="Subir archivo" class="btn-secondary"/>
+                    </footer>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_onedrive_document_window" model="ir.actions.act_window">
+        <field name="name">Documentos OneDrive</field>
+        <field name="res_model">onedrive.document</field>
+        <field name="view_mode">tree,form</field>
+        <field name="target">current</field>
+    </record>
+
+    <menuitem id="menu_onedrive_root" name="OneDrive" sequence="100"/>
+    <menuitem id="menu_onedrive_documents" name="Documentos" parent="menu_onedrive_root" action="action_onedrive_document_window" sequence="10"/>
 </odoo>
