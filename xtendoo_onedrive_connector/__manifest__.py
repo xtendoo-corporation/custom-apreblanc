@@ -9,7 +9,8 @@
     "data": [
         "security/ir.model.access.csv",
         "views/onedrive_document_views.xml",
-        "views/onedrive_callback_template.xml"
+        "views/onedrive_callback_template.xml",
+        "views/res_config_settings_views.xml"
     ],
     "installable": "true",
     "application": "true",
