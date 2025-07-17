@@ -1,56 +1,44 @@
-# -*- coding: utf-8 -*-
-from odoo import models, fields, api, _
+from odoo import models, fields, api
 from odoo.exceptions import UserError
-import base64
 
-class OneDriveDocument(models.Model):
+class OnedriveDocument(models.Model):
     _name = 'onedrive.document'
-    _description = 'Documento de OneDrive'
+    _description = 'OneDrive Document'
 
-    name = fields.Char('Nombre', required=True)
-    onedrive_id = fields.Char('ID OneDrive', required=True, index=True)
-    file_url = fields.Char('URL de archivo')
-    file_size = fields.Integer('Tamaño (bytes)')
-    file_type = fields.Char('Tipo')
-    owner = fields.Char('Propietario')
-    last_modified = fields.Datetime('Última modificación')
-    file_data = fields.Binary('Archivo descargado', readonly=True)
-    upload_file = fields.Binary('Subir archivo')
-    upload_filename = fields.Char('Nombre de archivo a subir')
+    name = fields.Char(string='Name', required=True)
+    is_folder = fields.Boolean(string='Is Folder', default=False)
+    mime_type = fields.Char(string='MIME Type')
+    size = fields.Float(string='Size')
+    last_modified = fields.Datetime(string='Last Modified')
+    onedrive_id = fields.Char(string='OneDrive ID', required=True)
+    parent_id = fields.Many2one('onedrive.document', string='Parent Folder', ondelete='cascade')
+    file_url = fields.Char(string='File URL')
+    created_at = fields.Datetime(string='Created At')
+    thumbnail = fields.Binary(string='Thumbnail')
 
-    def action_download_file(self):
-        service = self.env['onedrive.service']
-        for rec in self:
-            if not rec.onedrive_id:
-                raise UserError(_('No hay ID de OneDrive para este documento.'))
-            content = service.download_file(rec.onedrive_id)
-            rec.file_data = base64.b64encode(content)
-            return {
-                'type': 'ir.actions.act_url',
-                'url': f'/web/content/onedrive.document/{rec.id}/file_data/{rec.name}?download=true',
-                'target': 'self',
-            }
+    def navigate_to_folder(self):
+        """ Navega a la carpeta seleccionada en OneDrive. """
+        if not self.is_folder:
+            raise UserError("Solo se puede navegar a carpetas.")
 
-    def action_upload_file(self):
-        service = self.env['onedrive.service']
-        for rec in self:
-            if not rec.upload_file or not rec.upload_filename:
-                raise UserError(_('Debe seleccionar un archivo para subir.'))
-            # Subir al root, puedes cambiar folder_id si lo deseas
-            result = service.upload_file('root', rec.upload_filename, base64.b64decode(rec.upload_file))
-            # Actualizar datos del documento
-            rec.name = result.get('name')
-            rec.onedrive_id = result.get('id')
-            rec.file_url = result.get('@microsoft.graph.downloadUrl')
-            rec.file_size = result.get('size')
-            rec.file_type = result.get('file', {}).get('mimeType')
-            rec.owner = result.get('createdBy', {}).get('user', {}).get('displayName')
-            rec.last_modified = result.get('lastModifiedDateTime')
-
-    @api.model
-    def action_sync_onedrive_files(self):
-        self.env['onedrive.service'].sync_onedrive_files()
+        # Retorna una acción para mostrar los documentos dentro de la carpeta seleccionada
         return {
-            'type': 'ir.actions.client',
-            'tag': 'reload',
+            'type': 'ir.actions.act_window',
+            'name': 'Documentos en ' + self.name,
+            'res_model': 'onedrive.document',
+            'view_mode': 'tree,form',
+            'domain': [('parent_id', '=', self.id)],
+            'context': {'default_parent_id': self.id},
+        }
+
+    def download_file(self):
+        """Descarga el archivo desde OneDrive usando la URL almacenada."""
+        if self.is_folder:
+            raise UserError("Solo se pueden descargar archivos, no carpetas.")
+        if not self.file_url:
+            raise UserError("No hay URL de archivo disponible para descargar.")
+        return {
+            'type': 'ir.actions.act_url',
+            'url': self.file_url,
+            'target': 'new',
         }

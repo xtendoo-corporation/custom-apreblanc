@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <template id="onedrive_callback_template">
+        <html>
+            <head>
+                <title>OneDrive - Autorización completada</title>
+                <style>
+                    body {
+                        font-family: Arial, sans-serif;
+                        margin: 50px;
+                        text-align: center;
+                    }
+                    .container {
+                        max-width: 600px;
+                        margin: 0 auto;
+                        padding: 20px;
+                        border: 1px solid #ddd;
+                        border-radius: 5px;
+                        background-color: #f9f9f9;
+                    }
+                    .success {
+                        color: #28a745;
+                    }
+                    .btn {
+                        display: inline-block;
+                        padding: 10px 20px;
+                        background-color: #007bff;
+                        color: white;
+                        text-decoration: none;
+                        border-radius: 5px;
+                        margin-top: 20px;
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <h1 class="success">¡Autorización completada!</h1>
+                    <p>Tu cuenta de OneDrive ha sido conectada correctamente.</p>
+                    <p>Código de autorización recibido.</p>
+                    <a href="/web#action=onedrive_document_action" class="btn">Continuar a OneDrive</a>
+                </div>
+            </body>
+        </html>
+    </template>
+
+    <template id="onedrive_callback_error">
+        <html>
+            <head>
+                <title>OneDrive - Error de autorización</title>
+                <style>
+                    body {
+                        font-family: Arial, sans-serif;
+                        margin: 50px;
+                        text-align: center;
+                    }
+                    .container {
+                        max-width: 600px;
+                        margin: 0 auto;
+                        padding: 20px;
+                        border: 1px solid #ddd;
+                        border-radius: 5px;
+                        background-color: #f9f9f9;
+                    }
+                    .error {
+                        color: #dc3545;
+                    }
+                    .btn {
+                        display: inline-block;
+                        padding: 10px 20px;
+                        background-color: #007bff;
+                        color: white;
+                        text-decoration: none;
+                        border-radius: 5px;
+                        margin-top: 20px;
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <h1 class="error">Error de autorización</h1>
+                    <p>Ocurrió un error al conectar con OneDrive:</p>
+                    <p><strong t-esc="error"/></p>
+                    <a href="/web#menu_id=4" class="btn">Volver a Odoo</a>
+                </div>
+            </body>
+        </html>
+    </template>
+</odoo>
