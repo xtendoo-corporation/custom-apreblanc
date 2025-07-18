@@ -39,11 +39,12 @@
 
     <menuitem id="menu_onedrive_settings" name="OneDrive" parent="base.menu_administration" action="action_onedrive_settings" sequence="100"/>
 
+    <!-- Vista tree de documentos OneDrive -->
     <record id="view_onedrive_document_tree" model="ir.ui.view">
         <field name="name">onedrive.document.tree</field>
         <field name="model">onedrive.document</field>
         <field name="arch" type="xml">
-            <tree string="Documentos OneDrive">
+            <tree string="Documentos OneDrive" create="true" edit="true">
                 <field name="name"/>
                 <field name="onedrive_id"/>
                 <field name="file_url"/>
@@ -51,16 +52,22 @@
                 <field name="file_type"/>
                 <field name="owner"/>
                 <field name="last_modified"/>
-                <button name="action_download_file" type="object" icon="fa-download" string="Descargar"/>
+                <field name="parent_id"/>
+                <field name="is_folder"/>
+                <button name="action_sync_onedrive" type="object" string="Sincronizar" class="btn-primary"/>
             </tree>
         </field>
     </record>
 
+    <!-- Vista form de documentos OneDrive -->
     <record id="view_onedrive_document_form" model="ir.ui.view">
         <field name="name">onedrive.document.form</field>
         <field name="model">onedrive.document</field>
         <field name="arch" type="xml">
             <form string="Documento OneDrive">
+                <header>
+                    <button name="action_sync_onedrive" type="object" string="Sincronizar OneDrive" class="btn-primary"/>
+                </header>
                 <sheet>
                     <group>
                         <field name="name"/>
@@ -73,6 +80,8 @@
                         <field name="file_data"/>
                         <field name="upload_file"/>
                         <field name="upload_filename"/>
+                        <field name="parent_id"/>
+                        <field name="is_folder"/>
                     </group>
                     <footer>
                         <button name="action_download_file" type="object" string="Descargar archivo" class="btn-primary"/>
@@ -83,13 +92,25 @@
         </field>
     </record>
 
+    <!-- Acción server para sincronizar (nueva) -->
+    <record id="action_onedrive_sync" model="ir.actions.server">
+        <field name="name">Sincronizar OneDrive</field>
+        <field name="model_id" ref="model_onedrive_document"/>
+        <field name="state">code</field>
+        <field name="code">action = env['onedrive.document'].action_sync_onedrive()</field>
+    </record>
+
     <record id="action_onedrive_document_window" model="ir.actions.act_window">
         <field name="name">Documentos OneDrive</field>
         <field name="res_model">onedrive.document</field>
         <field name="view_mode">tree,form</field>
-        <field name="target">current</field>
+        <field name="context">{}</field>
+        <field name="help" type="html">
+            <p>Desde aquí puedes ver, subir, descargar y sincronizar tus archivos y carpetas de OneDrive.</p>
+        </field>
     </record>
 
     <menuitem id="menu_onedrive_root" name="OneDrive" sequence="100"/>
     <menuitem id="menu_onedrive_documents" name="Documentos" parent="menu_onedrive_root" action="action_onedrive_document_window" sequence="10"/>
+    <menuitem id="menu_onedrive_sync" name="Sincronizar OneDrive" parent="menu_onedrive_root" action="action_onedrive_sync" sequence="20"/>
 </odoo>
