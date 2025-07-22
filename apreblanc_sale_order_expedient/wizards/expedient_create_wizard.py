@@ -8,7 +8,7 @@ class ExpedientCreateWizard(models.TransientModel):
     _name = 'expedient.create.wizard'
     _description = 'Wizard para crear expedientes post-pagados'
 
-    person_to_study = fields.Char(
+    person_under_study = fields.Char(
         string='Persona a Estudiar',
         help='Persona que está siendo estudiada en el expediente'
     )
@@ -135,6 +135,7 @@ class ExpedientCreateWizard(models.TransientModel):
             'expedient_date_end': False,
             'sale_order_template_id': self.sale_order_template_id.id,
             'state': 'sale',  # Forzar estado sale desde la creación
+            'person_under_study': self.person_under_study,  # Transferir el campo studied_person
         }
 
         # Si se ha seleccionado un expediente pre-pagado, usarlo
@@ -197,6 +198,7 @@ class ExpedientCreateWizard(models.TransientModel):
             'expedient_manager_id': self.env.user.id,
             'expedient_date_start': fields.Datetime.now(),
             'sale_order_template_id': self.sale_order_template_id.id,
+            'person_under_study': self.person_under_study,  # Transferir el campo studied_person
         }
 
         sale_order = self.env['sale.order'].create(sale_order_vals)

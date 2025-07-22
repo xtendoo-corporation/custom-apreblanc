@@ -1,8 +1,8 @@
 {
-    'name': 'Sale Order Expedient',
+    'name': 'Apreblanc Sale Order Expedient',
     'version': '17.0.1.0.0',
     'category': 'Sales',
-    'summary': 'Adds expedient management to sales orders',
+    'summary': 'Adds expedient management to sales orders for Apreblanc',
     'author': 'Xtendoo Software SLU,' 'José Aguilar',
     'website': 'https://www.xtendoo.es',
     'license': 'AGPL-3',
@@ -23,9 +23,7 @@
         'data/expedient_return_reason_data.xml',  # Datos iniciales para motivos de devolución
 
         # Wizards
-        'wizards/create_expedient_wizard.xml',
         'wizards/expedient_create_wizard_views.xml',
-        'wizards/expedient_wizard_views.xml',
         'wizards/import_expedient_excel_view.xml',  # Nuevo asistente de importación Excel
 
         # Vistas de modelos base
@@ -39,9 +37,9 @@
     ],
     'assets': {
         'web.assets_backend': [
-            'sale_order_expedient/static/src/js/sale_order_create_hook.js',
-            'sale_order_expedient/static/src/js/expedient_statusbar_fix.js',
-            'sale_order_expedient/static/src/css/expedient_styles.css',
+            'apreblanc_sale_order_expedient/static/src/js/sale_order_create_hook.js',
+            'apreblanc_sale_order_expedient/static/src/js/expedient_statusbar_fix.js',
+            'apreblanc_sale_order_expedient/static/src/css/expedient_styles.css',
         ],
     },
     'installable': True,

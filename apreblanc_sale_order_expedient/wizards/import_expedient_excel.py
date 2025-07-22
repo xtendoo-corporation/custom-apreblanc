@@ -113,8 +113,8 @@ class ImportExpedientExcel(models.TransientModel):
                         })
                         self.env.cr.commit()  # Forzar actualización de la UI
 
-                    # Columna B (índice 1): Ahora es "person_to_study" en lugar del nombre del cliente
-                    person_to_study = sheet.cell_value(row_index, 1)
+                    # Columna B (índice 1): Ahora es "person_under_study" en lugar del nombre del cliente
+                    person_under_study = sheet.cell_value(row_index, 1)
 
                     # Columna D (índice 3): Procesar el tipo de persona (PF/PJ)
                     person_type_value = sheet.cell_value(row_index, 3)
@@ -143,8 +143,8 @@ class ImportExpedientExcel(models.TransientModel):
                         client_id = str(int(client_id))
                     if isinstance(expedient_number, (int, float)):
                         expedient_number = str(int(expedient_number))
-                    if isinstance(person_to_study, (int, float)):
-                        person_to_study = str(int(person_to_study))
+                    if isinstance(person_under_study, (int, float)):
+                        person_under_study = str(int(person_under_study))
 
                     # Verificar si ya existe un registro con esta clave compuesta
                     existing_order = self.env['sale.order'].search([
@@ -159,7 +159,7 @@ class ImportExpedientExcel(models.TransientModel):
                         'expedient_number': expedient_number,
                         'expedient_type': self.expedient_type,  # Usar el tipo seleccionado por el usuario
                         'expedient_state': 'creada',
-                        'person_to_study': person_to_study,  # Nuevo campo de persona a estudiar
+                        'person_under_study': person_under_study,  # Nuevo campo de persona a estudiar
                         'person_type': person_type,  # Tipo de persona (física/jurídica)
                     }
 

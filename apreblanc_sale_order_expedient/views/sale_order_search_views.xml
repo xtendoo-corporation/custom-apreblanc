@@ -15,7 +15,7 @@
                 <!-- Campos específicos de expediente -->
                 <field name="client_id"/>
                 <field name="expedient_number"/>
-                <field name="person_to_study"/>
+                <field name="person_under_study"/>
 
                 <!-- Filtros de estado -->
                 <separator/>

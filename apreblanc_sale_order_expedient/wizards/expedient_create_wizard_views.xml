@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <!-- Vista para el wizard de creación de expedientes -->
-    <record id="view_expedient_create_wizard_form_simple" model="ir.ui.view">
-        <field name="name">expedient.create.wizard.form.simple</field>
+    <!-- Vista básica para el wizard de creación de expedientes -->
+    <record id="view_expedient_create_wizard_form_basic" model="ir.ui.view">
+        <field name="name">expedient.create.wizard.form.basic</field>
         <field name="model">expedient.create.wizard</field>
         <field name="arch" type="xml">
             <form string="Crear Expediente Simple">
@@ -10,7 +10,7 @@
                     <field name="partner_id"/>
                     <field name="expedient_number"/>
                     <field name="client_id"/>
-                    <field name="person_to_study"/>
+                    <field name="person_under_study"/>
                 </group>
                 <footer>
                     <button string="Crear" name="action_create_expedient" type="object" class="btn-primary"/>

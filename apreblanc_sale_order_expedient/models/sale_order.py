@@ -111,7 +111,7 @@ class SaleOrder(models.Model):
     )
 
     # Nuevos campos solicitados
-    person_to_study = fields.Char(
+    person_under_study = fields.Char(
         string='Persona a Estudiar',
         help='Persona que está siendo estudiada en el expediente'
     )
