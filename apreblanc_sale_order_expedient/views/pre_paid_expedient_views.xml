@@ -40,7 +40,7 @@
                             <field name="expedient_number"/>
                         </group>
                         <group>
-                            <field name="initial_balance"/>
+<!--                            <field name="initial_balance"/>-->
                             <field name="current_balance"/>
                             <field name="date_created"/>
                         </group>

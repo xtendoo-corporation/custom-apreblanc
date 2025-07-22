@@ -110,7 +110,9 @@ class ExpedientCreateWizard(models.TransientModel):
                     'res_model': 'sale.order',
                     'res_id': sale_order.id,
                     'view_mode': 'form',
+                    'view_id': self.env.ref('apreblanc_sale_order_expedient.view_order_form_expedient').id,
                     'target': 'current',
+                    'context': {'show_as_expedient': True}
                 }
             else:
                 # Crear expediente post-pagado (mantener lógica existente)
@@ -121,7 +123,9 @@ class ExpedientCreateWizard(models.TransientModel):
                     'res_model': 'sale.order',
                     'res_id': sale_order.id,
                     'view_mode': 'form',
+                    'view_id': self.env.ref('apreblanc_sale_order_expedient.view_order_form_expedient').id,
                     'target': 'current',
+                    'context': {'show_as_expedient': True}
                 }
         except Exception as e:
             _logger.error("Error creating expedient: %s", str(e))
