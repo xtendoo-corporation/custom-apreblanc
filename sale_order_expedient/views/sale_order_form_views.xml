@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Form view for the expedient creation wizard -->
+    <record id="view_expedient_create_wizard_form" model="ir.ui.view">
+        <field name="name">expedient.create.wizard.form</field>
+        <field name="model">expedient.create.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Crear Expediente Post-pagado">
+                <sheet>
+                    <group>
+                        <!-- Ocultar el campo de tipo de expediente ya que viene del contexto -->
+                        <field name="expedient_type" invisible="1"/>
+                    </group>
+
+                    <group>
+                        <group>
+                            <field name="sale_order_template_id"/>
+                            <field name="partner_id" required="1"/>
+                            <field name="client_id" required="1"/>
+                            <field name="expedient_number" required="1"/>
+                            <field name="currency_id" invisible="1"/>
+                        </group>
+                        <group>
+                        </group>
+                    </group>
+                </sheet>
+                <footer>
+                    <button string="Create" name="action_create_expedient" type="object" class="btn-primary"/>
+                    <button string="Cancel" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <!-- Action to open the wizard -->
+    <record id="action_create_new_expedient" model="ir.actions.act_window">
+        <field name="name">Crear Expediente Post-pagado</field>
+        <field name="res_model">expedient.create.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+        <field name="view_id" ref="view_expedient_create_wizard_form"/>
+        <field name="binding_model_id" ref="model_sale_order"/>
+        <field name="binding_view_types">form,list</field>
+    </record>
+
+    <!-- Actualización del formulario para usar badges en el statusbar -->
+    <record id="view_order_form_expedient" model="ir.ui.view">
+        <field name="name">sale.order.form.inherit.expedient</field>
+        <field name="model">sale.order</field>
+        <field name="inherit_id" ref="sale.view_order_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//div[@class='o_pager']" position="before">
+                <!-- Status bar unificada para todos los expedientes -->
+                <div class="position-absolute top-0 end-0 mt-3 me-3" invisible="expedient_type == 'none'">
+                    <field name="expedient_state"
+                           widget="statusbar"
+                           statusbar_visible="creada,pendiente_documentacion,aprobada,rechazada,cancelada"
+                           clickable="True"
+                           options="{'clickable': '1'}"
+                           class="expedient_statusbar"
+                           nolabel="1"/>
+                </div>
+            </xpath>
+        </field>
+    </record>
+</odoo>

@@ -9,9 +9,6 @@ _logger = logging.getLogger(__name__)
 
 class SaleOrder(models.Model):
     _inherit = 'sale.order'
-    # Asegurar que el tracking está habilitado
-    _mail_post_access = 'read'
-
     _sql_constraints = [
         # Remove any constraints that enforce uniqueness on expedient_number alone
         # Keep only the composite constraint for both fields
@@ -86,17 +83,7 @@ class SaleOrder(models.Model):
         string='Manager',
         help='User responsible for managing this expedient',
         tracking=True,
-        index=True,  # Añadir índice para mejorar el rendimiento
     )
-
-    @api.model
-    def _setup_complete(self):
-        """Asegurar que el tracking esté habilitado"""
-        super()._setup_complete()
-        # Forzar que el campo tenga tracking habilitado
-        if hasattr(self._fields['expedient_manager_id'], 'tracking'):
-            self._fields['expedient_manager_id'].tracking = True
-
     expedient_state = fields.Selection([
         ('creada', 'Creada'),
         ('pendiente_documentacion', 'Pending Documentation'),

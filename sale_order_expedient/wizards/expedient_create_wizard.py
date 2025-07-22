@@ -13,13 +13,6 @@ class ExpedientCreateWizard(models.TransientModel):
         help='Persona que está siendo estudiada en el expediente'
     )
 
-    show_warning_message = fields.Boolean(
-        string='Mostrar Mensaje de Advertencia',
-        compute='_compute_show_warning_message',
-        default=False,
-        help='Indica si se debe mostrar un mensaje de advertencia al crear el expediente'
-    )
-
     # El tipo de expediente se define por defecto desde el contexto
     expedient_type = fields.Selection([
         ('post_paid', 'Expediente Post-pagado'),
@@ -239,14 +232,3 @@ class ExpedientCreateWizard(models.TransientModel):
             sale_order.payment_term_id = self.sale_order_template_id.payment_term_id.id
 
         return sale_order
-
-    @api.depends('person_under_study')
-    def _compute_show_warning_message(self):
-        for record in self:
-            if not record.person_under_study:
-                record.show_warning_message = False
-                continue
-            existing_orders = self.env['sale.order'].search([
-                ('person_under_study', '=', record.person_under_study)
-            ])
-            record.show_warning_message = bool(existing_orders)

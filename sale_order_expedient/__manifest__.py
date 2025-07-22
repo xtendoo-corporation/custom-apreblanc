@@ -32,7 +32,7 @@
         'views/expedient_views.xml',  # Primero cargar vistas base de expedientes
         'views/sale_order_views.xml',  # Luego las vistas de sale.order
         'views/sale_order_template_wizard_views.xml',
-        #'views/expedient_wizard_new_views.xml',
+        'views/expedient_wizard_new_views.xml',
 
     ],
     'assets': {

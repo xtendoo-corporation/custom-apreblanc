@@ -97,5 +97,4 @@ class SaleOrderTemplate(models.Model):
             domain = expression.AND([domain, [('name', operator, name)]])
 
         ids = self.search(domain, limit=limit).ids
-        records = self.browse(ids)
-        return [(record.id, record.display_name) for record in records]
+        return self.browse(ids).name_get()
