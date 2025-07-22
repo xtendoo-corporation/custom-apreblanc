@@ -82,6 +82,7 @@ class SaleOrder(models.Model):
         'res.users',
         string='Manager',
         help='User responsible for managing this expedient',
+        tracking=True,
     )
     expedient_state = fields.Selection([
         ('creada', 'Creada'),

@@ -10,6 +10,7 @@
                     <field name="partner_id"/>
                     <field name="expedient_number"/>
                     <field name="client_id"/>
+                    <field name="person_to_study"/>
                 </group>
                 <footer>
                     <button string="Crear" name="action_create_expedient" type="object" class="btn-primary"/>

@@ -8,6 +8,11 @@ class ExpedientCreateWizard(models.TransientModel):
     _name = 'expedient.create.wizard'
     _description = 'Wizard para crear expedientes post-pagados'
 
+    person_to_study = fields.Char(
+        string='Persona a Estudiar',
+        help='Persona que está siendo estudiada en el expediente'
+    )
+
     # El tipo de expediente se define por defecto desde el contexto
     expedient_type = fields.Selection([
         ('post_paid', 'Expediente Post-pagado'),
@@ -42,6 +47,8 @@ class ExpedientCreateWizard(models.TransientModel):
     # Campo para el monto total (necesario para validación de saldo)
     amount_total = fields.Monetary(string='Importe Total', currency_field='currency_id')
     currency_id = fields.Many2one('res.currency', string='Moneda', default=lambda self: self.env.company.currency_id.id)
+
+
 
     @api.model
     def _get_default_expedient_type(self):
