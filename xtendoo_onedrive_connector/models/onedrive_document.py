@@ -20,94 +20,49 @@ class OneDriveDocument(models.Model):
 
     @api.model
     def action_sync_onedrive(self):
-        # Obtener la configuración de OneDrive
-        settings = self.env['onedrive.settings'].search([], limit=1)
-        if not settings or not settings.onedrive_refresh_token:
+        """
+        Método llamado desde la interfaz para sincronizar con OneDrive
+        Usa el servicio mejorado de OneDrive
+        """
+        try:
+            # Usar el servicio mejorado de OneDrive
+            service = self.env['onedrive.service']
+            result = service.sync_onedrive_files()
+
+            if result['success']:
+                return {
+                    'type': 'ir.actions.client',
+                    'tag': 'display_notification',
+                    'params': {
+                        'title': 'Sincronización Exitosa',
+                        'type': 'success',
+                        'message': result['message'],
+                        'sticky': False,
+                    }
+                }
+            else:
+                return {
+                    'type': 'ir.actions.client',
+                    'tag': 'display_notification',
+                    'params': {
+                        'title': 'Error de Sincronización',
+                        'type': 'danger',
+                        'message': result['message'],
+                        'sticky': True,
+                    }
+                }
+
+        except Exception as e:
             return {
                 'type': 'ir.actions.client',
                 'tag': 'display_notification',
                 'params': {
-                    'title': 'Error',
+                    'title': 'Error Inesperado',
                     'type': 'danger',
-                    'message': 'No hay configuración de OneDrive o falta el refresh token.',
-                    'sticky': False,
+                    'message': f'Error durante la sincronización: {str(e)}',
+                    'sticky': True,
                 }
             }
-
-        # Paso 1: Obtener access_token
-        token_url = f"https://login.microsoftonline.com/{settings.onedrive_tenant_id}/oauth2/v2.0/token"
-        data = {
-            'client_id': settings.onedrive_client_id,
-            'client_secret': settings.onedrive_client_secret,
-            'grant_type': 'refresh_token',
-            'refresh_token': settings.onedrive_refresh_token,
-            'scope': 'offline_access Files.ReadWrite.All User.Read',
-        }
-        token_response = requests.post(token_url, data=data)
-        if token_response.status_code != 200:
-            return {
-                'type': 'ir.actions.client',
-                'tag': 'display_notification',
-                'params': {
-                    'title': 'Error',
-                    'type': 'danger',
-                    'message': 'No se pudo obtener el access token de OneDrive.',
-                    'sticky': False,
-                }
-            }
-        access_token = token_response.json().get('access_token')
-        if not access_token:
-            return {
-                'type': 'ir.actions.client',
-                'tag': 'display_notification',
-                'params': {
-                    'title': 'Error',
-                    'type': 'danger',
-                    'message': 'No se recibió access token de OneDrive.',
-                    'sticky': False,
-                }
-            }
-
-        headers = {'Authorization': f'Bearer {access_token}'}
-
-        def sync_folder(parent_id, parent_odoo_id=None):
-            url = f"https://graph.microsoft.com/v1.0/me/drive/items/{parent_id}/children" if parent_id else "https://graph.microsoft.com/v1.0/me/drive/root/children"
-            response = requests.get(url, headers=headers)
-            if response.status_code != 200:
-                return
-            for item in response.json().get('value', []):
-                vals = {
-                    'name': item.get('name'),
-                    'onedrive_id': item.get('id'),
-                    'file_url': item.get('@microsoft.graph.downloadUrl'),
-                    'file_size': item.get('size'),
-                    'file_type': item.get('file', {}).get('mimeType') if item.get('file') else None,
-                    'owner': item.get('createdBy', {}).get('user', {}).get('displayName'),
-                    'last_modified': item.get('lastModifiedDateTime'),
-                    'parent_id': parent_odoo_id.id if parent_odoo_id else False,
-                    'is_folder': item.get('folder') is not None,
-                }
-                doc = self.env['onedrive.document'].search([('onedrive_id', '=', item.get('id'))], limit=1)
-                if doc:
-                    doc.write(vals)
-                else:
-                    doc = self.env['onedrive.document'].create(vals)
-                if item.get('folder'):
-                    sync_folder(item.get('id'), doc)
-
-        # Sincronizar desde la raíz
-        sync_folder(None)
-
-        return {
-            'type': 'ir.actions.client',
-            'tag': 'display_notification',
-            'params': {
-                'title': 'Sincronización',
-                'type': 'success',
-                'message': 'Sincronización de OneDrive finalizada.',
-                'sticky': False,
-            }
-        }
 
     def action_download_file(self):
         # Lógica para descargar un archivo desde OneDrive
