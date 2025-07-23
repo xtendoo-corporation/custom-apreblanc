@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Acción de servidor para diagnosticar conexión OneDrive -->
+    <record id="action_server_onedrive_diagnose" model="ir.actions.server">
+        <field name="name">Diagnosticar Conexión OneDrive</field>
+        <field name="model_id" ref="base.model_res_users"/>
+        <field name="state">code</field>
+        <field name="code">
+service = env['onedrive.service']
+result = service.diagnose_connection()
+
+if result['success']:
+    raise UserError("✅ Conexión OneDrive OK: " + result['message'])
+else:
+    raise UserError("❌ Error OneDrive: " + result['error'])
+        </field>
+    </record>
+
+    <!-- Acción de servidor para sincronizar archivos OneDrive -->
+    <record id="action_server_onedrive_sync" model="ir.actions.server">
+        <field name="name">Sincronizar Archivos OneDrive</field>
+        <field name="model_id" ref="base.model_res_users"/>
+        <field name="state">code</field>
+        <field name="code">
+service = env['onedrive.service']
+result = service.sync_onedrive_files()
+
+if result['success']:
+    raise UserError("✅ Sincronización completada: " + result['message'])
+else:
+    raise UserError("❌ Error en sincronización: " + result['message'])
+        </field>
+    </record>
+
+    <!-- Menús para las acciones -->
+    <menuitem id="menu_onedrive_diagnose"
+              name="Diagnosticar Conexión OneDrive"
+              parent="base.menu_administration"
+              action="action_server_onedrive_diagnose"
+              sequence="101"/>
+
+    <menuitem id="menu_onedrive_sync"
+              name="Sincronizar OneDrive"
+              parent="base.menu_administration"
+              action="action_server_onedrive_sync"
+              sequence="102"/>
+</odoo>

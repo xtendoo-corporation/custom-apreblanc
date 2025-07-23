@@ -182,3 +182,91 @@ class OneDriveService(models.AbstractModel):
                 'error': str(e),
                 'message': _('Error durante la sincronización: %s') % str(e)
             }
+
+    def diagnose_connection(self):
+        """
+        Método para diagnosticar problemas de conexión con OneDrive
+        """
+        _logger.info('=== INICIO DIAGNÓSTICO ONEDRIVE ===')
+
+        # 1. Verificar configuración
+        config = self._get_config()
+        _logger.info('Configuración cargada:')
+        for key, value in config.items():
+            if value:
+                if key in ['client_secret', 'refresh_token']:
+                    _logger.info('  %s: ****** (oculto, pero presente)', key)
+                else:
+                    _logger.info('  %s: %s', key, value)
+            else:
+                _logger.error('  %s: ¡FALTA!', key)
+
+        # 2. Verificar conectividad
+        try:
+            import socket
+            socket.create_connection(("login.microsoftonline.com", 443), timeout=10)
+            _logger.info('Conectividad a Microsoft: OK')
+        except Exception as e:
+            _logger.error('Error de conectividad a Microsoft: %s', str(e))
+            return {'success': False, 'error': f'Sin conectividad: {str(e)}'}
+
+        # 3. Intentar obtener token con más detalles
+        try:
+            missing_params = [k for k, v in config.items() if not v]
+            if missing_params:
+                return {
+                    'success': False,
+                    'error': f'Faltan parámetros: {", ".join(missing_params)}'
+                }
+
+            url = f"https://login.microsoftonline.com/{config['tenant_id']}/oauth2/v2.0/token"
+            data = {
+                'client_id': config['client_id'],
+                'client_secret': config['client_secret'],
+                'grant_type': 'refresh_token',
+                'refresh_token': config['refresh_token'],
+                'redirect_uri': config['redirect_uri'],
+                'scope': 'https://graph.microsoft.com/.default offline_access',
+            }
+
+            _logger.info('URL de token: %s', url)
+            _logger.info('Datos enviados (sin secretos):')
+            for key, value in data.items():
+                if key in ['client_secret', 'refresh_token']:
+                    _logger.info('  %s: ****** (presente)', key)
+                else:
+                    _logger.info('  %s: %s', key, value)
+
+            resp = requests.post(url, data=data, timeout=30)
+            _logger.info('Respuesta HTTP: %s', resp.status_code)
+            _logger.info('Headers de respuesta: %s', dict(resp.headers))
+
+            try:
+                response_json = resp.json()
+                if resp.status_code == 200:
+                    _logger.info('Token obtenido exitosamente')
+                    return {'success': True, 'message': 'Token obtenido correctamente'}
+                else:
+                    _logger.error('Error en respuesta JSON: %s', response_json)
+                    return {
+                        'success': False,
+                        'error': f"Error {resp.status_code}: {response_json.get('error', 'unknown')}",
+                        'details': response_json
+                    }
+            except Exception as json_error:
+                _logger.error('Error parseando respuesta JSON: %s', str(json_error))
+                _logger.error('Respuesta raw: %s', resp.text)
+                return {
+                    'success': False,
+                    'error': f'Respuesta inválida: {resp.text[:200]}'
+                }
+
+        except requests.exceptions.RequestException as e:
+            _logger.error('Error de requests: %s', str(e))
+            return {'success': False, 'error': f'Error de conexión: {str(e)}'}
+        except Exception as e:
+            _logger.error('Error inesperado: %s', str(e))
+            return {'success': False, 'error': f'Error inesperado: {str(e)}'}
+        finally:
+            _logger.info('=== FIN DIAGNÓSTICO ONEDRIVE ===')
+
