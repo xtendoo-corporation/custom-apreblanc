@@ -97,11 +97,38 @@ class OneDriveService(models.AbstractModel):
     def list_files(self, folder_id=None):
         token = self._get_token()
         headers = {'Authorization': f'Bearer {token}'}
+
+        # Primero intentar OneDrive for Business
         url = 'https://graph.microsoft.com/v1.0/me/drive/root/children' if not folder_id else f'https://graph.microsoft.com/v1.0/me/drive/items/{folder_id}/children'
         resp = requests.get(url, headers=headers)
+
+        # Si falla con error de licencia SPO, intentar OneDrive Personal
         if resp.status_code != 200:
-            _logger.error('Error listando archivos OneDrive: %s', resp.text)
-            raise UserError(_('No se pudieron listar los archivos de OneDrive.'))
+            response_data = {}
+            try:
+                response_data = resp.json()
+            except:
+                pass
+
+            error_message = response_data.get('error', {}).get('message', '')
+
+            # Si es error de licencia SPO, intentar endpoint de OneDrive Personal
+            if 'SPO license' in error_message or 'Tenant does not have' in error_message:
+                _logger.info('OneDrive for Business no disponible, intentando OneDrive Personal...')
+
+                # Endpoint para OneDrive Personal
+                personal_url = 'https://graph.microsoft.com/v1.0/me/drive/root/children' if not folder_id else f'https://graph.microsoft.com/v1.0/me/drive/items/{folder_id}/children'
+
+                # Cambiar el scope para OneDrive Personal si es necesario
+                resp = requests.get(personal_url, headers=headers)
+
+                if resp.status_code != 200:
+                    _logger.error('Error listando archivos OneDrive Personal: %s', resp.text)
+                    raise UserError(_('No se pudieron listar los archivos de OneDrive. Error: %s') % resp.text)
+            else:
+                _logger.error('Error listando archivos OneDrive: %s', resp.text)
+                raise UserError(_('No se pudieron listar los archivos de OneDrive. Error: %s') % error_message)
+
         return resp.json().get('value', [])
 
     def download_file(self, onedrive_id):

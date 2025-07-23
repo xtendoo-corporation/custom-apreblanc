@@ -17,8 +17,8 @@ class OneDriveSettings(models.Model):
         if not (self.onedrive_client_id and self.onedrive_tenant_id and self.onedrive_redirect_uri):
             return False
 
-        # Definir scopes correctos
-        scopes = "openid offline_access Files.ReadWrite.All"
+        # Definir scopes para OneDrive Personal (más compatible)
+        scopes = "openid offline_access files.readwrite.all"
         encoded_scopes = urllib.parse.quote(scopes)
         encoded_redirect_uri = urllib.parse.quote(self.onedrive_redirect_uri)
 
