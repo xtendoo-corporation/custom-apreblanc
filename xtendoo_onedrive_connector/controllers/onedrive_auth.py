@@ -33,7 +33,7 @@ class OneDriveAuthController(http.Controller):
                 'code': code,
                 'grant_type': 'authorization_code',
                 'redirect_uri': settings.onedrive_redirect_uri,
-                'scope': 'Files.ReadWrite.All offline_access',
+                'scope': 'openid offline_access Files.ReadWrite.All',  # Corregir scope
             }
 
             _logger.info(f"[OneDrive] Intercambiando código por token. URL: {token_url}")

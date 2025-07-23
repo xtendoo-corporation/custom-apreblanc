@@ -1,4 +1,5 @@
 from odoo import models, fields, api
+import urllib.parse
 
 class OneDriveSettings(models.Model):
     _name = 'onedrive.settings'
@@ -15,12 +16,18 @@ class OneDriveSettings(models.Model):
         base_url = "https://login.microsoftonline.com/{tenant_id}/oauth2/v2.0/authorize"
         if not (self.onedrive_client_id and self.onedrive_tenant_id and self.onedrive_redirect_uri):
             return False
+
+        # Definir scopes correctos
+        scopes = "openid offline_access Files.ReadWrite.All"
+        encoded_scopes = urllib.parse.quote(scopes)
+        encoded_redirect_uri = urllib.parse.quote(self.onedrive_redirect_uri)
+
         params = (
             f"client_id={self.onedrive_client_id}"
             f"&response_type=code"
-            f"&redirect_uri={self.onedrive_redirect_uri}"
+            f"&redirect_uri={encoded_redirect_uri}"
             f"&response_mode=query"
-            f"&scope=offline_access Files.ReadWrite.All User.Read"
+            f"&scope={encoded_scopes}"
             f"&state=odoo_onedrive"
         )
         return base_url.format(tenant_id=self.onedrive_tenant_id) + "?" + params
