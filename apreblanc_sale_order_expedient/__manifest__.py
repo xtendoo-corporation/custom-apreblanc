@@ -3,7 +3,7 @@
     'version': '17.0.1.0.0',
     'category': 'Sales',
     'summary': 'Adds expedient management to sales orders for Apreblanc',
-    'author': 'Xtendoo Software SLU,' 'José Aguilar',
+    'author': 'Xtendoo Software SLU,' 'Daniel Doomínguez',
     'website': 'https://www.xtendoo.es',
     'license': 'AGPL-3',
     'depends': ['sale', 'sale_management', 'mail'],

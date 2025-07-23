@@ -23,8 +23,17 @@ class OneDriveService(models.AbstractModel):
 
     def _get_token(self):
         config = self._get_config()
-        if not all([config['client_id'], config['client_secret'], config['tenant_id'], config['refresh_token']]):
-            raise UserError(_('Faltan credenciales de OneDrive.'))
+
+        # Validar configuración más detalladamente
+        missing_params = []
+        for key, value in config.items():
+            if not value:
+                missing_params.append(key)
+
+        if missing_params:
+            _logger.error('Faltan parámetros de configuración de OneDrive: %s', ', '.join(missing_params))
+            raise UserError(_('Faltan credenciales de OneDrive: %s') % ', '.join(missing_params))
+
         url = f"https://login.microsoftonline.com/{config['tenant_id']}/oauth2/v2.0/token"
         data = {
             'client_id': config['client_id'],
@@ -34,11 +43,46 @@ class OneDriveService(models.AbstractModel):
             'redirect_uri': config['redirect_uri'],
             'scope': 'https://graph.microsoft.com/.default offline_access',
         }
-        resp = requests.post(url, data=data)
-        if resp.status_code != 200:
-            _logger.error('Error obteniendo token OneDrive: %s', resp.text)
-            raise UserError(_('No se pudo obtener el token de acceso de OneDrive.'))
-        return resp.json().get('access_token')
+
+        _logger.info('Intentando obtener token de OneDrive para tenant: %s', config['tenant_id'])
+
+        try:
+            resp = requests.post(url, data=data, timeout=30)
+            _logger.info('Respuesta de Microsoft: Status %s', resp.status_code)
+
+            if resp.status_code != 200:
+                response_data = {}
+                try:
+                    response_data = resp.json()
+                except:
+                    pass
+
+                error_description = response_data.get('error_description', resp.text)
+                error_code = response_data.get('error', 'unknown_error')
+
+                _logger.error('Error obteniendo token OneDrive: Status %s, Error: %s, Description: %s',
+                             resp.status_code, error_code, error_description)
+
+                if 'invalid_grant' in error_code or 'expired' in error_description.lower():
+                    raise UserError(_('El refresh token ha expirado o es inválido. Necesitas reautorizar la aplicación.'))
+                elif 'invalid_client' in error_code:
+                    raise UserError(_('Las credenciales del cliente (client_id/client_secret) son incorrectas.'))
+                elif 'unauthorized_client' in error_code:
+                    raise UserError(_('El cliente no está autorizado para usar este grant type.'))
+                else:
+                    raise UserError(_('Error obteniendo token de OneDrive: %s - %s') % (error_code, error_description))
+
+            token_data = resp.json()
+            if not token_data.get('access_token'):
+                _logger.error('Respuesta exitosa pero sin access_token: %s', token_data)
+                raise UserError(_('La respuesta no contiene un token de acceso válido.'))
+
+            _logger.info('Token de OneDrive obtenido exitosamente')
+            return token_data.get('access_token')
+
+        except requests.exceptions.RequestException as e:
+            _logger.error('Error de conexión obteniendo token OneDrive: %s', str(e))
+            raise UserError(_('Error de conexión con Microsoft: %s') % str(e))
 
     def list_files(self, folder_id=None):
         token = self._get_token()
@@ -78,22 +122,63 @@ class OneDriveService(models.AbstractModel):
         Sincroniza los archivos de OneDrive con el modelo onedrive.document en Odoo.
         Si folder_id es None, sincroniza la raíz.
         """
-        files = self.list_files(folder_id)
-        OneDriveDocument = self.env['onedrive.document']
-        for file in files:
-            if not file.get('file'):
-                continue  # Solo archivos, no carpetas
-            vals = {
-                'name': file.get('name'),
-                'onedrive_id': file.get('id'),
-                'file_url': file.get('@microsoft.graph.downloadUrl'),
-                'file_size': file.get('size'),
-                'file_type': file.get('file', {}).get('mimeType'),
-                'owner': file.get('createdBy', {}).get('user', {}).get('displayName'),
-                'last_modified': file.get('lastModifiedDateTime'),
+        try:
+            _logger.info('Iniciando sincronización de OneDrive. Folder ID: %s', folder_id or 'root')
+            files = self.list_files(folder_id)
+            _logger.info('Se encontraron %s elementos en OneDrive', len(files))
+
+            OneDriveDocument = self.env['onedrive.document']
+            synced_count = 0
+            updated_count = 0
+            created_count = 0
+
+            for file in files:
+                if not file.get('file'):
+                    _logger.debug('Omitiendo carpeta: %s', file.get('name'))
+                    continue  # Solo archivos, no carpetas
+
+                try:
+                    vals = {
+                        'name': file.get('name'),
+                        'onedrive_id': file.get('id'),
+                        'file_url': file.get('@microsoft.graph.downloadUrl'),
+                        'file_size': file.get('size'),
+                        'file_type': file.get('file', {}).get('mimeType'),
+                        'owner': file.get('createdBy', {}).get('user', {}).get('displayName'),
+                        'last_modified': file.get('lastModifiedDateTime'),
+                    }
+
+                    doc = OneDriveDocument.search([('onedrive_id', '=', file.get('id'))], limit=1)
+                    if doc:
+                        doc.write(vals)
+                        updated_count += 1
+                        _logger.debug('Archivo actualizado: %s', file.get('name'))
+                    else:
+                        OneDriveDocument.create(vals)
+                        created_count += 1
+                        _logger.debug('Archivo creado: %s', file.get('name'))
+
+                    synced_count += 1
+
+                except Exception as e:
+                    _logger.error('Error sincronizando archivo %s: %s', file.get('name'), str(e))
+                    continue
+
+            _logger.info('Sincronización completada. Total: %s, Creados: %s, Actualizados: %s',
+                        synced_count, created_count, updated_count)
+
+            return {
+                'success': True,
+                'synced_count': synced_count,
+                'created_count': created_count,
+                'updated_count': updated_count,
+                'message': _('Sincronización completada exitosamente. %s archivos procesados (%s creados, %s actualizados).') % (synced_count, created_count, updated_count)
             }
-            doc = OneDriveDocument.search([('onedrive_id', '=', file.get('id'))], limit=1)
-            if doc:
-                doc.write(vals)
-            else:
-                OneDriveDocument.create(vals)
+
+        except Exception as e:
+            _logger.error('Error durante la sincronización de OneDrive: %s', str(e))
+            return {
+                'success': False,
+                'error': str(e),
+                'message': _('Error durante la sincronización: %s') % str(e)
+            }
