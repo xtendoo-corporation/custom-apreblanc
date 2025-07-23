@@ -201,6 +201,8 @@ class OneDriveService(models.AbstractModel):
 
         # 1. Verificar configuración
         config = self._get_config()
+        settings = self.env['onedrive.settings'].search([], limit=1)
+
         _logger.info('Configuración cargada:')
         for key, value in config.items():
             if value:
@@ -224,6 +226,16 @@ class OneDriveService(models.AbstractModel):
         try:
             missing_params = [k for k, v in config.items() if not v]
             if missing_params:
+                # Si falta solo el refresh_token, proporcionar URL de autorización
+                if missing_params == ['refresh_token'] and settings:
+                    auth_url = settings.get_auth_url()
+                    if auth_url:
+                        return {
+                            'success': False,
+                            'error': f'Falta refresh_token. Autoriza la aplicación en: {auth_url}',
+                            'auth_url': auth_url
+                        }
+
                 return {
                     'success': False,
                     'error': f'Faltan parámetros: {", ".join(missing_params)}'
@@ -236,7 +248,7 @@ class OneDriveService(models.AbstractModel):
                 'grant_type': 'refresh_token',
                 'refresh_token': config['refresh_token'],
                 'redirect_uri': config['redirect_uri'],
-                'scope': 'https://graph.microsoft.com/.default offline_access',
+                'scope': 'Files.ReadWrite.All offline_access',  # Corregir el scope
             }
 
             _logger.info('URL de token: %s', url)
@@ -258,6 +270,22 @@ class OneDriveService(models.AbstractModel):
                     return {'success': True, 'message': 'Token obtenido correctamente'}
                 else:
                     _logger.error('Error en respuesta JSON: %s', response_json)
+
+                    # Manejo específico para invalid_grant
+                    if response_json.get('error') == 'invalid_grant':
+                        auth_url = settings.get_auth_url() if settings else None
+                        if auth_url:
+                            return {
+                                'success': False,
+                                'error': f'Refresh token inválido o expirado. Reautoriza en: {auth_url}',
+                                'auth_url': auth_url
+                            }
+                        else:
+                            return {
+                                'success': False,
+                                'error': 'Refresh token inválido o expirado. Necesitas reautorizar la aplicación.'
+                            }
+
                     return {
                         'success': False,
                         'error': f"Error {resp.status_code}: {response_json.get('error', 'unknown')}",
