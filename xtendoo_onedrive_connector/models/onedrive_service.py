@@ -12,13 +12,23 @@ class OneDriveService(models.AbstractModel):
     _description = 'Servicio de conexión con OneDrive'
 
     def _get_config(self):
-        IrConfig = self.env['ir.config_parameter'].sudo()
+        # Obtener configuración desde el modelo onedrive.settings
+        settings = self.env['onedrive.settings'].search([], limit=1)
+        if not settings:
+            return {
+                'client_id': None,
+                'client_secret': None,
+                'tenant_id': None,
+                'redirect_uri': None,
+                'refresh_token': None,
+            }
+
         return {
-            'client_id': IrConfig.get_param('xtendoo_onedrive_connector.onedrive_client_id'),
-            'client_secret': IrConfig.get_param('xtendoo_onedrive_connector.onedrive_client_secret'),
-            'tenant_id': IrConfig.get_param('xtendoo_onedrive_connector.onedrive_tenant_id'),
-            'redirect_uri': IrConfig.get_param('xtendoo_onedrive_connector.onedrive_redirect_uri'),
-            'refresh_token': IrConfig.get_param('xtendoo_onedrive_connector.onedrive_refresh_token'),
+            'client_id': settings.onedrive_client_id,
+            'client_secret': settings.onedrive_client_secret,
+            'tenant_id': settings.onedrive_tenant_id,
+            'redirect_uri': settings.onedrive_redirect_uri,
+            'refresh_token': settings.onedrive_refresh_token,
         }
 
     def _get_token(self):
@@ -269,4 +279,3 @@ class OneDriveService(models.AbstractModel):
             return {'success': False, 'error': f'Error inesperado: {str(e)}'}
         finally:
             _logger.info('=== FIN DIAGNÓSTICO ONEDRIVE ===')
-
