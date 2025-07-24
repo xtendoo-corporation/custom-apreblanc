@@ -237,41 +237,69 @@ class OneDriveService(models.AbstractModel):
             files = self.list_files(folder_id)
             _logger.info('Se encontraron %s elementos en OneDrive', len(files))
 
+            # Debug: Mostrar información detallada de los primeros elementos
+            for i, item in enumerate(files[:3]):  # Solo los primeros 3 para debug
+                _logger.info('Elemento %d: name=%s, tiene_file=%s, tiene_folder=%s, keys=%s',
+                           i+1, item.get('name'), bool(item.get('file')), bool(item.get('folder')), list(item.keys()))
+
             OneDriveDocument = self.env['onedrive.document']
             synced_count = 0
             updated_count = 0
             created_count = 0
 
             for file in files:
-                if not file.get('file'):
-                    _logger.debug('Omitiendo carpeta: %s', file.get('name'))
-                    continue  # Solo archivos, no carpetas
+                # Cambiar la lógica de filtrado para ser más inclusiva
+                is_file = file.get('file') is not None
+                is_folder = file.get('folder') is not None
+
+                _logger.info('Procesando elemento: %s, es_archivo=%s, es_carpeta=%s',
+                           file.get('name'), is_file, is_folder)
+
+                # Por ahora, procesar solo archivos (no carpetas)
+                if not is_file:
+                    _logger.debug('Omitiendo %s: %s', 'carpeta' if is_folder else 'elemento desconocido', file.get('name'))
+                    continue
 
                 try:
+                    # Convertir fecha si existe
+                    last_modified = None
+                    if file.get('lastModifiedDateTime'):
+                        try:
+                            from datetime import datetime
+                            # El formato típico es: 2023-12-01T10:30:00.000Z
+                            date_str = file.get('lastModifiedDateTime').replace('Z', '+00:00')
+                            last_modified = datetime.fromisoformat(date_str.replace('Z', '+00:00'))
+                        except Exception as date_error:
+                            _logger.warning('Error parseando fecha %s: %s', file.get('lastModifiedDateTime'), date_error)
+
                     vals = {
                         'name': file.get('name'),
                         'onedrive_id': file.get('id'),
                         'file_url': file.get('@microsoft.graph.downloadUrl'),
-                        'file_size': file.get('size'),
+                        'file_size': file.get('size', 0),
                         'file_type': file.get('file', {}).get('mimeType'),
                         'owner': file.get('createdBy', {}).get('user', {}).get('displayName'),
-                        'last_modified': file.get('lastModifiedDateTime'),
+                        'last_modified': last_modified,
+                        'is_folder': False,  # Marcar explícitamente como archivo
                     }
+
+                    _logger.info('Datos del archivo %s: %s', file.get('name'), vals)
 
                     doc = OneDriveDocument.search([('onedrive_id', '=', file.get('id'))], limit=1)
                     if doc:
                         doc.write(vals)
                         updated_count += 1
-                        _logger.debug('Archivo actualizado: %s', file.get('name'))
+                        _logger.info('Archivo actualizado: %s (ID: %s)', file.get('name'), doc.id)
                     else:
-                        OneDriveDocument.create(vals)
+                        new_doc = OneDriveDocument.create(vals)
                         created_count += 1
-                        _logger.debug('Archivo creado: %s', file.get('name'))
+                        _logger.info('Archivo creado: %s (ID: %s)', file.get('name'), new_doc.id)
 
                     synced_count += 1
 
                 except Exception as e:
                     _logger.error('Error sincronizando archivo %s: %s', file.get('name'), str(e))
+                    _logger.error('Datos del archivo problemático: %s', file)
                     continue
 
             _logger.info('Sincronización completada. Total: %s, Creados: %s, Actualizados: %s',
