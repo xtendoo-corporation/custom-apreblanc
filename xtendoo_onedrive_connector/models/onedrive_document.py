@@ -22,7 +22,7 @@ class OneDriveDocument(models.Model):
     def action_sync_onedrive(self):
         """
         Método llamado desde la interfaz para sincronizar con OneDrive
-        Usa el servicio mejorado de OneDrive y refresha la vista después
+        Usa el servicio mejorado de OneDrive y refresca la vista después
         """
         try:
             # Usar el servicio mejorado de OneDrive
