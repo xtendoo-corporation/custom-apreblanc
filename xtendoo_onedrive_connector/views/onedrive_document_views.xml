@@ -103,14 +103,134 @@
     <record id="action_onedrive_document_window" model="ir.actions.act_window">
         <field name="name">Documentos OneDrive</field>
         <field name="res_model">onedrive.document</field>
-        <field name="view_mode">tree,form</field>
-        <field name="context">{}</field>
+        <field name="view_mode">kanban,tree,form</field>
+        <field name="context">{'search_default_current_folder': 1}</field>
         <field name="help" type="html">
             <p>Desde aquí puedes ver, subir, descargar y sincronizar tus archivos y carpetas de OneDrive.</p>
+            <p>Usa la vista kanban para navegación visual o la vista tree para lista completa.</p>
         </field>
     </record>
 
-    <menuitem id="menu_onedrive_root" name="OneDrive" sequence="100"/>
-    <menuitem id="menu_onedrive_documents" name="Documentos" parent="menu_onedrive_root" action="action_onedrive_document_window" sequence="10"/>
-    <menuitem id="menu_onedrive_sync" name="Sincronizar OneDrive" parent="menu_onedrive_root" action="action_onedrive_sync" sequence="20"/>
+    <!-- Nueva vista kanban para navegación por directorios (SIN TOCAR NADA EXISTENTE) -->
+    <record id="view_onedrive_document_kanban" model="ir.ui.view">
+        <field name="name">onedrive.document.kanban</field>
+        <field name="model">onedrive.document</field>
+        <field name="arch" type="xml">
+            <kanban class="o_kanban_mobile o_documents_kanban" create="false" quick_create="false">
+                <field name="id"/>
+                <field name="name"/>
+                <field name="file_type"/>
+                <field name="file_size"/>
+                <field name="is_folder"/>
+                <field name="parent_id"/>
+                <field name="last_modified"/>
+                <field name="file_url"/>
+                <field name="owner"/>
+
+                <templates>
+                    <t t-name="kanban-box">
+                        <div class="oe_kanban_global_click o_documents_kanban_card">
+                            <!-- Icono según el tipo -->
+                            <div class="o_kanban_image">
+                                <t t-if="record.is_folder.raw_value">
+                                    <i class="fa fa-folder-o fa-3x text-primary" title="Carpeta"/>
+                                </t>
+                                <t t-elif="record.file_type.value and record.file_type.value.includes('image')">
+                                    <i class="fa fa-file-image-o fa-3x text-success" title="Imagen"/>
+                                </t>
+                                <t t-elif="record.file_type.value and record.file_type.value.includes('pdf')">
+                                    <i class="fa fa-file-pdf-o fa-3x text-danger" title="PDF"/>
+                                </t>
+                                <t t-elif="record.file_type.value and (record.file_type.value.includes('word') or record.file_type.value.includes('document'))">
+                                    <i class="fa fa-file-word-o fa-3x text-info" title="Word"/>
+                                </t>
+                                <t t-elif="record.file_type.value and (record.file_type.value.includes('excel') or record.file_type.value.includes('sheet'))">
+                                    <i class="fa fa-file-excel-o fa-3x text-success" title="Excel"/>
+                                </t>
+                                <t t-else="">
+                                    <i class="fa fa-file-o fa-3x text-muted" title="Archivo"/>
+                                </t>
+                            </div>
+
+                            <!-- Información del documento -->
+                            <div class="o_kanban_details">
+                                <div class="o_kanban_details_wrapper">
+                                    <div class="o_kanban_record_title">
+                                        <field name="name"/>
+                                    </div>
+                                    <div class="o_kanban_record_body">
+                                        <t t-if="record.is_folder.raw_value">
+                                            <span class="badge badge-primary">Carpeta</span>
+                                        </t>
+                                        <t t-else="">
+                                            <t t-if="record.file_size.value">
+                                                <span class="text-muted">
+                                                    <t t-if="record.file_size.value &lt; 1024">
+                                                        <t t-esc="record.file_size.value"/> bytes
+                                                    </t>
+                                                    <t t-elif="record.file_size.value &lt; 1048576">
+                                                        <t t-esc="Math.round(record.file_size.value / 1024)"/> KB
+                                                    </t>
+                                                    <t t-else="">
+                                                        <t t-esc="Math.round(record.file_size.value / 1048576)"/> MB
+                                                    </t>
+                                                </span>
+                                            </t>
+                                        </t>
+                                        <br/>
+                                        <t t-if="record.owner.value">
+                                            <small class="text-muted">
+                                                <i class="fa fa-user" title="Usuario"/> <t t-esc="record.owner.value"/>
+                                            </small>
+                                        </t>
+                                    </div>
+                                </div>
+
+                                <!-- Botones de acción -->
+                                <div class="o_kanban_record_bottom">
+                                    <div class="oe_kanban_bottom_right">
+                                        <t t-if="record.is_folder.raw_value">
+                                            <button name="action_open_folder" type="object" class="btn btn-sm btn-primary"
+                                                    string="Abrir Carpeta">
+                                                <i class="fa fa-folder-open" title="Abrir"/> Abrir
+                                            </button>
+                                        </t>
+                                        <t t-else="">
+                                            <a t-if="record.file_url.value" t-att-href="record.file_url.value" target="_blank"
+                                               class="btn btn-sm btn-secondary">
+                                                <i class="fa fa-download" title="Descargar"/> Descargar
+                                            </a>
+                                        </t>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </t>
+                </templates>
+            </kanban>
+        </field>
+    </record>
+
+    <!-- Filtros para navegación (sin tocar lo existente) -->
+    <record id="view_onedrive_document_search" model="ir.ui.view">
+        <field name="name">onedrive.document.search</field>
+        <field name="model">onedrive.document</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="name" string="Nombre" filter_domain="[('name','ilike',self)]"/>
+                <field name="file_type" string="Tipo"/>
+                <field name="owner" string="Propietario"/>
+                <separator/>
+                <filter string="Carpeta Raíz" name="current_folder" domain="[('parent_id','=',False)]"/>
+                <filter string="Solo Carpetas" name="folders_only" domain="[('is_folder','=',True)]"/>
+                <filter string="Solo Archivos" name="files_only" domain="[('is_folder','=',False)]"/>
+                <separator/>
+                <group expand="0" string="Agrupar por">
+                    <filter string="Carpeta Padre" name="group_by_parent" context="{'group_by':'parent_id'}"/>
+                    <filter string="Tipo de Archivo" name="group_by_type" context="{'group_by':'file_type'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
 </odoo>
