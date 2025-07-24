@@ -65,7 +65,7 @@ class OneDriveDocument(models.Model):
             }
 
     def action_download_file(self):
-        # Lógica para descargar un archivo desde OneDriveaaa
+        # Lógica para descargar un archivo desde OneDriveaa
         return True
 
     def action_upload_file(self):
