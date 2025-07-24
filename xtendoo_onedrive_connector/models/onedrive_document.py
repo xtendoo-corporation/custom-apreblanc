@@ -22,7 +22,7 @@ class OneDriveDocument(models.Model):
     def action_sync_onedrive(self):
         """
         Método llamado desde la interfaz para sincronizar con OneDrive
-        Usa el servicio mejorado de OneDrive
+        Usa el servicio mejorado de OneDrive y refresca la vista después
         """
         try:
             # Usar el servicio mejorado de OneDrive
@@ -30,7 +30,8 @@ class OneDriveDocument(models.Model):
             result = service.sync_onedrive_files()
 
             if result['success']:
-                return {
+                # Mostrar notificación de éxito
+                notification = {
                     'type': 'ir.actions.client',
                     'tag': 'display_notification',
                     'params': {
@@ -39,6 +40,22 @@ class OneDriveDocument(models.Model):
                         'message': result['message'],
                         'sticky': False,
                     }
+                }
+
+                # Recargar la vista de OneDrive para mostrar los documentos actualizados
+                reload_action = {
+                    'type': 'ir.actions.act_window',
+                    'name': 'Documentos OneDrive',
+                    'res_model': 'onedrive.document',
+                    'view_mode': 'tree,form',
+                    'target': 'current',
+                    'context': {'search_default_group_by_parent': 1},  # Agrupar por carpeta padre
+                }
+
+                # Retornar acción múltiple: notificación + recarga de vista
+                return {
+                    'type': 'ir.actions.act_multi',
+                    'actions': [notification, reload_action]
                 }
             else:
                 return {
