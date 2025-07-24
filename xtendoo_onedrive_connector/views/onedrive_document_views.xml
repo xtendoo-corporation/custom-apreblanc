@@ -100,17 +100,153 @@
         <field name="code">action = env['onedrive.document'].action_sync_onedrive()</field>
     </record>
 
-    <record id="action_onedrive_document_window" model="ir.actions.act_window">
-        <field name="name">Documentos OneDrive</field>
-        <field name="res_model">onedrive.document</field>
-        <field name="view_mode">tree,form</field>
-        <field name="context">{}</field>
-        <field name="help" type="html">
-            <p>Desde aquí puedes ver, subir, descargar y sincronizar tus archivos y carpetas de OneDrive.</p>
+    <!-- Vista kanban de documentos OneDrive (estilo Enterprise) -->
+    <record id="view_onedrive_document_kanban" model="ir.ui.view">
+        <field name="name">onedrive.document.kanban</field>
+        <field name="model">onedrive.document</field>
+        <field name="arch" type="xml">
+            <kanban class="o_kanban_mobile o_documents_kanban" create="false" quick_create="false">
+                <field name="id"/>
+                <field name="name"/>
+                <field name="file_type"/>
+                <field name="file_size"/>
+                <field name="is_folder"/>
+                <field name="parent_id"/>
+                <field name="last_modified"/>
+                <field name="file_url"/>
+                <field name="owner"/>
+
+                <templates>
+                    <t t-name="kanban-box">
+                        <div class="oe_kanban_global_click o_documents_kanban_card" t-att-data-id="record.id.value">
+                            <!-- Icono según el tipo -->
+                            <div class="o_kanban_image">
+                                <t t-if="record.is_folder.raw_value">
+                                    <i class="fa fa-folder-o fa-3x text-primary" style="color: #0d6efd;"/>
+                                </t>
+                                <t t-elif="record.file_type.value and record.file_type.value.includes('image')">
+                                    <i class="fa fa-file-image-o fa-3x text-success"/>
+                                </t>
+                                <t t-elif="record.file_type.value and record.file_type.value.includes('pdf')">
+                                    <i class="fa fa-file-pdf-o fa-3x text-danger"/>
+                                </t>
+                                <t t-elif="record.file_type.value and (record.file_type.value.includes('word') or record.file_type.value.includes('document'))">
+                                    <i class="fa fa-file-word-o fa-3x text-info"/>
+                                </t>
+                                <t t-elif="record.file_type.value and (record.file_type.value.includes('excel') or record.file_type.value.includes('sheet'))">
+                                    <i class="fa fa-file-excel-o fa-3x text-success"/>
+                                </t>
+                                <t t-elif="record.file_type.value and (record.file_type.value.includes('powerpoint') or record.file_type.value.includes('presentation'))">
+                                    <i class="fa fa-file-powerpoint-o fa-3x text-warning"/>
+                                </t>
+                                <t t-elif="record.file_type.value and record.file_type.value.includes('video')">
+                                    <i class="fa fa-file-video-o fa-3x text-purple"/>
+                                </t>
+                                <t t-elif="record.file_type.value and record.file_type.value.includes('audio')">
+                                    <i class="fa fa-file-audio-o fa-3x text-dark"/>
+                                </t>
+                                <t t-else="">
+                                    <i class="fa fa-file-o fa-3x text-muted"/>
+                                </t>
+                            </div>
+
+                            <!-- Información del documento -->
+                            <div class="o_kanban_details">
+                                <div class="o_kanban_details_wrapper">
+                                    <div class="o_kanban_record_title">
+                                        <field name="name"/>
+                                    </div>
+                                    <div class="o_kanban_record_body">
+                                        <t t-if="record.is_folder.raw_value">
+                                            <span class="badge badge-primary">Carpeta</span>
+                                        </t>
+                                        <t t-else="">
+                                            <t t-if="record.file_size.value">
+                                                <span class="text-muted">
+                                                    <t t-if="record.file_size.value &lt; 1024">
+                                                        <t t-esc="record.file_size.value"/> bytes
+                                                    </t>
+                                                    <t t-elif="record.file_size.value &lt; 1048576">
+                                                        <t t-esc="Math.round(record.file_size.value / 1024)"/> KB
+                                                    </t>
+                                                    <t t-else="">
+                                                        <t t-esc="Math.round(record.file_size.value / 1048576)"/> MB
+                                                    </t>
+                                                </span>
+                                            </t>
+                                        </t>
+                                        <br/>
+                                        <t t-if="record.owner.value">
+                                            <small class="text-muted">
+                                                <i class="fa fa-user"/> <t t-esc="record.owner.value"/>
+                                            </small>
+                                        </t>
+                                        <t t-if="record.last_modified.value">
+                                            <br/>
+                                            <small class="text-muted">
+                                                <i class="fa fa-clock-o"/> <t t-esc="record.last_modified.value"/>
+                                            </small>
+                                        </t>
+                                    </div>
+                                </div>
+
+                                <!-- Botones de acción -->
+                                <div class="o_kanban_record_bottom">
+                                    <div class="oe_kanban_bottom_right">
+                                        <t t-if="record.is_folder.raw_value">
+                                            <button type="button" class="btn btn-sm btn-primary o_kanban_folder_open"
+                                                    t-att-data-folder-id="record.id.value">
+                                                <i class="fa fa-folder-open"/> Abrir
+                                            </button>
+                                        </t>
+                                        <t t-else="">
+                                            <button type="button" class="btn btn-sm btn-secondary o_kanban_file_download"
+                                                    t-att-data-file-url="record.file_url.value">
+                                                <i class="fa fa-download"/> Descargar
+                                            </button>
+                                        </t>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </t>
+                </templates>
+            </kanban>
         </field>
     </record>
 
-    <menuitem id="menu_onedrive_root" name="OneDrive" sequence="100"/>
-    <menuitem id="menu_onedrive_documents" name="Documentos" parent="menu_onedrive_root" action="action_onedrive_document_window" sequence="10"/>
-    <menuitem id="menu_onedrive_sync" name="Sincronizar OneDrive" parent="menu_onedrive_root" action="action_onedrive_sync" sequence="20"/>
+    <!-- Actualizar la acción para incluir la nueva vista kanban -->
+    <record id="action_onedrive_document_window" model="ir.actions.act_window">
+        <field name="name">Documentos OneDrive</field>
+        <field name="res_model">onedrive.document</field>
+        <field name="view_mode">kanban,tree,form</field>
+        <field name="context">{'search_default_current_folder': 1}</field>
+        <field name="help" type="html">
+            <p>Desde aquí puedes ver, subir, descargar y sincronizar tus archivos y carpetas de OneDrive.</p>
+            <p>Haz clic en las carpetas para navegar por su contenido.</p>
+        </field>
+    </record>
+
+    <!-- Vista de búsqueda para filtros -->
+    <record id="view_onedrive_document_search" model="ir.ui.view">
+        <field name="name">onedrive.document.search</field>
+        <field name="model">onedrive.document</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="name" string="Nombre" filter_domain="[('name','ilike',self)]"/>
+                <field name="file_type" string="Tipo"/>
+                <field name="owner" string="Propietario"/>
+                <separator/>
+                <filter string="Solo Carpetas" name="folders_only" domain="[('is_folder','=',True)]"/>
+                <filter string="Solo Archivos" name="files_only" domain="[('is_folder','=',False)]"/>
+                <filter string="Carpeta Actual" name="current_folder" domain="[('parent_id','=',False)]"/>
+                <separator/>
+                <group expand="0" string="Agrupar por">
+                    <filter string="Carpeta Padre" name="group_by_parent" context="{'group_by':'parent_id'}"/>
+                    <filter string="Tipo de Archivo" name="group_by_type" context="{'group_by':'file_type'}"/>
+                    <filter string="Propietario" name="group_by_owner" context="{'group_by':'owner'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
 </odoo>
