@@ -44,17 +44,18 @@ class OneDriveService(models.AbstractModel):
             _logger.error('Faltan parámetros de configuración de OneDrive: %s', ', '.join(missing_params))
             raise UserError(_('Faltan credenciales de OneDrive: %s') % ', '.join(missing_params))
 
-        url = f"https://login.microsoftonline.com/{config['tenant_id']}/oauth2/v2.0/token"
+        # Usar endpoint común para cuentas personales y empresariales
+        url = "https://login.microsoftonline.com/common/oauth2/v2.0/token"
         data = {
             'client_id': config['client_id'],
             'client_secret': config['client_secret'],
             'grant_type': 'refresh_token',
             'refresh_token': config['refresh_token'],
             'redirect_uri': config['redirect_uri'],
-            'scope': 'https://graph.microsoft.com/.default offline_access',
+            'scope': 'openid offline_access Files.ReadWrite.All',  # Agregar openid requerido
         }
 
-        _logger.info('Intentando obtener token de OneDrive para tenant: %s', config['tenant_id'])
+        _logger.info('Intentando obtener token de OneDrive usando endpoint común')
 
         try:
             resp = requests.post(url, data=data, timeout=30)
@@ -94,16 +95,79 @@ class OneDriveService(models.AbstractModel):
             _logger.error('Error de conexión obteniendo token OneDrive: %s', str(e))
             raise UserError(_('Error de conexión con Microsoft: %s') % str(e))
 
+    def _detect_account_type(self, token):
+        """
+        Detecta si es una cuenta personal o empresarial de OneDrive
+        """
+        headers = {'Authorization': f'Bearer {token}'}
+
+        try:
+            # Intentar acceder al perfil del usuario para determinar el tipo de cuenta
+            profile_url = 'https://graph.microsoft.com/v1.0/me'
+            resp = requests.get(profile_url, headers=headers, timeout=10)
+
+            if resp.status_code == 200:
+                user_data = resp.json()
+                # Si tiene 'businessPhones' y no está vacío, probablemente es cuenta empresarial
+                # Si tiene 'userPrincipalName' con dominio corporativo, es empresarial
+                user_principal = user_data.get('userPrincipalName', '')
+                business_phones = user_data.get('businessPhones', [])
+
+                # Verificar si es un dominio corporativo conocido vs personal (outlook.com, hotmail.com, live.com)
+                personal_domains = ['outlook.com', 'hotmail.com', 'live.com', 'gmail.com']
+                is_personal_domain = any(domain in user_principal.lower() for domain in personal_domains)
+
+                if is_personal_domain:
+                    _logger.info('Detectada cuenta personal de OneDrive: %s', user_principal)
+                    return 'personal'
+                else:
+                    _logger.info('Detectada cuenta empresarial de OneDrive: %s', user_principal)
+                    return 'business'
+
+        except Exception as e:
+            _logger.warning('No se pudo detectar el tipo de cuenta: %s', str(e))
+
+        # Por defecto, asumir que es empresarial y luego manejar el error si no tiene licencia SPO
+        return 'business'
+
+    def _get_drive_endpoint(self, account_type, folder_id=None):
+        """
+        Obtiene el endpoint correcto según el tipo de cuenta
+        """
+        if account_type == 'personal':
+            # Para cuentas personales, usar el endpoint estándar
+            if folder_id:
+                return f'https://graph.microsoft.com/v1.0/me/drive/items/{folder_id}/children'
+            else:
+                return 'https://graph.microsoft.com/v1.0/me/drive/root/children'
+        else:
+            # Para cuentas empresariales, usar el mismo endpoint pero manejar errores de SPO
+            if folder_id:
+                return f'https://graph.microsoft.com/v1.0/me/drive/items/{folder_id}/children'
+            else:
+                return 'https://graph.microsoft.com/v1.0/me/drive/root/children'
+
     def list_files(self, folder_id=None):
         token = self._get_token()
         headers = {'Authorization': f'Bearer {token}'}
 
-        # Primero intentar OneDrive for Business
-        url = 'https://graph.microsoft.com/v1.0/me/drive/root/children' if not folder_id else f'https://graph.microsoft.com/v1.0/me/drive/items/{folder_id}/children'
-        resp = requests.get(url, headers=headers)
+        # Detectar tipo de cuenta automáticamente
+        account_type = self._detect_account_type(token)
+        _logger.info('Tipo de cuenta detectado: %s', account_type)
 
-        # Si falla con error de licencia SPO, intentar OneDrive Personal
-        if resp.status_code != 200:
+        # Obtener el endpoint correcto según el tipo de cuenta
+        url = self._get_drive_endpoint(account_type, folder_id)
+
+        try:
+            resp = requests.get(url, headers=headers, timeout=30)
+
+            # Si es exitoso, retornar los archivos
+            if resp.status_code == 200:
+                files = resp.json().get('value', [])
+                _logger.info('Archivos obtenidos exitosamente desde %s: %d archivos', account_type, len(files))
+                return files
+
+            # Si falla, analizar el error
             response_data = {}
             try:
                 response_data = resp.json()
@@ -111,25 +175,34 @@ class OneDriveService(models.AbstractModel):
                 pass
 
             error_message = response_data.get('error', {}).get('message', '')
+            error_code = response_data.get('error', {}).get('code', '')
 
-            # Si es error de licencia SPO, intentar endpoint de OneDrive Personal
-            if 'SPO license' in error_message or 'Tenant does not have' in error_message:
-                _logger.info('OneDrive for Business no disponible, intentando OneDrive Personal...')
+            _logger.warning('Error %s al acceder a OneDrive %s: %s', resp.status_code, account_type, error_message)
 
-                # Endpoint para OneDrive Personal
-                personal_url = 'https://graph.microsoft.com/v1.0/me/drive/root/children' if not folder_id else f'https://graph.microsoft.com/v1.0/me/drive/items/{folder_id}/children'
+            # Si es error de licencia SPO y detectamos cuenta empresarial, intentar como cuenta personal
+            if ('SPO license' in error_message or 'Tenant does not have' in error_message or
+                'BadRequest' in error_code) and account_type == 'business':
 
-                # Cambiar el scope para OneDrive Personal si es necesario
-                resp = requests.get(personal_url, headers=headers)
+                _logger.info('Error de licencia SPO detectado. Intentando acceso como cuenta personal...')
 
-                if resp.status_code != 200:
-                    _logger.error('Error listando archivos OneDrive Personal: %s', resp.text)
+                # Intentar con endpoint de cuenta personal
+                personal_url = self._get_drive_endpoint('personal', folder_id)
+                resp = requests.get(personal_url, headers=headers, timeout=30)
+
+                if resp.status_code == 200:
+                    files = resp.json().get('value', [])
+                    _logger.info('Archivos obtenidos exitosamente desde cuenta personal: %d archivos', len(files))
+                    return files
+                else:
+                    _logger.error('Error también con cuenta personal: %s', resp.text)
                     raise UserError(_('No se pudieron listar los archivos de OneDrive. Error: %s') % resp.text)
             else:
-                _logger.error('Error listando archivos OneDrive: %s', resp.text)
+                _logger.error('Error listando archivos OneDrive: %s', error_message)
                 raise UserError(_('No se pudieron listar los archivos de OneDrive. Error: %s') % error_message)
 
-        return resp.json().get('value', [])
+        except requests.exceptions.RequestException as e:
+            _logger.error('Error de conexión listando archivos OneDrive: %s', str(e))
+            raise UserError(_('Error de conexión con OneDrive: %s') % str(e))
 
     def download_file(self, onedrive_id):
         token = self._get_token()
@@ -275,7 +348,7 @@ class OneDriveService(models.AbstractModel):
                 'grant_type': 'refresh_token',
                 'refresh_token': config['refresh_token'],
                 'redirect_uri': config['redirect_uri'],
-                'scope': 'Files.ReadWrite.All offline_access',  # Corregir el scope
+                'scope': 'openid offline_access Files.ReadWrite.All',  # Corregir para incluir openid
             }
 
             _logger.info('URL de token: %s', url)

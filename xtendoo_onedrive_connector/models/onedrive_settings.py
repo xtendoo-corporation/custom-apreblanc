@@ -13,12 +13,13 @@ class OneDriveSettings(models.Model):
     onedrive_refresh_token = fields.Char('Refresh Token')
 
     def get_auth_url(self):
-        base_url = "https://login.microsoftonline.com/{tenant_id}/oauth2/v2.0/authorize"
-        if not (self.onedrive_client_id and self.onedrive_tenant_id and self.onedrive_redirect_uri):
+        # Usar endpoint común en lugar de tenant específico para cuentas personales
+        base_url = "https://login.microsoftonline.com/common/oauth2/v2.0/authorize"
+        if not (self.onedrive_client_id and self.onedrive_redirect_uri):
             return False
 
-        # Definir scopes para OneDrive Personal (más compatible)
-        scopes = "openid offline_access files.readwrite.all"
+        # Definir scopes para OneDrive Personal y Business (más compatible)
+        scopes = "openid offline_access Files.ReadWrite.All"
         encoded_scopes = urllib.parse.quote(scopes)
         encoded_redirect_uri = urllib.parse.quote(self.onedrive_redirect_uri)
 
@@ -30,7 +31,7 @@ class OneDriveSettings(models.Model):
             f"&scope={encoded_scopes}"
             f"&state=odoo_onedrive"
         )
-        return base_url.format(tenant_id=self.onedrive_tenant_id) + "?" + params
+        return base_url + "?" + params
 
     def action_get_onedrive_auth_url(self):
         url = self.get_auth_url()
