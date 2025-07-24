@@ -255,18 +255,32 @@ class OneDriveService(models.AbstractModel):
             raise UserError(_('No se pudo subir el archivo a OneDrive.'))
         return resp.json()
 
-    def sync_onedrive_files(self, folder_id=None, recursive=True, parent_doc_id=None):
+    def sync_onedrive_files(self, folder_id=None, recursive=True, parent_doc_id=None, max_depth=3, current_depth=0):
         """
         Sincroniza los archivos de OneDrive con el modelo onedrive.document en Odoo.
         Si folder_id es None, sincroniza la raíz.
         Si recursive es True, explora carpetas recursivamente.
         Si parent_doc_id se proporciona, asigna como padre a los elementos encontrados.
+        max_depth controla la profundidad máxima de exploración (por defecto 3 niveles).
+        current_depth es el nivel actual de profundidad.
         """
         try:
-            _logger.info('Iniciando sincronización de OneDrive. Folder ID: %s, Recursivo: %s, Parent Doc ID: %s',
-                        folder_id or 'root', recursive, parent_doc_id)
+            _logger.info('Iniciando sincronización de OneDrive. Folder ID: %s, Recursivo: %s, Parent Doc ID: %s, Profundidad: %d/%d',
+                        folder_id or 'root', recursive, parent_doc_id, current_depth, max_depth)
+
+            # Verificar si hemos alcanzado la profundidad máxima
+            if current_depth >= max_depth:
+                _logger.warning('Profundidad máxima alcanzada (%d), deteniendo exploración recursiva', max_depth)
+                return {
+                    'success': True,
+                    'synced_count': 0,
+                    'created_count': 0,
+                    'updated_count': 0,
+                    'message': _('Profundidad máxima alcanzada')
+                }
+
             files = self.list_files(folder_id)
-            _logger.info('Se encontraron %s elementos en OneDrive', len(files))
+            _logger.info('Se encontraron %s elementos en OneDrive (profundidad %d)', len(files), current_depth)
 
             # Debug: Mostrar información detallada de los primeros elementos
             for i, item in enumerate(files[:3]):  # Solo los primeros 3 para debug
@@ -283,8 +297,8 @@ class OneDriveService(models.AbstractModel):
                 is_file = item.get('file') is not None
                 is_folder = item.get('folder') is not None
 
-                _logger.info('Procesando elemento: %s, es_archivo=%s, es_carpeta=%s',
-                           item.get('name'), is_file, is_folder)
+                _logger.info('Procesando elemento: %s, es_archivo=%s, es_carpeta=%s (profundidad %d)',
+                           item.get('name'), is_file, is_folder, current_depth)
 
                 try:
                     # Procesar tanto archivos como carpetas
@@ -314,7 +328,8 @@ class OneDriveService(models.AbstractModel):
                             'parent_id': parent_doc_id,  # Asignar el parent_id si se proporciona
                         }
 
-                        _logger.info('Datos del elemento %s (parent_id=%s): %s', item.get('name'), parent_doc_id, vals)
+                        _logger.info('Datos del elemento %s (parent_id=%s, profundidad=%d): %s',
+                                   item.get('name'), parent_doc_id, current_depth, vals)
 
                         doc = OneDriveDocument.search([('onedrive_id', '=', item.get('id'))], limit=1)
                         if doc:
@@ -330,21 +345,33 @@ class OneDriveService(models.AbstractModel):
 
                         synced_count += 1
 
-                        # Si es carpeta y recursive=True, sincronizar contenido de la carpeta
-                        if is_folder and recursive:
-                            _logger.info('Explorando carpeta: %s (ID: %s, Doc ID: %s)', item.get('name'), item.get('id'), current_doc_id)
+                        # Si es carpeta, recursive=True y no hemos alcanzado la profundidad máxima, sincronizar contenido
+                        if is_folder and recursive and current_depth < max_depth:
+                            _logger.info('Explorando carpeta: %s (ID: %s, Doc ID: %s) - Profundidad %d/%d',
+                                       item.get('name'), item.get('id'), current_doc_id, current_depth + 1, max_depth)
                             try:
                                 # Pasar current_doc_id como parent_doc_id para los elementos hijos
-                                folder_result = self.sync_onedrive_files(item.get('id'), recursive=False, parent_doc_id=current_doc_id)
+                                # Incrementar current_depth para el siguiente nivel
+                                folder_result = self.sync_onedrive_files(
+                                    folder_id=item.get('id'),
+                                    recursive=True,  # Mantener recursivo=True
+                                    parent_doc_id=current_doc_id,
+                                    max_depth=max_depth,
+                                    current_depth=current_depth + 1
+                                )
                                 if folder_result['success']:
                                     synced_count += folder_result['synced_count']
                                     created_count += folder_result['created_count']
                                     updated_count += folder_result['updated_count']
-                                    _logger.info('Carpeta %s procesada: +%d elementos hijos', item.get('name'), folder_result['synced_count'])
+                                    _logger.info('Carpeta %s procesada: +%d elementos hijos (profundidad %d)',
+                                               item.get('name'), folder_result['synced_count'], current_depth + 1)
                                 else:
                                     _logger.warning('Error procesando carpeta %s: %s', item.get('name'), folder_result.get('error'))
                             except Exception as folder_error:
                                 _logger.error('Error explorando carpeta %s: %s', item.get('name'), str(folder_error))
+                        elif is_folder and current_depth >= max_depth:
+                            _logger.info('Carpeta %s omitida por profundidad máxima (%d/%d)',
+                                       item.get('name'), current_depth, max_depth)
                     else:
                         _logger.debug('Omitiendo elemento desconocido: %s', item.get('name'))
 
@@ -353,8 +380,8 @@ class OneDriveService(models.AbstractModel):
                     _logger.error('Datos del elemento problemático: %s', item)
                     continue
 
-            _logger.info('Sincronización completada. Total: %s, Creados: %s, Actualizados: %s',
-                        synced_count, created_count, updated_count)
+            _logger.info('Sincronización completada (profundidad %d). Total: %s, Creados: %s, Actualizados: %s',
+                        current_depth, synced_count, created_count, updated_count)
 
             return {
                 'success': True,
