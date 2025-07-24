@@ -115,3 +115,18 @@ class OneDriveDocument(models.Model):
             'url': self.file_url,
             'target': 'new',
         }
+
+    def action_upload_file(self):
+        """
+        Subir un archivo a OneDrive (placeholder)
+        """
+        return {
+            'type': 'ir.actions.client',
+            'tag': 'display_notification',
+            'params': {
+                'title': 'Función no implementada',
+                'type': 'info',
+                'message': 'La funcionalidad de subida de archivos estará disponible en una futura versión.',
+                'sticky': False,
+            }
+        }
