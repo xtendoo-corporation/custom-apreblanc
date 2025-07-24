@@ -1,51 +1,21 @@
 <odoo>
     <template id="onedrive_callback_template">
-        <html>
-            <head>
-                <title>OneDrive - Resultado de Autorización</title>
-                <style>
-                    body { font-family: Arial, sans-serif; margin: 40px auto; max-width: 600px; }
-                    .success { background: #d4edda; border: 1px solid #c3e6cb; color: #155724; padding: 20px; border-radius: 8px; }
-                    .error { background: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; padding: 20px; border-radius: 8px; }
-                    .info { background: #d1ecf1; border: 1px solid #bee5eb; color: #0c5460; padding: 20px; border-radius: 8px; }
-                    h2 { margin-top: 0; }
-                    .close-btn { margin-top: 20px; }
-                    .close-btn button { background: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; }
-                    .close-btn button:hover { background: #0056b3; }
-                </style>
-            </head>
-            <body>
-                <t t-if="success">
-                    <div class="success">
-                        <h2>✅ ¡Autorización Exitosa!</h2>
-                        <p t-esc="message"/>
-                        <t t-if="refresh_token_preview">
-                            <p><strong>Token guardado:</strong> <code t-esc="refresh_token_preview"/></p>
-                        </t>
-                        <div class="close-btn">
-                            <button onclick="window.close()">Cerrar esta ventana</button>
-                        </div>
-                    </div>
-                </t>
-                <t t-if="not success">
-                    <div class="error">
-                        <h2>❌ Error en la Autorización</h2>
-                        <p t-esc="message"/>
-                        <div class="close-btn">
-                            <button onclick="window.close()">Cerrar esta ventana</button>
-                        </div>
-                    </div>
-                </t>
-
-                <script>
-                    // Auto-cerrar después de 10 segundos si fue exitoso
-                    <t t-if="success">
-                        setTimeout(function() {
-                            window.close();
-                        }, 10000);
-                    </t>
-                </script>
-            </body>
-        </html>
+        <t t-if="code">
+            <div style="margin: 40px auto; max-width: 600px; padding: 30px; border: 1px solid #ddd; border-radius: 8px; background: #fafbfc;">
+                <h2>¡Código de autorización recibido!</h2>
+                <p>Copia este código y úsalo para obtener el <b>refresh_token</b> en el siguiente paso del proceso OAuth2.</p>
+                <div style="background: #f5f5f5; padding: 10px; border-radius: 4px; word-break: break-all;">
+                    <b>code:</b>
+                    <span t-esc="code"/>
+                </div>
+                <p style="margin-top: 20px; color: #888;">Puedes cerrar esta ventana.</p>
+            </div>
+        </t>
+        <t t-if="not code">
+            <div style="margin: 40px auto; max-width: 600px; padding: 30px; border: 1px solid #ddd; border-radius: 8px; background: #fafbfc;">
+                <h2>No se recibió ningún código de autorización</h2>
+                <p>Vuelve a intentarlo o revisa la configuración de la aplicación en Azure.</p>
+            </div>
+        </t>
     </template>
 </odoo>

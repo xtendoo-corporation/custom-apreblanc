@@ -266,7 +266,9 @@ class OneDriveService(models.AbstractModel):
                                 from datetime import datetime
                                 # El formato típico es: 2023-12-01T10:30:00.000Z
                                 date_str = item.get('lastModifiedDateTime').replace('Z', '+00:00')
-                                last_modified = datetime.fromisoformat(date_str.replace('Z', '+00:00'))
+                                last_modified_with_tz = datetime.fromisoformat(date_str.replace('Z', '+00:00'))
+                                # Convertir a naive datetime (sin timezone) que es lo que espera Odoo
+                                last_modified = last_modified_with_tz.replace(tzinfo=None)
                             except Exception as date_error:
                                 _logger.warning('Error parseando fecha %s: %s', item.get('lastModifiedDateTime'), date_error)
 
