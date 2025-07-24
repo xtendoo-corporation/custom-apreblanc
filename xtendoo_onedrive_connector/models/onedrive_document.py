@@ -22,7 +22,7 @@ class OneDriveDocument(models.Model):
     def action_sync_onedrive(self):
         """
         Método llamado desde la interfaz para sincronizar con OneDrive
-        Usa el servicio mejorado de OneDrive y refresca la vista después
+        Usa el servicio mejorado de OneDrive y refresha la vista después
         """
         try:
             # Usar el servicio mejorado de OneDrive
@@ -66,10 +66,52 @@ class OneDriveDocument(models.Model):
                 }
             }
 
-    def action_download_file(self):
-        # Lógica para descargar un archivo desde OneDrive
-        return True
+    def action_open_folder(self):
+        """
+        Abre una carpeta mostrando sus contenidos
+        """
+        self.ensure_one()
+        if not self.is_folder:
+            return False
 
-    def action_upload_file(self):
-        # Lógica para subir un archivo a OneDrive
-        return True
+        return {
+            'type': 'ir.actions.act_window',
+            'name': f'Carpeta: {self.name}',
+            'res_model': 'onedrive.document',
+            'view_mode': 'kanban,tree,form',
+            'views': [[False, 'kanban'], [False, 'tree'], [False, 'form']],
+            'domain': [['parent_id', '=', self.id]],
+            'context': {
+                'default_parent_id': self.id,
+                'search_default_current_folder': 1,
+                'breadcrumb_parent_name': self.name,
+            },
+            'target': 'current',
+        }
+
+    def action_download_file(self):
+        """
+        Descarga un archivo desde OneDrive
+        """
+        self.ensure_one()
+        if self.is_folder:
+            return False
+
+        if not self.file_url:
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': 'Error',
+                    'type': 'warning',
+                    'message': 'No hay URL de descarga disponible para este archivo.',
+                    'sticky': False,
+                }
+            }
+
+        # Redirigir a la URL de descarga de OneDrive
+        return {
+            'type': 'ir.actions.act_url',
+            'url': self.file_url,
+            'target': 'new',
+        }

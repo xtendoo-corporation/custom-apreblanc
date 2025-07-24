@@ -194,14 +194,14 @@
                                 <div class="o_kanban_record_bottom">
                                     <div class="oe_kanban_bottom_right">
                                         <t t-if="record.is_folder.raw_value">
-                                            <button type="button" class="btn btn-sm btn-primary o_kanban_folder_open"
-                                                    t-att-data-folder-id="record.id.value">
+                                            <button name="action_open_folder" type="object" class="btn btn-sm btn-primary"
+                                                    string="Abrir Carpeta">
                                                 <i class="fa fa-folder-open"/> Abrir
                                             </button>
                                         </t>
                                         <t t-else="">
-                                            <button type="button" class="btn btn-sm btn-secondary o_kanban_file_download"
-                                                    t-att-data-file-url="record.file_url.value">
+                                            <button name="action_download_file" type="object" class="btn btn-sm btn-secondary"
+                                                    string="Descargar Archivo">
                                                 <i class="fa fa-download"/> Descargar
                                             </button>
                                         </t>
