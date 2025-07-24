@@ -24,24 +24,7 @@ class OneDriveAuthController(http.Controller):
         if not code:
             _logger.error(f"[OneDrive] No se recibió código. Todos los parámetros: {kwargs}")
             return request.render('xtendoo_onedrive_connector.onedrive_callback_template', {
-                'success': False,
-                'message': f"""
-                No se recibió ningún código de autorización.
-
-                Parámetros recibidos: {str(kwargs)}
-
-                Posibles causas:
-                • La URL de redirección en Azure Portal no coincide exactamente con: https://pre-apreblanc.xtendoo.es/onedrive/callback
-                • Los permisos de la aplicación no están configurados correctamente
-                • El usuario canceló la autorización
-                • Los "Supported account types" no incluyen cuentas personales/multitenant
-
-                Verifica en Azure Portal:
-                1. Authentication > Redirect URIs: https://pre-apreblanc.xtendoo.es/onedrive/callback
-                2. API permissions: Files.ReadWrite.All, User.Read, openid, offline_access (todos Delegated)
-                3. Supported account types: "Accounts in any organizational directory and personal Microsoft accounts"
-                4. Grant admin consent para todos los permisos
-                """
+                'code': False,  # Usar el parámetro que espera la plantilla
             })
 
         # Obtener configuración de OneDrive

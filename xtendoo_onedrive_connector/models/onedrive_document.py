@@ -30,8 +30,8 @@ class OneDriveDocument(models.Model):
             result = service.sync_onedrive_files()
 
             if result['success']:
-                # Mostrar notificación de éxito
-                notification = {
+                # Mostrar notificación de éxito y recargar la vista
+                return {
                     'type': 'ir.actions.client',
                     'tag': 'display_notification',
                     'params': {
@@ -39,23 +39,14 @@ class OneDriveDocument(models.Model):
                         'type': 'success',
                         'message': result['message'],
                         'sticky': False,
+                        'next': {
+                            'type': 'ir.actions.act_window',
+                            'name': 'Documentos OneDrive',
+                            'res_model': 'onedrive.document',
+                            'view_mode': 'tree,form',
+                            'target': 'current',
+                        }
                     }
-                }
-
-                # Recargar la vista de OneDrive para mostrar los documentos actualizados
-                reload_action = {
-                    'type': 'ir.actions.act_window',
-                    'name': 'Documentos OneDrive',
-                    'res_model': 'onedrive.document',
-                    'view_mode': 'tree,form',
-                    'target': 'current',
-                    'context': {'search_default_group_by_parent': 1},  # Agrupar por carpeta padre
-                }
-
-                # Retornar acción múltiple: notificación + recarga de vista
-                return {
-                    'type': 'ir.actions.act_multi',
-                    'actions': [notification, reload_action]
                 }
             else:
                 return {
