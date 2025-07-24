@@ -158,47 +158,75 @@ class OneDriveService(models.AbstractModel):
         # Obtener el endpoint correcto según el tipo de cuenta
         url = self._get_drive_endpoint(account_type, folder_id)
 
+        # Agregar parámetros para obtener más elementos (por defecto Microsoft limita a pocos)
+        if '?' in url:
+            url += '&$top=1000'  # Solicitar hasta 1000 elementos por página
+        else:
+            url += '?$top=1000'
+
         try:
-            resp = requests.get(url, headers=headers, timeout=30)
+            all_files = []
+            next_url = url
 
-            # Si es exitoso, retornar los archivos
-            if resp.status_code == 200:
-                files = resp.json().get('value', [])
-                _logger.info('Archivos obtenidos exitosamente desde %s: %d archivos', account_type, len(files))
-                return files
+            # Manejar paginación para obtener todos los archivos
+            while next_url:
+                resp = requests.get(next_url, headers=headers, timeout=30)
 
-            # Si falla, analizar el error
-            response_data = {}
-            try:
-                response_data = resp.json()
-            except:
-                pass
-
-            error_message = response_data.get('error', {}).get('message', '')
-            error_code = response_data.get('error', {}).get('code', '')
-
-            _logger.warning('Error %s al acceder a OneDrive %s: %s', resp.status_code, account_type, error_message)
-
-            # Si es error de licencia SPO y detectamos cuenta empresarial, intentar como cuenta personal
-            if ('SPO license' in error_message or 'Tenant does not have' in error_message or
-                'BadRequest' in error_code) and account_type == 'business':
-
-                _logger.info('Error de licencia SPO detectado. Intentando acceso como cuenta personal...')
-
-                # Intentar con endpoint de cuenta personal
-                personal_url = self._get_drive_endpoint('personal', folder_id)
-                resp = requests.get(personal_url, headers=headers, timeout=30)
-
+                # Si es exitoso, procesar los archivos
                 if resp.status_code == 200:
-                    files = resp.json().get('value', [])
-                    _logger.info('Archivos obtenidos exitosamente desde cuenta personal: %d archivos', len(files))
-                    return files
+                    data = resp.json()
+                    files = data.get('value', [])
+                    all_files.extend(files)
+
+                    # Verificar si hay más páginas
+                    next_url = data.get('@odata.nextLink')
+                    if next_url:
+                        _logger.info('Obteniendo página siguiente: %d archivos más...', len(files))
+                    else:
+                        _logger.info('Archivos obtenidos exitosamente desde %s: %d archivos total', account_type, len(all_files))
+                        break
                 else:
-                    _logger.error('Error también con cuenta personal: %s', resp.text)
-                    raise UserError(_('No se pudieron listar los archivos de OneDrive. Error: %s') % resp.text)
-            else:
-                _logger.error('Error listando archivos OneDrive: %s', error_message)
-                raise UserError(_('No se pudieron listar los archivos de OneDrive. Error: %s') % error_message)
+                    # Si falla, analizar el error
+                    response_data = {}
+                    try:
+                        response_data = resp.json()
+                    except:
+                        pass
+
+                    error_message = response_data.get('error', {}).get('message', '')
+                    error_code = response_data.get('error', {}).get('code', '')
+
+                    _logger.warning('Error %s al acceder a OneDrive %s: %s', resp.status_code, account_type, error_message)
+
+                    # Si es error de licencia SPO y detectamos cuenta empresarial, intentar como cuenta personal
+                    if ('SPO license' in error_message or 'Tenant does not have' in error_message or
+                        'BadRequest' in error_code) and account_type == 'business':
+
+                        _logger.info('Error de licencia SPO detectado. Intentando acceso como cuenta personal...')
+
+                        # Intentar con endpoint de cuenta personal
+                        personal_url = self._get_drive_endpoint('personal', folder_id)
+                        if '?' in personal_url:
+                            personal_url += '&$top=1000'
+                        else:
+                            personal_url += '?$top=1000'
+
+                        resp = requests.get(personal_url, headers=headers, timeout=30)
+
+                        if resp.status_code == 200:
+                            data = resp.json()
+                            files = data.get('value', [])
+                            all_files.extend(files)
+                            next_url = data.get('@odata.nextLink')
+                            _logger.info('Archivos obtenidos exitosamente desde cuenta personal: %d archivos', len(files))
+                        else:
+                            _logger.error('Error también con cuenta personal: %s', resp.text)
+                            raise UserError(_('No se pudieron listar los archivos de OneDrive. Error: %s') % resp.text)
+                    else:
+                        _logger.error('Error listando archivos OneDrive: %s', error_message)
+                        raise UserError(_('No se pudieron listar los archivos de OneDrive. Error: %s') % error_message)
+
+            return all_files
 
         except requests.exceptions.RequestException as e:
             _logger.error('Error de conexión listando archivos OneDrive: %s', str(e))
@@ -227,14 +255,16 @@ class OneDriveService(models.AbstractModel):
             raise UserError(_('No se pudo subir el archivo a OneDrive.'))
         return resp.json()
 
-    def sync_onedrive_files(self, folder_id=None, recursive=True):
+    def sync_onedrive_files(self, folder_id=None, recursive=True, parent_doc_id=None):
         """
         Sincroniza los archivos de OneDrive con el modelo onedrive.document en Odoo.
         Si folder_id es None, sincroniza la raíz.
         Si recursive es True, explora carpetas recursivamente.
+        Si parent_doc_id se proporciona, asigna como padre a los elementos encontrados.
         """
         try:
-            _logger.info('Iniciando sincronización de OneDrive. Folder ID: %s, Recursivo: %s', folder_id or 'root', recursive)
+            _logger.info('Iniciando sincronización de OneDrive. Folder ID: %s, Recursivo: %s, Parent Doc ID: %s',
+                        folder_id or 'root', recursive, parent_doc_id)
             files = self.list_files(folder_id)
             _logger.info('Se encontraron %s elementos en OneDrive', len(files))
 
@@ -281,32 +311,36 @@ class OneDriveService(models.AbstractModel):
                             'owner': item.get('createdBy', {}).get('user', {}).get('displayName'),
                             'last_modified': last_modified,
                             'is_folder': is_folder,
+                            'parent_id': parent_doc_id,  # Asignar el parent_id si se proporciona
                         }
 
-                        _logger.info('Datos del elemento %s: %s', item.get('name'), vals)
+                        _logger.info('Datos del elemento %s (parent_id=%s): %s', item.get('name'), parent_doc_id, vals)
 
                         doc = OneDriveDocument.search([('onedrive_id', '=', item.get('id'))], limit=1)
                         if doc:
                             doc.write(vals)
                             updated_count += 1
-                            _logger.info('Elemento actualizado: %s (ID: %s)', item.get('name'), doc.id)
+                            _logger.info('Elemento actualizado: %s (ID: %s, Parent ID: %s)', item.get('name'), doc.id, parent_doc_id)
+                            current_doc_id = doc.id
                         else:
                             new_doc = OneDriveDocument.create(vals)
                             created_count += 1
-                            _logger.info('Elemento creado: %s (ID: %s)', item.get('name'), new_doc.id)
+                            _logger.info('Elemento creado: %s (ID: %s, Parent ID: %s)', item.get('name'), new_doc.id, parent_doc_id)
+                            current_doc_id = new_doc.id
 
                         synced_count += 1
 
                         # Si es carpeta y recursive=True, sincronizar contenido de la carpeta
                         if is_folder and recursive:
-                            _logger.info('Explorando carpeta: %s (ID: %s)', item.get('name'), item.get('id'))
+                            _logger.info('Explorando carpeta: %s (ID: %s, Doc ID: %s)', item.get('name'), item.get('id'), current_doc_id)
                             try:
-                                folder_result = self.sync_onedrive_files(item.get('id'), recursive=False)  # No recursivo para evitar bucles infinitos
+                                # Pasar current_doc_id como parent_doc_id para los elementos hijos
+                                folder_result = self.sync_onedrive_files(item.get('id'), recursive=False, parent_doc_id=current_doc_id)
                                 if folder_result['success']:
                                     synced_count += folder_result['synced_count']
                                     created_count += folder_result['created_count']
                                     updated_count += folder_result['updated_count']
-                                    _logger.info('Carpeta %s procesada: +%d elementos', item.get('name'), folder_result['synced_count'])
+                                    _logger.info('Carpeta %s procesada: +%d elementos hijos', item.get('name'), folder_result['synced_count'])
                                 else:
                                     _logger.warning('Error procesando carpeta %s: %s', item.get('name'), folder_result.get('error'))
                             except Exception as folder_error:
