@@ -22,7 +22,7 @@ class OneDriveDocument(models.Model):
     def action_sync_onedrive(self):
         """
         Método llamado desde la interfaz para sincronizar con OneDrive
-        Usa el servicio mejorado de OneDrive y refresca la vista después
+        Usa el servicio mejorado de OneDrive
         """
         try:
             # Usar el servicio mejorado de OneDrive
@@ -30,16 +30,14 @@ class OneDriveDocument(models.Model):
             result = service.sync_onedrive_files()
 
             if result['success']:
-                # Después de una sincronización exitosa, retornar directamente a la vista actualizada
                 return {
-                    'type': 'ir.actions.act_window',
-                    'name': 'Documentos OneDrive - Sincronizado',
-                    'res_model': 'onedrive.document',
-                    'view_mode': 'tree,form',
-                    'target': 'current',
-                    'context': {
-                        'search_default_group_by_parent': 1,
-                        'default_message': result['message']
+                    'type': 'ir.actions.client',
+                    'tag': 'display_notification',
+                    'params': {
+                        'title': 'Sincronización Exitosa',
+                        'type': 'success',
+                        'message': result['message'],
+                        'sticky': False,
                     }
                 }
             else:
@@ -66,67 +64,10 @@ class OneDriveDocument(models.Model):
                 }
             }
 
-    def action_open_folder(self):
-        """
-        Abre una carpeta mostrando sus contenidos
-        """
-        self.ensure_one()
-        if not self.is_folder:
-            return False
-
-        return {
-            'type': 'ir.actions.act_window',
-            'name': f'Carpeta: {self.name}',
-            'res_model': 'onedrive.document',
-            'view_mode': 'kanban,tree,form',
-            'views': [[False, 'kanban'], [False, 'tree'], [False, 'form']],
-            'domain': [['parent_id', '=', self.id]],
-            'context': {
-                'default_parent_id': self.id,
-                'search_default_current_folder': 1,
-                'breadcrumb_parent_name': self.name,
-            },
-            'target': 'current',
-        }
-
     def action_download_file(self):
-        """
-        Descarga un archivo desde OneDrive
-        """
-        self.ensure_one()
-        if self.is_folder:
-            return False
-
-        if not self.file_url:
-            return {
-                'type': 'ir.actions.client',
-                'tag': 'display_notification',
-                'params': {
-                    'title': 'Error',
-                    'type': 'warning',
-                    'message': 'No hay URL de descarga disponible para este archivo.',
-                    'sticky': False,
-                }
-            }
-
-        # Redirigir a la URL de descarga de OneDrive
-        return {
-            'type': 'ir.actions.act_url',
-            'url': self.file_url,
-            'target': 'new',
-        }
+        # Lógica para descargar un archivo desde OneDrive
+        return True
 
     def action_upload_file(self):
-        """
-        Subir un archivo a OneDrive (placeholder)
-        """
-        return {
-            'type': 'ir.actions.client',
-            'tag': 'display_notification',
-            'params': {
-                'title': 'Función no implementada',
-                'type': 'info',
-                'message': 'La funcionalidad de subida de archivos estará disponible en una futura versión.',
-                'sticky': False,
-            }
-        }
+        # Lógica para subir un archivo a OneDrive
+        return True
