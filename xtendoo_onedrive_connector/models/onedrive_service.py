@@ -227,13 +227,14 @@ class OneDriveService(models.AbstractModel):
             raise UserError(_('No se pudo subir el archivo a OneDrive.'))
         return resp.json()
 
-    def sync_onedrive_files(self, folder_id=None):
+    def sync_onedrive_files(self, folder_id=None, recursive=True):
         """
         Sincroniza los archivos de OneDrive con el modelo onedrive.document en Odoo.
         Si folder_id es None, sincroniza la raíz.
+        Si recursive es True, explora carpetas recursivamente.
         """
         try:
-            _logger.info('Iniciando sincronización de OneDrive. Folder ID: %s', folder_id or 'root')
+            _logger.info('Iniciando sincronización de OneDrive. Folder ID: %s, Recursivo: %s', folder_id or 'root', recursive)
             files = self.list_files(folder_id)
             _logger.info('Se encontraron %s elementos en OneDrive', len(files))
 
@@ -247,59 +248,73 @@ class OneDriveService(models.AbstractModel):
             updated_count = 0
             created_count = 0
 
-            for file in files:
-                # Cambiar la lógica de filtrado para ser más inclusiva
-                is_file = file.get('file') is not None
-                is_folder = file.get('folder') is not None
+            for item in files:
+                # Detectar si es archivo o carpeta
+                is_file = item.get('file') is not None
+                is_folder = item.get('folder') is not None
 
                 _logger.info('Procesando elemento: %s, es_archivo=%s, es_carpeta=%s',
-                           file.get('name'), is_file, is_folder)
-
-                # Por ahora, procesar solo archivos (no carpetas)
-                if not is_file:
-                    _logger.debug('Omitiendo %s: %s', 'carpeta' if is_folder else 'elemento desconocido', file.get('name'))
-                    continue
+                           item.get('name'), is_file, is_folder)
 
                 try:
-                    # Convertir fecha si existe
-                    last_modified = None
-                    if file.get('lastModifiedDateTime'):
-                        try:
-                            from datetime import datetime
-                            # El formato típico es: 2023-12-01T10:30:00.000Z
-                            date_str = file.get('lastModifiedDateTime').replace('Z', '+00:00')
-                            last_modified = datetime.fromisoformat(date_str.replace('Z', '+00:00'))
-                        except Exception as date_error:
-                            _logger.warning('Error parseando fecha %s: %s', file.get('lastModifiedDateTime'), date_error)
+                    # Procesar tanto archivos como carpetas
+                    if is_file or is_folder:
+                        # Convertir fecha si existe
+                        last_modified = None
+                        if item.get('lastModifiedDateTime'):
+                            try:
+                                from datetime import datetime
+                                # El formato típico es: 2023-12-01T10:30:00.000Z
+                                date_str = item.get('lastModifiedDateTime').replace('Z', '+00:00')
+                                last_modified = datetime.fromisoformat(date_str.replace('Z', '+00:00'))
+                            except Exception as date_error:
+                                _logger.warning('Error parseando fecha %s: %s', item.get('lastModifiedDateTime'), date_error)
 
-                    vals = {
-                        'name': file.get('name'),
-                        'onedrive_id': file.get('id'),
-                        'file_url': file.get('@microsoft.graph.downloadUrl'),
-                        'file_size': file.get('size', 0),
-                        'file_type': file.get('file', {}).get('mimeType'),
-                        'owner': file.get('createdBy', {}).get('user', {}).get('displayName'),
-                        'last_modified': last_modified,
-                        'is_folder': False,  # Marcar explícitamente como archivo
-                    }
+                        vals = {
+                            'name': item.get('name'),
+                            'onedrive_id': item.get('id'),
+                            'file_url': item.get('@microsoft.graph.downloadUrl') if is_file else item.get('webUrl'),
+                            'file_size': item.get('size', 0),
+                            'file_type': item.get('file', {}).get('mimeType') if is_file else 'folder',
+                            'owner': item.get('createdBy', {}).get('user', {}).get('displayName'),
+                            'last_modified': last_modified,
+                            'is_folder': is_folder,
+                        }
 
-                    _logger.info('Datos del archivo %s: %s', file.get('name'), vals)
+                        _logger.info('Datos del elemento %s: %s', item.get('name'), vals)
 
-                    doc = OneDriveDocument.search([('onedrive_id', '=', file.get('id'))], limit=1)
-                    if doc:
-                        doc.write(vals)
-                        updated_count += 1
-                        _logger.info('Archivo actualizado: %s (ID: %s)', file.get('name'), doc.id)
+                        doc = OneDriveDocument.search([('onedrive_id', '=', item.get('id'))], limit=1)
+                        if doc:
+                            doc.write(vals)
+                            updated_count += 1
+                            _logger.info('Elemento actualizado: %s (ID: %s)', item.get('name'), doc.id)
+                        else:
+                            new_doc = OneDriveDocument.create(vals)
+                            created_count += 1
+                            _logger.info('Elemento creado: %s (ID: %s)', item.get('name'), new_doc.id)
+
+                        synced_count += 1
+
+                        # Si es carpeta y recursive=True, sincronizar contenido de la carpeta
+                        if is_folder and recursive:
+                            _logger.info('Explorando carpeta: %s (ID: %s)', item.get('name'), item.get('id'))
+                            try:
+                                folder_result = self.sync_onedrive_files(item.get('id'), recursive=False)  # No recursivo para evitar bucles infinitos
+                                if folder_result['success']:
+                                    synced_count += folder_result['synced_count']
+                                    created_count += folder_result['created_count']
+                                    updated_count += folder_result['updated_count']
+                                    _logger.info('Carpeta %s procesada: +%d elementos', item.get('name'), folder_result['synced_count'])
+                                else:
+                                    _logger.warning('Error procesando carpeta %s: %s', item.get('name'), folder_result.get('error'))
+                            except Exception as folder_error:
+                                _logger.error('Error explorando carpeta %s: %s', item.get('name'), str(folder_error))
                     else:
-                        new_doc = OneDriveDocument.create(vals)
-                        created_count += 1
-                        _logger.info('Archivo creado: %s (ID: %s)', file.get('name'), new_doc.id)
-
-                    synced_count += 1
+                        _logger.debug('Omitiendo elemento desconocido: %s', item.get('name'))
 
                 except Exception as e:
-                    _logger.error('Error sincronizando archivo %s: %s', file.get('name'), str(e))
-                    _logger.error('Datos del archivo problemático: %s', file)
+                    _logger.error('Error sincronizando elemento %s: %s', item.get('name'), str(e))
+                    _logger.error('Datos del elemento problemático: %s', item)
                     continue
 
             _logger.info('Sincronización completada. Total: %s, Creados: %s, Actualizados: %s',
@@ -310,7 +325,7 @@ class OneDriveService(models.AbstractModel):
                 'synced_count': synced_count,
                 'created_count': created_count,
                 'updated_count': updated_count,
-                'message': _('Sincronización completada exitosamente. %s archivos procesados (%s creados, %s actualizados).') % (synced_count, created_count, updated_count)
+                'message': _('Sincronización completada exitosamente. %s elementos procesados (%s creados, %s actualizados).') % (synced_count, created_count, updated_count)
             }
 
         except Exception as e:
