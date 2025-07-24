@@ -30,22 +30,16 @@ class OneDriveDocument(models.Model):
             result = service.sync_onedrive_files()
 
             if result['success']:
-                # Mostrar notificación de éxito y recargar la vista
+                # Después de una sincronización exitosa, retornar directamente a la vista actualizada
                 return {
-                    'type': 'ir.actions.client',
-                    'tag': 'display_notification',
-                    'params': {
-                        'title': 'Sincronización Exitosa',
-                        'type': 'success',
-                        'message': result['message'],
-                        'sticky': False,
-                        'next': {
-                            'type': 'ir.actions.act_window',
-                            'name': 'Documentos OneDrive',
-                            'res_model': 'onedrive.document',
-                            'view_mode': 'tree,form',
-                            'target': 'current',
-                        }
+                    'type': 'ir.actions.act_window',
+                    'name': 'Documentos OneDrive - Sincronizado',
+                    'res_model': 'onedrive.document',
+                    'view_mode': 'tree,form',
+                    'target': 'current',
+                    'context': {
+                        'search_default_group_by_parent': 1,
+                        'default_message': result['message']
                     }
                 }
             else:
