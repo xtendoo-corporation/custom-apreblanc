@@ -86,17 +86,17 @@
                             <strong>Previsualización del archivo</strong>
                         </div>
 
-                        <!-- Mostrar previsualización usando preview_data (que descarga automáticamente de OneDrive) -->
-                        <field name="preview_data" widget="image" options="{'size': [800, 600]}" nolabel="1" invisible="not preview_data"/>
+                        <!-- Mostrar file_data si existe -->
+                        <field name="file_data" widget="image" options="{'size': [800, 600]}" nolabel="1" invisible="not file_data"/>
 
-                        <!-- Botón para cargar archivo permanentemente si solo tenemos URL -->
+                        <!-- Botón para cargar archivo si solo tenemos URL -->
                         <div invisible="file_data or not file_url" class="text-center mb-3">
                             <button name="action_load_preview" type="object" string="Cargar archivo para previsualización" class="btn btn-primary"/>
                             <p><small>Haz clic para descargar el archivo de OneDrive y poder previsualizarlo aquí</small></p>
                         </div>
 
                         <!-- Si no hay nada -->
-                        <div invisible="preview_data or file_url" class="alert alert-info text-center">
+                        <div invisible="file_data or file_url" class="alert alert-info" role="alert">
                             <i class="fa fa-info-circle"/> No hay archivo disponible para previsualizar.
                         </div>
                     </group>

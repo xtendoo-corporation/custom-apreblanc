@@ -108,16 +108,53 @@ class OneDriveDocument(models.Model):
         for record in self:
             if record.file_url and not record.file_data and not record.is_folder:
                 try:
-                    response = requests.get(record.file_url, timeout=30)
+                    import base64
+                    # Agregar headers para evitar bloqueos de OneDrive
+                    headers = {
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+                    }
+                    response = requests.get(record.file_url, timeout=30, headers=headers, stream=True)
                     if response.status_code == 200:
-                        import base64
-                        record.file_data = base64.b64encode(response.content)
+                        # Leer el contenido del archivo
+                        file_content = response.content
+                        # Codificar en base64 para almacenar en Odoo
+                        record.file_data = base64.b64encode(file_content)
+
+                        # Mostrar mensaje de éxito
                         return {
                             'type': 'ir.actions.client',
-                            'tag': 'reload',
+                            'tag': 'display_notification',
+                            'params': {
+                                'title': '¡Archivo cargado!',
+                                'message': f'El archivo "{record.name}" se ha cargado correctamente y ya se puede previsualizar.',
+                                'type': 'success',
+                                'sticky': False,
+                            }
+                        }
+                    else:
+                        # Mostrar error si no se puede descargar
+                        return {
+                            'type': 'ir.actions.client',
+                            'tag': 'display_notification',
+                            'params': {
+                                'title': 'Error al cargar archivo',
+                                'message': f'No se pudo descargar el archivo desde OneDrive. Código de error: {response.status_code}',
+                                'type': 'danger',
+                                'sticky': True,
+                            }
                         }
                 except Exception as e:
-                    pass
+                    # Mostrar error si hay excepción
+                    return {
+                        'type': 'ir.actions.client',
+                        'tag': 'display_notification',
+                        'params': {
+                            'title': 'Error al cargar archivo',
+                            'message': f'Error: {str(e)}',
+                            'type': 'danger',
+                            'sticky': True,
+                        }
+                    }
         return True
 
     def get_download_url(self):
