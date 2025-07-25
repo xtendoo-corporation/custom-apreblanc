@@ -18,19 +18,6 @@ class OneDriveDocument(models.Model):
     upload_file = fields.Binary(string='Upload File')
     upload_filename = fields.Char(string='Upload Filename')
 
-    def download_file_data(self, file_url):
-        """
-        Descarga los datos binarios de un archivo desde OneDrive y los almacena en el campo file_data.
-        """
-        try:
-            response = requests.get(file_url, stream=True)
-            if response.status_code == 200:
-                self.file_data = response.content
-            else:
-                raise Exception(f"Error al descargar el archivo: {response.status_code}")
-        except Exception as e:
-            raise Exception(f"Error al descargar el archivo: {str(e)}")
-
     @api.model
     def action_sync_onedrive(self):
         """
@@ -43,10 +30,6 @@ class OneDriveDocument(models.Model):
             result = service.sync_onedrive_files()
 
             if result['success']:
-                # Descargar datos binarios para cada archivo sincronizado
-                for record in self.search([('file_url', '!=', False), ('is_folder', '=', False)]):
-                    record.download_file_data(record.file_url)
-
                 return {
                     'type': 'ir.actions.client',
                     'tag': 'display_notification',
@@ -62,21 +45,22 @@ class OneDriveDocument(models.Model):
                     'type': 'ir.actions.client',
                     'tag': 'display_notification',
                     'params': {
-                        'title': 'Error en la Sincronización',
+                        'title': 'Error de Sincronización',
                         'type': 'danger',
-                        'message': result['error'],
-                        'sticky': False,
+                        'message': result['message'],
+                        'sticky': True,
                     }
                 }
+
         except Exception as e:
             return {
                 'type': 'ir.actions.client',
                 'tag': 'display_notification',
                 'params': {
-                    'title': 'Error en la Sincronización',
+                    'title': 'Error Inesperado',
                     'type': 'danger',
-                    'message': str(e),
-                    'sticky': False,
+                    'message': f'Error durante la sincronización: {str(e)}',
+                    'sticky': True,
                 }
             }
 
