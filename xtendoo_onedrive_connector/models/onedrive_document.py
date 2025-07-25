@@ -71,28 +71,3 @@ class OneDriveDocument(models.Model):
     def action_upload_file(self):
         # Lógica para subir un archivo a OneDrive
         return True
-
-    def action_open_folder(self):
-        """
-        Acción para abrir una carpeta en OneDrive.
-        """
-        if self.is_folder:
-            return {
-                'type': 'ir.actions.act_window',
-                'name': 'Contenido de la Carpeta',
-                'res_model': 'onedrive.document',
-                'view_mode': 'tree,form',
-                'domain': [('parent_id', '=', self.id)],
-                'context': dict(self.env.context),
-            }
-        else:
-            return {
-                'type': 'ir.actions.client',
-                'tag': 'display_notification',
-                'params': {
-                    'title': 'Error',
-                    'type': 'danger',
-                    'message': 'El elemento seleccionado no es una carpeta.',
-                    'sticky': False,
-                }
-            }
