@@ -77,7 +77,7 @@
                         <field name="file_type"/>
                         <field name="owner"/>
                         <field name="last_modified"/>
-                        <field name="file_data"/>
+                        <field name="file_data" widget="image" options="{'preview_image': 'file_data'}"/>
                         <field name="upload_file"/>
                         <field name="upload_filename"/>
                         <field name="parent_id"/>
