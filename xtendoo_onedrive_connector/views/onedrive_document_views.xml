@@ -90,8 +90,8 @@
                         <field name="file_data" widget="image" options="{'size': [800, 600]}" nolabel="1"
                                invisible="not file_data or file_type in ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx']"/>
 
-                        <!-- Mostrar PDFs usando widget binary -->
-                        <field name="file_data" widget="pdf_viewer" nolabel="1"
+                        <!-- Mostrar PDFs usando widget personalizado -->
+                        <field name="file_data" widget="pdf_preview" nolabel="1"
                                invisible="not file_data or file_type != 'pdf'"/>
 
                         <!-- Para otros documentos, mostrar como enlace de descarga -->
