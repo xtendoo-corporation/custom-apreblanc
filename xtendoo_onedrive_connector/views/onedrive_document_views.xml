@@ -86,8 +86,23 @@
                             <strong>Previsualización del archivo</strong>
                         </div>
 
-                        <!-- Mostrar file_data si existe -->
-                        <field name="file_data" widget="image" options="{'size': [800, 600]}" nolabel="1" invisible="not file_data"/>
+                        <!-- Mostrar imágenes usando widget image -->
+                        <field name="file_data" widget="image" options="{'size': [800, 600]}" nolabel="1"
+                               invisible="not file_data or file_type in ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx']"/>
+
+                        <!-- Mostrar PDFs usando widget binary -->
+                        <field name="file_data" widget="pdf_viewer" nolabel="1"
+                               invisible="not file_data or file_type != 'pdf'"/>
+
+                        <!-- Para otros documentos, mostrar como enlace de descarga -->
+                        <div invisible="not file_data or file_type not in ['doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx']" class="text-center">
+                            <p><i class="fa fa-file-text-o fa-3x text-muted"/></p>
+                            <p><strong>Documento: <field name="name" nolabel="1" readonly="1"/></strong></p>
+                            <p>Este tipo de documento se puede descargar pero no previsualizar directamente.</p>
+                            <a href="/web/content?field=file_data&amp;model=onedrive.document&amp;id=" class="btn btn-primary">
+                                <i class="fa fa-download"/> Descargar documento
+                            </a>
+                        </div>
 
                         <!-- Botón para cargar archivo si solo tenemos URL -->
                         <div invisible="file_data or not file_url" class="text-center mb-3">
