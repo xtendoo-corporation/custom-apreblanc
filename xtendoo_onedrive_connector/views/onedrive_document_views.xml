@@ -82,7 +82,9 @@
                         <field name="upload_filename"/>
                     </group>
                     <group>
-                        <label string="Previsualización del archivo"/>
+                        <div class="o_form_label">
+                            <strong>Previsualización del archivo</strong>
+                        </div>
                         <div t-if="record.file_url.raw_value">
                             <iframe t-att-src="record.file_url.raw_value" width="100%" height="500px" style="border: none;"/>
                         </div>
