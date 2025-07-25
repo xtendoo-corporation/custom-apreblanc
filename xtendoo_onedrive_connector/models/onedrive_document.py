@@ -76,18 +76,25 @@ class OneDriveDocument(models.Model):
     def _compute_preview_url(self):
         for record in self:
             if record.file_url and not record.is_folder:
-                # Convertir URL de OneDrive a URL de previsualización
-                if 'sharepoint.com' in record.file_url or 'onedrive.live.com' in record.file_url:
-                    # Para URLs de OneDrive, intentar convertir a URL de previsualización
-                    if '?download=1' in record.file_url:
-                        # Reemplazar download=1 con embed=1 para previsualización
-                        record.preview_url = record.file_url.replace('?download=1', '?embed=1')
-                    elif 'view.aspx' in record.file_url:
-                        # Para URLs de SharePoint, agregar parámetros de embed
-                        record.preview_url = record.file_url + '&action=embedview'
-                    else:
-                        record.preview_url = record.file_url
-                else:
-                    record.preview_url = record.file_url
+                # Usar nuestro controlador proxy para la previsualización
+                record.preview_url = f'/onedrive/preview/{record.id}'
             else:
                 record.preview_url = False
+
+    def get_download_url(self):
+        """Obtener URL de descarga a través de nuestro proxy"""
+        return f'/onedrive/download/{self.id}'
+
+    def get_direct_preview_url(self):
+        """Obtener URL directa para casos específicos"""
+        if not self.file_url or self.is_folder:
+            return False
+
+        # Para algunos tipos de archivo, intentar URLs de previsualización directa
+        if 'sharepoint.com' in self.file_url or 'onedrive.live.com' in self.file_url:
+            if '?download=1' in self.file_url:
+                return self.file_url.replace('?download=1', '?embed=1')
+            elif 'view.aspx' in self.file_url:
+                return self.file_url + '&action=embedview'
+
+        return self.file_url

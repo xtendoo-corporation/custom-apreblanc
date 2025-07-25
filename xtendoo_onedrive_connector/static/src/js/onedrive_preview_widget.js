@@ -2,15 +2,17 @@
 
 import { registry } from "@web/core/registry";
 import { Component, useState, onWillStart, onWillUpdateProps } from "@odoo/owl";
-import { useService } from "@web/core/utils/hooks";
 
 export class OneDrivePreviewWidget extends Component {
     setup() {
         this.state = useState({
             previewUrl: null,
+            downloadUrl: null,
             fileType: null,
+            fileName: null,
             isLoading: true,
-            hasError: false
+            hasError: false,
+            canEmbedPreview: false
         });
 
         onWillStart(async () => {
@@ -26,48 +28,52 @@ export class OneDrivePreviewWidget extends Component {
         const record = props.record;
         const fileUrl = record.data.file_url;
         const fileType = record.data.file_type;
+        const fileName = record.data.name;
         const isFolder = record.data.is_folder;
+        const recordId = record.data.id;
 
         this.state.isLoading = false;
         this.state.hasError = false;
+        this.state.fileName = fileName;
+        this.state.fileType = fileType?.toLowerCase() || '';
 
-        if (!fileUrl || isFolder) {
+        if (!fileUrl || isFolder || !recordId) {
             this.state.previewUrl = null;
-            this.state.fileType = null;
+            this.state.downloadUrl = null;
+            this.state.canEmbedPreview = false;
             return;
         }
 
-        // Convertir URL de OneDrive para previsualización
-        let previewUrl = fileUrl;
+        // URLs usando nuestro controlador proxy
+        this.state.previewUrl = `/onedrive/preview/${recordId}`;
+        this.state.downloadUrl = `/onedrive/download/${recordId}`;
 
-        if (fileUrl.includes('sharepoint.com') || fileUrl.includes('onedrive.live.com')) {
-            if (fileUrl.includes('?download=1')) {
-                previewUrl = fileUrl.replace('?download=1', '?embed=1');
-            } else if (fileUrl.includes('view.aspx')) {
-                previewUrl = fileUrl + '&action=embedview';
-            }
-        }
-
-        this.state.previewUrl = previewUrl;
-        this.state.fileType = fileType?.toLowerCase() || '';
-    }
-
-    get canPreview() {
-        if (!this.state.previewUrl) return false;
-
+        // Determinar si el archivo se puede previsualizar en iframe
         const previewableTypes = [
-            'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx',
-            'txt', 'jpg', 'jpeg', 'png', 'gif', 'bmp', 'svg'
+            'pdf', 'txt', 'csv',
+            'jpg', 'jpeg', 'png', 'gif', 'bmp', 'svg', 'webp'
         ];
 
-        return previewableTypes.some(type =>
+        this.state.canEmbedPreview = previewableTypes.some(type =>
             this.state.fileType.includes(type) ||
-            this.state.previewUrl.toLowerCase().includes(`.${type}`)
+            fileName?.toLowerCase().includes(`.${type}`)
         );
     }
 
     onIframeError() {
         this.state.hasError = true;
+    }
+
+    openInNewWindow() {
+        if (this.state.previewUrl) {
+            window.open(this.state.previewUrl, '_blank');
+        }
+    }
+
+    downloadFile() {
+        if (this.state.downloadUrl) {
+            window.open(this.state.downloadUrl, '_blank');
+        }
     }
 }
 
