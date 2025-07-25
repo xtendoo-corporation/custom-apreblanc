@@ -197,6 +197,17 @@ class SaleOrder(models.Model):
         help='Technical field used in views',
     )
 
+    # Relación con documentos de OneDrive
+    onedrive_document_ids = fields.Many2many(
+        'onedrive.document',
+        'sale_order_onedrive_document_rel',
+        'sale_order_id',
+        'onedrive_document_id',
+        string='Documentos OneDrive',
+        help='Documentos de OneDrive relacionados con este pedido'
+    )
+
+
     # Related fields for customer information display
     partner_vat = fields.Char(related='partner_id.vat', string='VAT', readonly=True)
     partner_phone = fields.Char(related='partner_id.phone', string='Phone', readonly=True)
