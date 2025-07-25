@@ -85,10 +85,10 @@
                         <div class="o_form_label">
                             <strong>Previsualización del archivo</strong>
                         </div>
-                        <div t-if="record.file_url.raw_value">
+                        <div attrs="{'invisible': [('file_url', '=', False)]}">
                             <iframe t-att-src="record.file_url.raw_value" width="100%" height="500px" style="border: none;"/>
                         </div>
-                        <div t-else="">
+                        <div attrs="{'invisible': [('file_url', '!=', False)]}">
                             <p>No hay archivo disponible para previsualizar.</p>
                         </div>
                     </group>
