@@ -29,9 +29,15 @@ class OneDriveDocument(models.Model):
             service = self.env['onedrive.service']
             result = service.sync_onedrive_files()
 
+            # Refrescar la vista automáticamente
+            action = {
+                'type': 'ir.actions.client',
+                'tag': 'reload',
+            }
+
             # Mostrar notificación según el resultado
             if result['success']:
-                return {
+                action.update({
                     'type': 'ir.actions.client',
                     'tag': 'display_notification',
                     'params': {
@@ -40,9 +46,9 @@ class OneDriveDocument(models.Model):
                         'message': result['message'],
                         'sticky': False,
                     }
-                }
+                })
             else:
-                return {
+                action.update({
                     'type': 'ir.actions.client',
                     'tag': 'display_notification',
                     'params': {
@@ -51,7 +57,9 @@ class OneDriveDocument(models.Model):
                         'message': result['error'],
                         'sticky': False,
                     }
-                }
+                })
+
+            return action
         except Exception as e:
             return {
                 'type': 'ir.actions.client',
