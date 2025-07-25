@@ -25,14 +25,24 @@ class OneDriveDocument(models.Model):
         Usa el servicio mejorado de OneDrive
         """
         try:
+            # Mostrar indicador de carga
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'block_ui',
+                'params': {
+                    'message': 'Sincronizando con OneDrive...'
+                }
+            }
+
             # Usar el servicio mejorado de OneDrive
             service = self.env['onedrive.service']
             result = service.sync_onedrive_files()
 
+            # Ocultar indicador de carga y mostrar notificación
             if result['success']:
                 return {
                     'type': 'ir.actions.client',
-                    'tag': 'display_notification',
+                    'tag': 'unblock_ui',
                     'params': {
                         'title': 'Sincronización Exitosa',
                         'type': 'success',
@@ -43,24 +53,23 @@ class OneDriveDocument(models.Model):
             else:
                 return {
                     'type': 'ir.actions.client',
-                    'tag': 'display_notification',
+                    'tag': 'unblock_ui',
                     'params': {
-                        'title': 'Error de Sincronización',
+                        'title': 'Error en la Sincronización',
                         'type': 'danger',
-                        'message': result['message'],
-                        'sticky': True,
+                        'message': result['error'],
+                        'sticky': False,
                     }
                 }
-
         except Exception as e:
             return {
                 'type': 'ir.actions.client',
-                'tag': 'display_notification',
+                'tag': 'unblock_ui',
                 'params': {
-                    'title': 'Error Inesperado',
+                    'title': 'Error en la Sincronización',
                     'type': 'danger',
-                    'message': f'Error durante la sincronización: {str(e)}',
-                    'sticky': True,
+                    'message': str(e),
+                    'sticky': False,
                 }
             }
 
