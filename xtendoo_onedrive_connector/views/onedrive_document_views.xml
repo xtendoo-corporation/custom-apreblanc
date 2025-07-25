@@ -90,9 +90,15 @@
                         <field name="file_data" widget="image" options="{'size': [800, 600]}" nolabel="1"
                                invisible="not file_data or 'pdf' in file_type or file_type in ['doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx']"/>
 
-                        <!-- Mostrar PDFs usando widget personalizado -->
-                        <field name="file_data" widget="pdf_viewer_simple" nolabel="1"
+                        <!-- Mostrar PDFs usando widget binary con previsualización -->
+                        <field name="file_data" widget="binary" options="{'preview': True, 'filename': 'name'}" nolabel="1"
                                invisible="not file_data or 'pdf' not in file_type"/>
+
+                        <!-- PDF en iframe usando URL directa -->
+                        <div invisible="not file_data or 'pdf' not in file_type" class="mt-3">
+                            <iframe src="/web/content" width="100%" height="600px" style="border: 1px solid #ddd; border-radius: 4px;"
+                                    onload="this.src='/web/content?field=file_data&amp;model=onedrive.document&amp;id=' + window.location.pathname.split('/').pop().split('?')[0]"></iframe>
+                        </div>
 
                         <!-- Para otros documentos, mostrar como enlace de descarga -->
                         <div invisible="not file_data or file_type not in ['doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx']" class="text-center">
