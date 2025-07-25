@@ -80,8 +80,15 @@
                         <field name="file_data"/>
                         <field name="upload_file"/>
                         <field name="upload_filename"/>
-                        <field name="parent_id"/>
-                        <field name="is_folder"/>
+                    </group>
+                    <group>
+                        <label string="Previsualización del archivo"/>
+                        <div t-if="record.file_url.raw_value">
+                            <iframe t-att-src="record.file_url.raw_value" width="100%" height="500px" style="border: none;"/>
+                        </div>
+                        <div t-else="">
+                            <p>No hay archivo disponible para previsualizar.</p>
+                        </div>
                     </group>
                     <footer>
                         <button name="action_download_file" type="object" string="Descargar archivo" class="btn-primary"/>
