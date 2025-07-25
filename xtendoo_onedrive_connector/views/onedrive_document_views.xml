@@ -85,7 +85,36 @@
                         <div class="o_form_label">
                             <strong>Previsualización del archivo</strong>
                         </div>
-                        <field name="preview_url" widget="onedrive_preview" nolabel="1"/>
+
+                        <!-- Si hay file_data (archivo almacenado localmente) -->
+                        <div invisible="not file_data" class="text-center">
+                            <field name="file_data" widget="image" options="{'size': [800, 600]}" nolabel="1"/>
+                        </div>
+
+                        <!-- Si es una imagen y tenemos URL pero no file_data -->
+                        <div invisible="file_data or not file_url or file_type not in ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'svg', 'webp']" class="text-center">
+                            <img t-att-src="file_url" style="max-width: 800px; max-height: 600px; border: 1px solid #ddd; border-radius: 4px;" alt="Preview"/>
+                        </div>
+
+                        <!-- Para PDFs y otros documentos -->
+                        <div invisible="file_data or file_type in ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'svg', 'webp'] or not file_url" class="text-center">
+                            <iframe t-att-src="file_url" width="100%" height="600px" style="border: 1px solid #ddd; border-radius: 4px;"></iframe>
+                        </div>
+
+                        <!-- Si no hay nada que mostrar -->
+                        <div invisible="file_data or file_url" class="alert alert-info text-center">
+                            <i class="fa fa-info-circle"/> No hay archivo disponible para previsualizar.
+                        </div>
+
+                        <!-- Botones de acción -->
+                        <div invisible="not file_url" class="text-center mt-3">
+                            <a t-att-href="file_url" target="_blank" class="btn btn-primary me-2">
+                                <i class="fa fa-external-link"/> Abrir en nueva ventana
+                            </a>
+                            <a t-att-href="file_url" download="" class="btn btn-secondary">
+                                <i class="fa fa-download"/> Descargar
+                            </a>
+                        </div>
                     </group>
                     <footer>
                         <button name="action_download_file" type="object" string="Descargar archivo" class="btn-primary"/>

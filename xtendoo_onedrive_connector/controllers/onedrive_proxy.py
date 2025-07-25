@@ -1,8 +1,9 @@
-from odoo import http
+from odoo import http, _
 from odoo.http import request
 import requests
 import base64
 import mimetypes
+from werkzeug.exceptions import NotFound
 
 class OneDriveProxyController(http.Controller):
 
@@ -12,7 +13,7 @@ class OneDriveProxyController(http.Controller):
         try:
             document = request.env['onedrive.document'].browse(document_id)
             if not document.exists() or not document.file_url:
-                return request.not_found()
+                raise NotFound()
 
             # Si el archivo está almacenado localmente en file_data, usarlo
             if document.file_data:
@@ -55,10 +56,10 @@ class OneDriveProxyController(http.Controller):
                 # Para otros archivos, redirigir a OneDrive
                 return request.redirect(document.file_url)
 
-            return request.not_found()
+            raise NotFound()
 
         except Exception as e:
-            return request.not_found()
+            raise NotFound()
 
     @http.route('/onedrive/download/<int:document_id>', type='http', auth='user', methods=['GET'])
     def download_document(self, document_id, **kwargs):
@@ -66,7 +67,7 @@ class OneDriveProxyController(http.Controller):
         try:
             document = request.env['onedrive.document'].browse(document_id)
             if not document.exists():
-                return request.not_found()
+                raise NotFound()
 
             if document.file_data:
                 file_content = base64.b64decode(document.file_data)
@@ -84,7 +85,7 @@ class OneDriveProxyController(http.Controller):
             elif document.file_url:
                 return request.redirect(document.file_url)
 
-            return request.not_found()
+            raise NotFound()
 
         except Exception:
-            return request.not_found()
+            raise NotFound()
