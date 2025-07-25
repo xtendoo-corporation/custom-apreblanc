@@ -8,6 +8,7 @@ class OneDriveDocument(models.Model):
     name = fields.Char(string='Name', required=True)
     onedrive_id = fields.Char(string='OneDrive ID')
     file_url = fields.Char(string='File URL')
+    preview_url = fields.Char(string='Preview URL', compute='_compute_preview_url')
     file_size = fields.Integer(string='File Size')
     file_type = fields.Char(string='File Type')
     owner = fields.Char(string='Owner')
@@ -70,3 +71,23 @@ class OneDriveDocument(models.Model):
     def action_upload_file(self):
         # Lógica para subir un archivo a OneDrive
         return True
+
+    @api.depends('file_url')
+    def _compute_preview_url(self):
+        for record in self:
+            if record.file_url and not record.is_folder:
+                # Convertir URL de OneDrive a URL de previsualización
+                if 'sharepoint.com' in record.file_url or 'onedrive.live.com' in record.file_url:
+                    # Para URLs de OneDrive, intentar convertir a URL de previsualización
+                    if '?download=1' in record.file_url:
+                        # Reemplazar download=1 con embed=1 para previsualización
+                        record.preview_url = record.file_url.replace('?download=1', '?embed=1')
+                    elif 'view.aspx' in record.file_url:
+                        # Para URLs de SharePoint, agregar parámetros de embed
+                        record.preview_url = record.file_url + '&action=embedview'
+                    else:
+                        record.preview_url = record.file_url
+                else:
+                    record.preview_url = record.file_url
+            else:
+                record.preview_url = False

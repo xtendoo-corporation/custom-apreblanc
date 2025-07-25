@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+    <t t-name="xtendoo_onedrive_connector.OneDrivePreviewWidget">
+        <div class="o_onedrive_preview">
+            <t t-if="state.isLoading">
+                <div class="text-center p-4">
+                    <i class="fa fa-spinner fa-spin"/> Cargando previsualización...
+                </div>
+            </t>
+            <t t-elif="state.hasError">
+                <div class="alert alert-warning text-center">
+                    <i class="fa fa-exclamation-triangle"/>
+                    No se pudo cargar la previsualización.
+                    <br/>
+                    <a t-att-href="state.previewUrl" target="_blank" class="btn btn-link">
+                        <i class="fa fa-external-link"/> Abrir en nueva ventana
+                    </a>
+                </div>
+            </t>
+            <t t-elif="!state.previewUrl">
+                <div class="alert alert-info text-center">
+                    <i class="fa fa-info-circle"/>
+                    No hay archivo disponible para previsualizar.
+                </div>
+            </t>
+            <t t-elif="canPreview">
+                <div class="position-relative">
+                    <iframe
+                        t-att-src="state.previewUrl"
+                        width="100%"
+                        height="600px"
+                        style="border: 1px solid #ddd; border-radius: 4px;"
+                        t-on-error="onIframeError"
+                        sandbox="allow-same-origin allow-scripts allow-popups allow-forms">
+                    </iframe>
+                    <div class="position-absolute" style="top: 10px; right: 10px;">
+                        <a t-att-href="state.previewUrl" target="_blank" class="btn btn-sm btn-secondary">
+                            <i class="fa fa-external-link"/> Abrir en nueva ventana
+                        </a>
+                    </div>
+                </div>
+            </t>
+            <t t-else="">
+                <div class="alert alert-warning text-center">
+                    <i class="fa fa-file-o"/>
+                    Este tipo de archivo no se puede previsualizar directamente.
+                    <br/>
+                    <a t-att-href="state.previewUrl" target="_blank" class="btn btn-link">
+                        <i class="fa fa-external-link"/> Abrir en nueva ventana
+                    </a>
+                </div>
+            </t>
+        </div>
+    </t>
+</templates>
+

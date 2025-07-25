@@ -85,13 +85,7 @@
                         <div class="o_form_label">
                             <strong>Previsualización del archivo</strong>
                         </div>
-                        <div invisible="not file_url">
-                            <p>URL del archivo: <field name="file_url" nolabel="1" readonly="1"/></p>
-                            <p><i>Nota: Para ver el archivo, haz clic en el botón "Descargar archivo" o copia la URL en tu navegador.</i></p>
-                        </div>
-                        <div invisible="file_url">
-                            <p>No hay archivo disponible para previsualizar.</p>
-                        </div>
+                        <field name="preview_url" widget="onedrive_preview" nolabel="1"/>
                     </group>
                     <footer>
                         <button name="action_download_file" type="object" string="Descargar archivo" class="btn-primary"/>
