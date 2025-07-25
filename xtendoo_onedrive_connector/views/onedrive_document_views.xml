@@ -96,7 +96,7 @@
 
                         <!-- Botón para ver PDF en nueva ventana -->
                         <div invisible="not file_data or 'pdf' not in file_type" class="text-center mt-3">
-                            <button type="button" class="btn btn-primary" onclick="window.open('/onedrive/pdf/' + document.querySelector('input[name=&quot;id&quot;]').value, '_blank')">
+                            <button type="button" name="view_pdf_button" class="btn btn-primary" onclick="window.open('/onedrive/pdf/' + document.querySelector('input[name=&quot;id&quot;]').value, '_blank')">
                                 <i class="fa fa-eye"/> Ver PDF en nueva ventana
                             </button>
                         </div>
