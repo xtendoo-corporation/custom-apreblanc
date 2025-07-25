@@ -16,6 +16,7 @@ class OneDriveDocument(models.Model):
     parent_id = fields.Many2one('onedrive.document', string='Parent Folder')
     is_folder = fields.Boolean(string='Is Folder', default=False)
     file_data = fields.Binary(string='File Data')
+    pdf_preview_url = fields.Char(string='PDF Preview URL', compute='_compute_pdf_preview_url')
     preview_data = fields.Binary(string='Preview Data', compute='_compute_preview_data', store=False)
     upload_file = fields.Binary(string='Upload File')
     upload_filename = fields.Char(string='Upload Filename')
@@ -174,3 +175,12 @@ class OneDriveDocument(models.Model):
                 return self.file_url + '&action=embedview'
 
         return self.file_url
+
+    @api.depends('id', 'file_data', 'file_type')
+    def _compute_pdf_preview_url(self):
+        """Generar URL para previsualización de PDF"""
+        for record in self:
+            if record.id and record.file_data and record.file_type == 'pdf':
+                record.pdf_preview_url = f'/onedrive/pdf/{record.id}'
+            else:
+                record.pdf_preview_url = False
