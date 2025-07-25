@@ -25,24 +25,15 @@ class OneDriveDocument(models.Model):
         Usa el servicio mejorado de OneDrive
         """
         try:
-            # Mostrar indicador de carga
-            return {
-                'type': 'ir.actions.client',
-                'tag': 'block_ui',
-                'params': {
-                    'message': 'Sincronizando con OneDrive...'
-                }
-            }
-
             # Usar el servicio mejorado de OneDrive
             service = self.env['onedrive.service']
             result = service.sync_onedrive_files()
 
-            # Ocultar indicador de carga y mostrar notificación
+            # Mostrar notificación según el resultado
             if result['success']:
                 return {
                     'type': 'ir.actions.client',
-                    'tag': 'unblock_ui',
+                    'tag': 'display_notification',
                     'params': {
                         'title': 'Sincronización Exitosa',
                         'type': 'success',
@@ -53,7 +44,7 @@ class OneDriveDocument(models.Model):
             else:
                 return {
                     'type': 'ir.actions.client',
-                    'tag': 'unblock_ui',
+                    'tag': 'display_notification',
                     'params': {
                         'title': 'Error en la Sincronización',
                         'type': 'danger',
@@ -64,7 +55,7 @@ class OneDriveDocument(models.Model):
         except Exception as e:
             return {
                 'type': 'ir.actions.client',
-                'tag': 'unblock_ui',
+                'tag': 'display_notification',
                 'params': {
                     'title': 'Error en la Sincronización',
                     'type': 'danger',
