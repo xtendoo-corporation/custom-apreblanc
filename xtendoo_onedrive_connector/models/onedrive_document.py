@@ -22,48 +22,39 @@ class OneDriveDocument(models.Model):
     def action_sync_onedrive(self):
         """
         Método llamado desde la interfaz para sincronizar con OneDrive
-        Usa el servicio mejorado de OneDrive
         """
         try:
             # Usar el servicio mejorado de OneDrive
             service = self.env['onedrive.service']
             result = service.sync_onedrive_files()
 
-            # Refrescar la vista automáticamente
-            action = {
-                'type': 'ir.actions.client',
-                'tag': 'reload',
-            }
-
-            # Mostrar notificación según el resultado
+            # Mostrar notificación y recargar la vista
             if result['success']:
-                action.update({
+                return {
                     'type': 'ir.actions.client',
-                    'tag': 'display_notification',
+                    'tag': 'reload',
                     'params': {
                         'title': 'Sincronización Exitosa',
                         'type': 'success',
                         'message': result['message'],
                         'sticky': False,
                     }
-                })
+                }
             else:
-                action.update({
+                return {
                     'type': 'ir.actions.client',
-                    'tag': 'display_notification',
+                    'tag': 'reload',
                     'params': {
                         'title': 'Error en la Sincronización',
                         'type': 'danger',
                         'message': result['error'],
                         'sticky': False,
                     }
-                })
-
-            return action
+                }
         except Exception as e:
             return {
                 'type': 'ir.actions.client',
-                'tag': 'display_notification',
+                'tag': 'reload',
                 'params': {
                     'title': 'Error en la Sincronización',
                     'type': 'danger',
