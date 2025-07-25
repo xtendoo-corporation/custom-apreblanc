@@ -176,11 +176,11 @@ class OneDriveDocument(models.Model):
 
         return self.file_url
 
-    @api.depends('id', 'file_data', 'file_type')
+    @api.depends('file_data', 'file_type')
     def _compute_pdf_preview_url(self):
         """Generar URL para previsualización de PDF"""
         for record in self:
-            if record.id and record.file_data and record.file_type == 'pdf':
+            if record.file_data and record.file_type == 'pdf':
                 record.pdf_preview_url = f'/onedrive/pdf/{record.id}'
             else:
                 record.pdf_preview_url = False
