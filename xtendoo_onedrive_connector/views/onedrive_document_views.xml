@@ -197,7 +197,7 @@
                                         </t>
                                         <t t-else="">
                                             <a t-if="record.file_url.value" t-att-href="record.file_url.value" target="_blank"
-                                               class="btn btn-sm btn-secondary">
+                                               class="btn btn-sm btn-secondary" role="button">
                                                 <i class="fa fa-download" title="Descargar"/> Descargar
                                             </a>
                                         </t>
