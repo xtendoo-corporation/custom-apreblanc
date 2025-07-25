@@ -90,24 +90,27 @@
                         <field name="file_data" widget="image" options="{'size': [800, 600]}" nolabel="1"
                                invisible="not file_data or 'pdf' in file_type or file_type in ['doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx']"/>
 
-                        <!-- Mostrar PDFs usando widget binary con previsualización -->
-                        <field name="file_data" widget="binary" options="{'preview': True, 'filename': 'name'}" nolabel="1"
-                               invisible="not file_data or 'pdf' not in file_type"/>
-
-                        <!-- Botón para ver PDF en nueva ventana -->
-                        <div invisible="not file_data or 'pdf' not in file_type" class="text-center mt-3">
-                            <button type="button" name="view_pdf_button" class="btn btn-primary" onclick="window.open('/onedrive/pdf/' + document.querySelector('input[name=&quot;id&quot;]').value, '_blank')">
-                                <i class="fa fa-eye"/> Ver PDF en nueva ventana
-                            </button>
+                        <!-- Mostrar PDFs como imagen thumbnail con enlace al PDF completo -->
+                        <div invisible="not pdf_thumbnail" class="text-center">
+                            <a href="#" onclick="window.open('/onedrive/pdf/' + document.querySelector('input[name=&quot;id&quot;]').value, '_blank'); return false;">
+                                <field name="pdf_thumbnail" widget="image" options="{'size': [800, 600]}" nolabel="1"/>
+                            </a>
+                            <p class="text-muted mt-2">
+                                <i class="fa fa-info-circle"/> Haz clic en la imagen para ver el PDF completo
+                            </p>
                         </div>
+
+                        <!-- Fallback: widget binary para PDFs sin thumbnail -->
+                        <field name="file_data" widget="binary" options="{'preview': True, 'filename': 'name'}" nolabel="1"
+                               invisible="not file_data or 'pdf' not in file_type or pdf_thumbnail"/>
 
                         <!-- Para otros documentos, mostrar como enlace de descarga -->
                         <div invisible="not file_data or file_type not in ['doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx']" class="text-center">
-                            <p><i class="fa fa-file-text-o fa-3x text-muted"/></p>
+                            <p><i class="fa fa-file-text-o fa-3x text-muted" title="Documento de Office"/></p>
                             <p><strong>Documento: <field name="name" nolabel="1" readonly="1"/></strong></p>
                             <p>Este tipo de documento se puede descargar pero no previsualizar directamente.</p>
-                            <a href="/web/content?field=file_data&amp;model=onedrive.document&amp;id=" class="btn btn-primary">
-                                <i class="fa fa-download"/> Descargar documento
+                            <a href="/web/content?field=file_data&amp;model=onedrive.document&amp;id=" class="btn btn-primary" role="button">
+                                <i class="fa fa-download" title="Descargar"/> Descargar documento
                             </a>
                         </div>
 

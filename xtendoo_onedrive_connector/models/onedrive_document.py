@@ -16,6 +16,7 @@ class OneDriveDocument(models.Model):
     parent_id = fields.Many2one('onedrive.document', string='Parent Folder')
     is_folder = fields.Boolean(string='Is Folder', default=False)
     file_data = fields.Binary(string='File Data')
+    pdf_thumbnail = fields.Binary(string='PDF Thumbnail', compute='_compute_pdf_thumbnail', store=True)
     pdf_preview_url = fields.Char(string='PDF Preview URL', compute='_compute_pdf_preview_url')
     preview_data = fields.Binary(string='Preview Data', compute='_compute_preview_data', store=False)
     upload_file = fields.Binary(string='Upload File')
@@ -184,3 +185,40 @@ class OneDriveDocument(models.Model):
                 record.pdf_preview_url = f'/onedrive/pdf/{record.id}'
             else:
                 record.pdf_preview_url = False
+
+    @api.depends('file_data', 'file_type')
+    def _compute_pdf_thumbnail(self):
+        """Generar thumbnail de la primera página del PDF"""
+        for record in self:
+            if record.file_data and record.file_type and 'pdf' in record.file_type:
+                try:
+                    import base64
+                    import io
+                    from pdf2image import convert_from_bytes
+                    from PIL import Image
+
+                    # Decodificar el PDF
+                    pdf_content = base64.b64decode(record.file_data)
+
+                    # Convertir primera página a imagen
+                    images = convert_from_bytes(pdf_content, first_page=1, last_page=1, dpi=150)
+
+                    if images:
+                        # Redimensionar la imagen para que sea más pequeña
+                        image = images[0]
+                        image.thumbnail((800, 600), Image.Resampling.LANCZOS)
+
+                        # Convertir a bytes y codificar en base64
+                        img_buffer = io.BytesIO()
+                        image.save(img_buffer, format='JPEG', quality=85)
+                        img_buffer.seek(0)
+
+                        record.pdf_thumbnail = base64.b64encode(img_buffer.getvalue())
+                    else:
+                        record.pdf_thumbnail = False
+
+                except Exception as e:
+                    # Si hay error en la conversión, no mostrar thumbnail
+                    record.pdf_thumbnail = False
+            else:
+                record.pdf_thumbnail = False

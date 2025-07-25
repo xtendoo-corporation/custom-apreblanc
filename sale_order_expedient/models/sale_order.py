@@ -1030,3 +1030,14 @@ class SaleOrder(models.Model):
                     raise ValidationError(_('El número de partes implicadas debe ser mayor que 0.'))
                 if record.account_numbers <= 0:
                     raise ValidationError(_('El número de cuentas debe ser mayor que 0.'))
+
+    # Relación con documentos de OneDrive
+    onedrive_document_ids = fields.Many2many(
+        'onedrive.document',
+        'sale_order_onedrive_document_rel',
+        'sale_order_id',
+        'onedrive_document_id',
+        string='Documentos OneDrive',
+        help='Documentos de OneDrive relacionados con este pedido'
+    )
+
