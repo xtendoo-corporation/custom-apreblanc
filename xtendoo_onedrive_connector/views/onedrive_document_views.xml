@@ -77,17 +77,11 @@
                         <field name="file_type"/>
                         <field name="owner"/>
                         <field name="last_modified"/>
-                        <t t-if="record.file_type.value and record.file_type.value.startswith('image/')">
-                            <field name="file_data" widget="image" options="{'preview_image': 'file_data'}"/>
-                        </t>
-                        <t t-elif="record.file_type.value and record.file_type.value == 'application/pdf'">
-                            <iframe t-att-src="'/web/content/' + record.id.value + '/file_data'" width="100%" height="500px"/>
-                        </t>
-                        <t t-else="">
-                            <a t-if="record.file_url.value" t-att-href="record.file_url.value" target="_blank" class="btn btn-secondary">
-                                Descargar archivo
-                            </a>
-                        </t>
+                        <field name="file_data" widget="image" options="{'preview_image': 'file_data'}"/>
+                        <iframe t-if="file_type == 'application/pdf'" t-att-src="'/web/content/' + id + '/file_data'" width="100%" height="500px"/>
+                        <a t-if="file_type != 'application/pdf' and file_type != 'image'" t-att-href="file_url" target="_blank" class="btn btn-secondary">
+                            Descargar archivo
+                        </a>
                         <field name="upload_file"/>
                         <field name="upload_filename"/>
                         <field name="parent_id"/>
