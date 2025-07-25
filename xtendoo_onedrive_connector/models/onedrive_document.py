@@ -33,30 +33,33 @@ class OneDriveDocument(models.Model):
             if result['success']:
                 return {
                     'type': 'ir.actions.client',
-                    'tag': 'reload',
+                    'tag': 'display_notification',
                     'params': {
-                        'message': 'Sincronización Exitosa',
+                        'title': 'Sincronización Exitosa',
                         'type': 'success',
+                        'message': result['message'],
                         'sticky': False,
                     }
                 }
             else:
                 return {
                     'type': 'ir.actions.client',
-                    'tag': 'reload',
+                    'tag': 'display_notification',
                     'params': {
-                        'message': 'Error en la Sincronización',
+                        'title': 'Error en la Sincronización',
                         'type': 'danger',
+                        'message': result['error'],
                         'sticky': False,
                     }
                 }
         except Exception as e:
             return {
                 'type': 'ir.actions.client',
-                'tag': 'reload',
+                'tag': 'display_notification',
                 'params': {
-                    'message': str(e),
+                    'title': 'Error en la Sincronización',
                     'type': 'danger',
+                    'message': str(e),
                     'sticky': False,
                 }
             }
