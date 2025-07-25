@@ -190,14 +190,12 @@
                                 <div class="o_kanban_record_bottom">
                                     <div class="oe_kanban_bottom_right">
                                         <t t-if="record.is_folder.raw_value">
-                                            <button name="action_open_folder" type="object" class="btn btn-sm btn-primary"
-                                                    string="Abrir Carpeta">
+                                            <button name="action_open_folder" type="object" class="btn btn-sm btn-primary" string="Abrir Carpeta">
                                                 <i class="fa fa-folder-open" title="Abrir"/> Abrir
                                             </button>
                                         </t>
                                         <t t-else="">
-                                            <a t-if="record.file_url.value" t-att-href="record.file_url.value" target="_blank"
-                                               class="btn btn-sm btn-secondary" role="button">
+                                            <a t-if="record.file_url.value" t-att-href="record.file_url.value" target="_blank" class="btn btn-sm btn-secondary" role="button">
                                                 <i class="fa fa-download" title="Descargar"/> Descargar
                                             </a>
                                         </t>
