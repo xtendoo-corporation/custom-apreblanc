@@ -16,6 +16,7 @@ class OneDriveDocument(models.Model):
     parent_id = fields.Many2one('onedrive.document', string='Parent Folder')
     is_folder = fields.Boolean(string='Is Folder', default=False)
     file_data = fields.Binary(string='File Data')
+    preview_data = fields.Binary(string='Preview Data', compute='_compute_preview_data', store=False)
     upload_file = fields.Binary(string='Upload File')
     upload_filename = fields.Char(string='Upload Filename')
 
@@ -80,6 +81,44 @@ class OneDriveDocument(models.Model):
                 record.preview_url = f'/onedrive/preview/{record.id}'
             else:
                 record.preview_url = False
+
+    @api.depends('file_url', 'file_data')
+    def _compute_preview_data(self):
+        """Descargar archivo de OneDrive para previsualización si no está almacenado localmente"""
+        for record in self:
+            if record.file_data:
+                # Si ya tenemos el archivo localmente, usarlo
+                record.preview_data = record.file_data
+            elif record.file_url and not record.is_folder:
+                # Intentar descargar el archivo de OneDrive para previsualización
+                try:
+                    response = requests.get(record.file_url, timeout=30)
+                    if response.status_code == 200:
+                        import base64
+                        record.preview_data = base64.b64encode(response.content)
+                    else:
+                        record.preview_data = False
+                except Exception:
+                    record.preview_data = False
+            else:
+                record.preview_data = False
+
+    def action_load_preview(self):
+        """Cargar archivo para previsualización y almacenarlo permanentemente"""
+        for record in self:
+            if record.file_url and not record.file_data and not record.is_folder:
+                try:
+                    response = requests.get(record.file_url, timeout=30)
+                    if response.status_code == 200:
+                        import base64
+                        record.file_data = base64.b64encode(response.content)
+                        return {
+                            'type': 'ir.actions.client',
+                            'tag': 'reload',
+                        }
+                except Exception as e:
+                    pass
+        return True
 
     def get_download_url(self):
         """Obtener URL de descarga a través de nuestro proxy"""

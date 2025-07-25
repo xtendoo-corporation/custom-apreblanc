@@ -86,22 +86,17 @@
                             <strong>Previsualización del archivo</strong>
                         </div>
 
-                        <!-- Mostrar archivo usando el widget image nativo si hay file_data -->
-                        <field name="file_data" widget="image" options="{'size': [800, 600]}" nolabel="1" invisible="not file_data"/>
+                        <!-- Mostrar previsualización usando preview_data (que descarga automáticamente de OneDrive) -->
+                        <field name="preview_data" widget="image" options="{'size': [800, 600]}" nolabel="1" invisible="not preview_data"/>
 
-                        <!-- Mostrar URL como enlace clickeable si no hay file_data pero sí file_url -->
-                        <div invisible="file_data or not file_url" class="text-center">
-                            <p><strong>Archivo disponible en OneDrive:</strong></p>
-                            <field name="file_url" widget="url" nolabel="1"/>
-                            <p>
-                                <a href="#" onclick="window.open(this.parentNode.previousElementSibling.querySelector('input').value, '_blank'); return false;" class="btn btn-primary">
-                                    <i class="fa fa-external-link"/> Ver archivo
-                                </a>
-                            </p>
+                        <!-- Botón para cargar archivo permanentemente si solo tenemos URL -->
+                        <div invisible="file_data or not file_url" class="text-center mb-3">
+                            <button name="action_load_preview" type="object" string="Cargar archivo para previsualización" class="btn btn-primary"/>
+                            <p><small>Haz clic para descargar el archivo de OneDrive y poder previsualizarlo aquí</small></p>
                         </div>
 
                         <!-- Si no hay nada -->
-                        <div invisible="file_data or file_url" class="alert alert-info text-center">
+                        <div invisible="preview_data or file_url" class="alert alert-info text-center">
                             <i class="fa fa-info-circle"/> No hay archivo disponible para previsualizar.
                         </div>
                     </group>
