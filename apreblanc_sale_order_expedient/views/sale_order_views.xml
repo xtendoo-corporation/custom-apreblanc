@@ -151,55 +151,54 @@
 
                 <!-- Pestaña para documentos OneDrive -->
                 <page name="onedrive_documents" string="Documentos OneDrive" invisible="expedient_type == 'none' or not context.get('show_as_expedient', False)">
-                    <group>
-                        <field name="onedrive_document_ids"
-                               widget="many2many"
-                               nolabel="1"
-                               readonly="expedient_state in ['aprobada', 'rechazada'] and not is_expedient_admin">
-                            <tree>
-                                <field name="name"/>
-                                <field name="file_type"/>
-                                <field name="file_size"/>
-                                <field name="owner"/>
-                                <field name="last_modified"/>
-                            </tree>
-                            <form>
-                                <sheet>
-                                    <group>
-                                        <field name="name"/>
-                                        <field name="file_url"/>
-                                        <field name="file_type"/>
-                                        <field name="file_size"/>
-                                        <field name="owner"/>
-                                        <field name="last_modified"/>
-                                        <field name="is_folder"/>
-                                    </group>
-                                    <group>
-                                        <div class="o_form_label">
-                                            <strong>Previsualización del archivo</strong>
-                                        </div>
+                    <field name="onedrive_document_ids"
+                           widget="many2many"
+                           nolabel="1"
+                           readonly="expedient_state in ['aprobada', 'rechazada'] and not is_expedient_admin"
+                           options="{'create_text': 'Agregar documento', 'no_open': False}">
+                        <tree>
+                            <field name="name"/>
+                            <field name="file_type"/>
+                            <field name="file_size"/>
+                            <field name="owner"/>
+                            <field name="last_modified"/>
+                        </tree>
+                        <form>
+                            <sheet>
+                                <group>
+                                    <field name="name"/>
+                                    <field name="file_url"/>
+                                    <field name="file_type"/>
+                                    <field name="file_size"/>
+                                    <field name="owner"/>
+                                    <field name="last_modified"/>
+                                    <field name="is_folder"/>
+                                </group>
+                                <group>
+                                    <div class="o_form_label">
+                                        <strong>Previsualización del archivo</strong>
+                                    </div>
 
-                                        <!-- Mostrar imágenes -->
-                                        <field name="file_data" widget="image" options="{'size': [400, 300]}" nolabel="1"
-                                               invisible="not file_data or 'pdf' in file_type"/>
+                                    <!-- Mostrar imágenes -->
+                                    <field name="file_data" widget="image" options="{'size': [600, 400]}" nolabel="1"
+                                           invisible="not file_data or 'pdf' in file_type"/>
 
-                                        <!-- Mostrar PDFs como thumbnail -->
-                                        <div invisible="not pdf_thumbnail" class="text-center">
-                                            <field name="pdf_thumbnail" widget="image" options="{'size': [400, 300]}" nolabel="1"/>
-                                            <p class="text-muted mt-2">
-                                                <i class="fa fa-info-circle"/> Vista previa del PDF
-                                            </p>
-                                        </div>
+                                    <!-- Mostrar PDFs como thumbnail -->
+                                    <div invisible="not pdf_thumbnail" class="text-center">
+                                        <field name="pdf_thumbnail" widget="image" options="{'size': [600, 400]}" nolabel="1"/>
+                                        <p class="text-muted mt-2">
+                                            <i class="fa fa-info-circle"/> Vista previa del PDF
+                                        </p>
+                                    </div>
 
-                                        <!-- Mensaje si no hay previsualización -->
-                                        <div invisible="file_data or pdf_thumbnail" class="alert alert-info" role="alert">
-                                            <i class="fa fa-info-circle"/> No hay previsualización disponible
-                                        </div>
-                                    </group>
-                                </sheet>
-                            </form>
-                        </field>
-                    </group>
+                                    <!-- Mensaje si no hay previsualización -->
+                                    <div invisible="file_data or pdf_thumbnail" class="alert alert-info" role="alert">
+                                        <i class="fa fa-info-circle"/> No hay previsualización disponible
+                                    </div>
+                                </group>
+                            </sheet>
+                        </form>
+                    </field>
                 </page>
 
                 <!-- Pestaña para la autorización -->
