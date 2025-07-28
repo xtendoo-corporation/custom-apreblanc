@@ -286,7 +286,7 @@ class OneDriveDocument(models.Model):
         else:
             _logger.info("❌ No es active_model='sale.order' o no hay active_id")
 
-        # 3. NUEVO: Buscar en params del contexto
+        # 3. NUEVO: Buscaar en params del contexto
         params = self.env.context.get('params', {})
         _logger.info(f"Params del contexto: {params}")
 
