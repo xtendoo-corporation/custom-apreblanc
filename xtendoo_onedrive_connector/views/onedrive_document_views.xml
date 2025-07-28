@@ -1,158 +1,109 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <record id="view_onedrive_settings_form" model="ir.ui.view">
-        <field name="name">onedrive.settings.form</field>
-        <field name="model">onedrive.settings</field>
-        <field name="arch" type="xml">
-            <form string="Configuración OneDrive">
-                <group>
-                    <field name="onedrive_client_id"/>
-                    <field name="onedrive_client_secret" password="True"/>
-                    <field name="onedrive_tenant_id"/>
-                    <field name="onedrive_redirect_uri"/>
-                    <field name="onedrive_refresh_token"/>
-                    <button name="action_get_onedrive_auth_url" type="object" string="Obtener URL de autorización OneDrive" class="btn-primary"/>
-                </group>
-            </form>
-        </field>
-    </record>
-
-    <record id="view_onedrive_settings_tree" model="ir.ui.view">
-        <field name="name">onedrive.settings.tree</field>
-        <field name="model">onedrive.settings</field>
-        <field name="arch" type="xml">
-            <tree string="Configuraciones OneDrive">
-                <field name="onedrive_client_id"/>
-                <field name="onedrive_tenant_id"/>
-                <field name="onedrive_redirect_uri"/>
-                <field name="onedrive_refresh_token"/>
-            </tree>
-        </field>
-    </record>
-
-    <record id="action_onedrive_settings" model="ir.actions.act_window">
-        <field name="name">Configuración OneDrive</field>
-        <field name="res_model">onedrive.settings</field>
-        <field name="view_mode">tree,form</field>
-        <field name="target">current</field>
-    </record>
-
-    <menuitem id="menu_onedrive_settings" name="OneDrive" parent="base.menu_administration" action="action_onedrive_settings" sequence="100"/>
-
-    <!-- Vista tree de documentos OneDrive -->
-    <record id="view_onedrive_document_tree" model="ir.ui.view">
-        <field name="name">onedrive.document.tree</field>
-        <field name="model">onedrive.document</field>
-        <field name="arch" type="xml">
-            <tree string="Documentos OneDrive" create="true" edit="true">
-                <field name="name"/>
-                <field name="onedrive_id"/>
-                <field name="file_url"/>
-                <field name="file_size"/>
-                <field name="file_type"/>
-                <field name="owner"/>
-                <field name="last_modified"/>
-                <field name="parent_id"/>
-                <field name="is_folder"/>
-                <button name="action_sync_onedrive" type="object" string="Sincronizar" class="btn-primary"/>
-            </tree>
-        </field>
-    </record>
-
-    <!-- Vista form de documentos OneDrive -->
+    <!-- Vista formulario para crear documentos OneDrive -->
     <record id="view_onedrive_document_form" model="ir.ui.view">
         <field name="name">onedrive.document.form</field>
         <field name="model">onedrive.document</field>
         <field name="arch" type="xml">
             <form string="Documento OneDrive">
-                <header>
-                    <button name="action_sync_onedrive" type="object" string="Sincronizar OneDrive" class="btn-primary"/>
-                </header>
                 <sheet>
-                    <group>
-                        <field name="name"/>
+                    <!-- Campos principales para creación -->
+                    <group name="main_fields">
+                        <!-- Campo de nombre - se llena automáticamente -->
+                        <field name="name" placeholder="El nombre se llenará automáticamente al seleccionar el archivo" readonly="context.get('readonly_name', False)"/>
+
+                        <!-- Campo para subir archivo - solo visible al crear -->
+                        <field name="file_data"
+                               widget="binary"
+                               string="Seleccionar Archivo"
+                               filename="name"
+                               invisible="context.get('hide_upload', False) or id"/>
+                    </group>
+
+                    <!-- Información del archivo - solo visible en edición -->
+                    <group name="file_info" string="Información del Archivo" invisible="not id">
+                        <field name="file_size" readonly="1"/>
+                        <field name="file_type" readonly="1"/>
+                        <field name="owner" readonly="1"/>
+                        <field name="last_modified" readonly="1"/>
+                        <field name="file_url" readonly="1" widget="url"/>
+                    </group>
+
+                    <!-- Botón de descarga - solo visible en edición -->
+                    <div class="oe_button_box" invisible="not id or not file_url">
+                        <button name="action_download_file"
+                                type="object"
+                                string="Descargar Archivo"
+                                class="btn-primary"
+                                icon="fa-download"/>
+                    </div>
+
+                    <!-- Campos técnicos ocultos -->
+                    <group invisible="1">
                         <field name="onedrive_id"/>
-                        <field name="file_url"/>
-                        <field name="file_size"/>
-                        <field name="file_type"/>
-                        <field name="owner"/>
-                        <field name="last_modified"/>
-                        <field name="file_data"/>
+                        <field name="is_folder"/>
                         <field name="upload_file"/>
                         <field name="upload_filename"/>
                     </group>
-                    <group>
-                        <div class="o_form_label">
-                            <strong>Previsualización del archivo</strong>
-                        </div>
-
-                        <!-- Mostrar imágenes usando widget image -->
-                        <field name="file_data" widget="image" options="{'size': [800, 600]}" nolabel="1"
-                               invisible="not file_data or 'pdf' in file_type or file_type in ['doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx']"/>
-
-                        <!-- Mostrar PDFs como imagen thumbnail con enlace al PDF completo -->
-                        <div invisible="not pdf_thumbnail" class="text-center">
-                            <a href="#" onclick="window.open('/onedrive/pdf/' + document.querySelector('input[name=&quot;id&quot;]').value, '_blank'); return false;">
-                                <field name="pdf_thumbnail" widget="image" options="{'size': [800, 600]}" nolabel="1"/>
-                            </a>
-                            <p class="text-muted mt-2">
-                                <i class="fa fa-info-circle"/> Haz clic en la imagen para ver el PDF completo
-                            </p>
-                        </div>
-
-                        <!-- Fallback: widget binary para PDFs sin thumbnail -->
-                        <field name="file_data" widget="binary" options="{'preview': True, 'filename': 'name'}" nolabel="1"
-                               invisible="not file_data or 'pdf' not in file_type or pdf_thumbnail"/>
-
-                        <!-- Para otros documentos, mostrar como enlace de descarga -->
-                        <div invisible="not file_data or file_type not in ['doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx']" class="text-center">
-                            <p><i class="fa fa-file-text-o fa-3x text-muted" title="Documento de Office"/></p>
-                            <p><strong>Documento: <field name="name" nolabel="1" readonly="1"/></strong></p>
-                            <p>Este tipo de documento se puede descargar pero no previsualizar directamente.</p>
-                            <a href="/web/content?field=file_data&amp;model=onedrive.document&amp;id=" class="btn btn-primary" role="button">
-                                <i class="fa fa-download" title="Descargar"/> Descargar documento
-                            </a>
-                        </div>
-
-                        <!-- Botón para cargar archivo si solo tenemos URL -->
-                        <div invisible="file_data or not file_url" class="text-center mb-3">
-                            <button name="action_load_preview" type="object" string="Cargar archivo para previsualización" class="btn btn-primary"/>
-                            <p><small>Haz clic para descargar el archivo de OneDrive y poder previsualizarlo aquí</small></p>
-                        </div>
-
-                        <!-- Si no hay nada -->
-                        <div invisible="file_data or file_url" class="alert alert-info" role="alert">
-                            <i class="fa fa-info-circle"/> No hay archivo disponible para previsualizar.
-                        </div>
-                    </group>
-                    <footer>
-                        <button name="action_download_file" type="object" string="Descargar archivo" class="btn-primary"/>
-                        <button name="action_upload_file" type="object" string="Subir archivo" class="btn-secondary"/>
-                    </footer>
                 </sheet>
             </form>
         </field>
     </record>
 
-    <!-- Acción server para sincronizar (nueva) -->
-    <record id="action_onedrive_sync" model="ir.actions.server">
-        <field name="name">Sincronizar OneDrive</field>
-        <field name="model_id" ref="model_onedrive_document"/>
-        <field name="state">code</field>
-        <field name="code">action = env['onedrive.document'].action_sync_onedrive()</field>
+    <!-- Vista tree para listar documentos -->
+    <record id="view_onedrive_document_tree" model="ir.ui.view">
+        <field name="name">onedrive.document.tree</field>
+        <field name="model">onedrive.document</field>
+        <field name="arch" type="xml">
+            <tree string="Documentos OneDrive">
+                <field name="name"/>
+                <field name="file_type"/>
+                <field name="file_size"/>
+                <field name="owner"/>
+                <field name="last_modified"/>
+                <button name="action_download_file"
+                        type="object"
+                        string="Descargar"
+                        class="btn-primary"
+                        invisible="not file_url or is_folder"/>
+            </tree>
+        </field>
     </record>
 
-    <record id="action_onedrive_document_window" model="ir.actions.act_window">
+    <!-- Vista search para filtrar documentos -->
+    <record id="view_onedrive_document_search" model="ir.ui.view">
+        <field name="name">onedrive.document.search</field>
+        <field name="model">onedrive.document</field>
+        <field name="arch" type="xml">
+            <search string="Buscar Documentos">
+                <field name="name"/>
+                <field name="file_type"/>
+                <field name="owner"/>
+                <separator/>
+                <filter string="Solo Archivos" name="files_only" domain="[('is_folder', '=', False)]"/>
+                <filter string="Solo Carpetas" name="folders_only" domain="[('is_folder', '=', True)]"/>
+                <group expand="0" string="Agrupar por">
+                    <filter string="Tipo de Archivo" name="group_file_type" context="{'group_by': 'file_type'}"/>
+                    <filter string="Propietario" name="group_owner" context="{'group_by': 'owner'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- Acción para documentos OneDrive -->
+    <record id="action_onedrive_document" model="ir.actions.act_window">
         <field name="name">Documentos OneDrive</field>
         <field name="res_model">onedrive.document</field>
         <field name="view_mode">tree,form</field>
         <field name="context">{}</field>
         <field name="help" type="html">
-            <p>Desde aquí puedes ver, subir, descargar y sincronizar tus archivos y carpetas de OneDrive.</p>
+            <p class="o_view_nocontent_smiling_face">
+                Sube tu primer documento a OneDrive
+            </p>
+            <p>
+                Aquí puedes gestionar todos tus documentos almacenados en OneDrive.
+                Los archivos se organizarán automáticamente en carpetas según el proyecto o venta.
+            </p>
         </field>
     </record>
-
-    <menuitem id="menu_onedrive_root" name="OneDrive" sequence="100"/>
-    <menuitem id="menu_onedrive_documents" name="Documentos" parent="menu_onedrive_root" action="action_onedrive_document_window" sequence="10"/>
-    <menuitem id="menu_onedrive_sync" name="Sincronizar OneDrive" parent="menu_onedrive_root" action="action_onedrive_sync" sequence="20"/>
 </odoo>

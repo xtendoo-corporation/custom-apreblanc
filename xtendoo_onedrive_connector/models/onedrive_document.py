@@ -22,6 +22,19 @@ class OneDriveDocument(models.Model):
     upload_file = fields.Binary(string='Upload File')
     upload_filename = fields.Char(string='Upload Filename')
 
+    @api.onchange('file_data')
+    def _onchange_file_data(self):
+        """Actualizar automáticamente el nombre cuando se selecciona un archivo"""
+        if self.file_data and not self.name:
+            # Si hay un filename disponible en el widget, usarlo
+            # En el contexto del upload, Odoo suele pasar el filename
+            filename = self.env.context.get('filename') or 'nuevo_archivo'
+
+            # Remover caracteres especiales del nombre si es necesario
+            import re
+            clean_filename = re.sub(r'[<>:"/\\|?*]', '_', filename)
+            self.name = clean_filename
+
     @api.model
     def action_sync_onedrive(self):
         """
