@@ -286,7 +286,26 @@ class OneDriveDocument(models.Model):
         else:
             _logger.info("❌ No es active_model='sale.order' o no hay active_id")
 
-        # 3. Buscar en el contexto otros posibles identificadores de venta
+        # 3. NUEVO: Buscar en params del contexto
+        params = self.env.context.get('params', {})
+        _logger.info(f"Params del contexto: {params}")
+
+        if params.get('model') == 'sale.order' and params.get('id'):
+            try:
+                sale_id = params.get('id')
+                sale_order = self.env['sale.order'].browse(sale_id)
+                _logger.info(f"Sale order desde params: {sale_order}, exists: {sale_order.exists()}")
+                if sale_order.exists():
+                    _logger.info(f"✅ Nombre de sale.order desde params: {sale_order.name}")
+                    return sale_order.name
+                else:
+                    _logger.info("❌ Sale order desde params no existe")
+            except Exception as e:
+                _logger.error(f"❌ Error buscando sale.order por params: {e}")
+        else:
+            _logger.info("❌ No hay model='sale.order' o id en params")
+
+        # 4. Buscar en el contexto otros posibles identificadores de venta
         context_keys = ['default_sale_order_id', 'sale_order_id']
         for key in context_keys:
             context_value = self.env.context.get(key)
@@ -304,7 +323,7 @@ class OneDriveDocument(models.Model):
             else:
                 _logger.info(f"❌ No hay valor en contexto para '{key}'")
 
-        # 4. Intentar obtener desde la relación inversa (si el documento ya está relacionado)
+        # 5. Intentar obtener desde la relación inversa (si el documento ya está relacionado)
         try:
             _logger.info(f"Buscando sales que contengan document ID {self.id}")
             # Buscar órdenes de venta que tengan este documento relacionado
@@ -319,7 +338,7 @@ class OneDriveDocument(models.Model):
         except Exception as e:
             _logger.error(f"❌ Error en búsqueda de relación inversa: {e}")
 
-        # 5. Como último recurso, usar "GENERAL" - NO buscar la última venta automáticamente
+        # 6. Como último recurso, usar "GENERAL" - NO buscar la última venta automáticamente
         _logger.warning("⚠️ Usando 'GENERAL' como último recurso - no se encontró ninguna venta")
         return "GENERAL"
 
