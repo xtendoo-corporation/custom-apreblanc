@@ -159,12 +159,19 @@
                            domain="[('is_folder', '=', False)]"/>
                 </page>
 
-                <!-- Pestaña para la autorización -->
-                <page name="authorization" string="Autorización" invisible="expedient_type == 'none' or not context.get('show_as_expedient', False)">
-                    <field name="authorization"
+               <!-- Pestaña para documentos OneDrive -->
+                <page name="onedrive_documents" string="Documentos OneDrive" invisible="expedient_type == 'none' or not context.get('show_as_expedient', False)">
+                    <field name="onedrive_document_id"
+                           widget="many2one"
+                           nolabel="1"
                            readonly="expedient_state in ['aprobada', 'rechazada'] and not is_expedient_admin"
-                           placeholder="Detalles de la autorización del expediente..."
-                           nolabel="1"/>
+                           options="{'create_text': 'Agregar documento', 'no_open': False}">
+                        <form>
+                            <field name="name"/>
+                            <field name="file_size"/>
+                            <button name="action_download_file" type="object" string="Descargar" class="btn-primary"/>
+                        </form>
+                    </field>
                 </page>
 
             </xpath>
