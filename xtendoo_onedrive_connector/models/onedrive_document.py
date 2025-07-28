@@ -68,8 +68,51 @@ class OneDriveDocument(models.Model):
             }
 
     def action_download_file(self):
-        # Lógica para descargar un archivo desde OneDriveaa
-        return True
+        """Descargar archivo desde OneDrive"""
+        if not self.file_url or self.is_folder:
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': 'Error',
+                    'message': 'No se puede descargar: archivo no válido o es una carpeta.',
+                    'type': 'warning',
+                    'sticky': False,
+                }
+            }
+
+        try:
+            # Si ya tenemos el archivo almacenado localmente
+            if self.file_data:
+                import base64
+                file_content = base64.b64decode(self.file_data)
+
+                return {
+                    'type': 'ir.actions.act_url',
+                    'url': f'/web/content/onedrive.document/{self.id}/file_data/{self.name}?download=true',
+                    'target': 'self',
+                }
+
+            # Si no lo tenemos localmente, descargarlo desde OneDrive
+            else:
+                # Redirigir a nuestro controlador que manejará la descarga
+                return {
+                    'type': 'ir.actions.act_url',
+                    'url': f'/onedrive/download/{self.id}',
+                    'target': 'self',
+                }
+
+        except Exception as e:
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': 'Error al descargar',
+                    'message': f'Error: {str(e)}',
+                    'type': 'danger',
+                    'sticky': True,
+                }
+            }
 
     def action_upload_file(self):
         # Lógica para subir un archivo a OneDrive
