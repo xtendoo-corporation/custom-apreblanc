@@ -149,7 +149,7 @@
                            nolabel="1"/>
                 </page>
 
-               <!-- Pestaña para documentos OneDrive -->
+               <!-- Pestaña para documentoss OneDrive -->
                 <page name="onedrive_documents" string="Documentos OneDrive" invisible="expedient_type == 'none' or not context.get('show_as_expedient', False)">
                     <field name="onedrive_document_ids"
                            widget="many2many"
