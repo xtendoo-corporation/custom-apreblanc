@@ -221,28 +221,39 @@ class OneDriveDocument(models.Model):
             else:
                 search_url = 'https://graph.microsoft.com/v1.0/me/drive/root/children'
 
-            # Buscar la carpeta
-            response = requests.get(f"{search_url}?$filter=name eq '{folder_name}' and folder ne null", headers=headers, timeout=30)
+            # Buscar la carpeta existente - corregir el filtro
+            filter_url = f"{search_url}?$filter=name eq '{folder_name}'"
+            response = requests.get(filter_url, headers=headers, timeout=30)
 
             if response.status_code == 200:
-                folders = response.json().get('value', [])
+                data = response.json()
+                folders = [item for item in data.get('value', []) if item.get('folder') is not None]
                 if folders:
                     # La carpeta existe, devolver su ID
                     return folders[0]['id']
 
-            # La carpeta no existe, crearla
+            # La carpeta no existe, crearla SIN rename para evitar duplicados
             create_data = {
                 "name": folder_name,
                 "folder": {},
-                "@microsoft.graph.conflictBehavior": "rename"
+                "@microsoft.graph.conflictBehavior": "fail"  # Cambiar a "fail" para no crear duplicados
             }
 
             create_response = requests.post(search_url, headers=headers, json=create_data, timeout=30)
 
             if create_response.status_code == 201:
                 return create_response.json()['id']
+            elif create_response.status_code == 409:
+                # Si falla porque ya existe (conflicto), buscar nuevamente
+                response = requests.get(filter_url, headers=headers, timeout=30)
+                if response.status_code == 200:
+                    data = response.json()
+                    folders = [item for item in data.get('value', []) if item.get('folder') is not None]
+                    if folders:
+                        return folders[0]['id']
+                raise Exception(f"Carpeta {folder_name} existe pero no se puede encontrar")
             else:
-                raise Exception(f"Error creando carpeta {folder_name}: {create_response.status_code}")
+                raise Exception(f"Error creando carpeta {folder_name}: {create_response.status_code} - {create_response.text}")
 
         except Exception as e:
             raise Exception(f"Error en _ensure_folder_exists para {folder_name}: {str(e)}")
