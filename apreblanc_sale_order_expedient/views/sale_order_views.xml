@@ -192,7 +192,7 @@
             <!-- Añadir nuevos campos en la sección de información del expediente -->
             <xpath expr="//group[@name='expedient_info']/group[1]" position="inside">
                 <group>
-                    <field name="onedrive_document_id" widget="many2one" options="{'no_create': True}" domain="[('is_folder', '=', False)]"/>
+                    <field name="onedrive_document_ids" widget="many2many_tags" options="{'no_create': True}" domain="[('is_folder', '=', False)]"/>
                 </group>
             </xpath>
 

@@ -252,17 +252,18 @@ class OneDriveDocument(models.Model):
 
     def _get_sale_name(self):
         """Obtener el nombre de la venta desde el contexto o relación"""
-        # Intentar obtener desde el contexto
+        # 1. Intentar obtener desde el contexto (cuando se está creando)
         if self.env.context.get('sale_name'):
             return self.env.context.get('sale_name')
 
-        # Intentar obtener desde el active_id si viene de una venta
+        # 2. Si viene del contexto de una venta específica
         if self.env.context.get('active_model') == 'sale.order' and self.env.context.get('active_id'):
             sale_order = self.env['sale.order'].browse(self.env.context.get('active_id'))
-            return sale_order.name if sale_order.exists() else None
+            if sale_order.exists():
+                return sale_order.name
 
-        # Buscar en el contexto otros posibles identificadores de venta
-        context_keys = ['active_id', 'default_sale_order_id', 'sale_order_id']
+        # 3. Buscar en el contexto otros posibles identificadores de venta
+        context_keys = ['default_sale_order_id', 'sale_order_id']
         for key in context_keys:
             if self.env.context.get(key):
                 try:
@@ -272,30 +273,16 @@ class OneDriveDocument(models.Model):
                 except:
                     continue
 
-        # Intentar obtener desde expedientes relacionados si existe el campo
+        # 4. Intentar obtener desde la relación inversa (si el documento ya está relacionado)
         try:
-            if hasattr(self.env['sale.order'], 'onedrive_document_ids'):
-                # Buscar órdenes de venta que tengan este documento relacionado
-                sales = self.env['sale.order'].search([('onedrive_document_ids', 'in', [self.id])])
-                if sales:
-                    return sales[0].name
+            # Buscar órdenes de venta que tengan este documento relacionado
+            sales = self.env['sale.order'].search([('onedrive_document_ids', 'in', [self.id])])
+            if sales:
+                return sales[0].name
         except:
             pass
 
-        # Si estamos en el contexto de creación desde expedientes
-        if self.env.context.get('default_partner_id'):
-            # Buscar la última orden de venta de ese partner
-            try:
-                partner_id = self.env.context.get('default_partner_id')
-                latest_sale = self.env['sale.order'].search([
-                    ('partner_id', '=', partner_id)
-                ], order='create_date desc', limit=1)
-                if latest_sale:
-                    return latest_sale.name
-            except:
-                pass
-
-        # Como último recurso, usar "GENERAL" en lugar de timestamp
+        # 5. Como último recurso, usar "GENERAL" - NO buscar la última venta automáticamente
         return "GENERAL"
 
     def _ensure_folder_exists(self, folder_name, parent_folder_id, headers):
