@@ -408,6 +408,25 @@
                   action="action_sale_order_prepaid"
                   sequence="25"/>
 
+    <!-- Nueva vista y acción para documentos OneDrive -->
+    <record id="view_onedrive_document_tree" model="ir.ui.view">
+        <field name="name">onedrive.document.tree</field>
+        <field name="model">onedrive.document</field>
+        <field name="arch" type="xml">
+            <tree>
+                <field name="name"/>
+                <field name="file_size"/>
+                <button name="action_download" type="object" string="Descargar" class="btn-primary"/>
+            </tree>
+        </field>
+    </record>
 
+    <record id="action_onedrive_document_tree" model="ir.actions.act_window">
+        <field name="name">Documentos OneDrive</field>
+        <field name="res_model">onedrive.document</field>
+        <field name="view_mode">tree</field>
+        <field name="view_id" ref="view_onedrive_document_tree"/>
+        <field name="domain">[('is_folder', '=', False)]</field>
+    </record>
 
 </odoo>
