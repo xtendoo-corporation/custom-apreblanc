@@ -82,23 +82,20 @@ class OneDriveDocument(models.Model):
             }
 
         try:
-            # Si ya tenemos el archivo almacenado localmente
+            # Si ya tenemos el archivo almacenado localmente, usar la URL de Odoo
             if self.file_data:
-                import base64
-                file_content = base64.b64decode(self.file_data)
-
                 return {
                     'type': 'ir.actions.act_url',
                     'url': f'/web/content/onedrive.document/{self.id}/file_data/{self.name}?download=true',
                     'target': 'self',
                 }
 
-            # Si no lo tenemos localmente, descargarlo desde OneDrive
+            # Si no lo tenemos localmente, usar la URL directa de OneDrive
             else:
-                # Redirigir a nuestro controlador que manejará la descarga
+                # Usar directamente la URL de descarga de OneDrive
                 return {
                     'type': 'ir.actions.act_url',
-                    'url': f'/onedrive/download/{self.id}',
+                    'url': self.file_url,
                     'target': 'self',
                 }
 
