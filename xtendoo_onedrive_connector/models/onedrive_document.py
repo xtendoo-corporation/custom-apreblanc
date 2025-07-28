@@ -26,13 +26,24 @@ class OneDriveDocument(models.Model):
     def _onchange_file_data(self):
         """Actualizar automáticamente el nombre cuando se selecciona un archivo"""
         if self.file_data and not self.name:
-            # Si hay un filename disponible en el widget, usarlo
-            # En el contexto del upload, Odoo suele pasar el filename
-            filename = self.env.context.get('filename') or 'nuevo_archivo'
+            # El nombre del archivo se puede obtener desde varios lugares
+            filename = None
 
-            # Remover caracteres especiales del nombre si es necesario
+            # 1. Desde el contexto si está disponible
+            if self.env.context.get('filename'):
+                filename = self.env.context.get('filename')
+
+            # 2. Si no hay contexto, generar un nombre basado en timestamp
+            if not filename:
+                from datetime import datetime
+                timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+                filename = f'documento_{timestamp}'
+
+            # Limpiar el nombre del archivo de caracteres no válidos
             import re
             clean_filename = re.sub(r'[<>:"/\\|?*]', '_', filename)
+
+            # Asignar el nombre limpio
             self.name = clean_filename
 
     @api.model
