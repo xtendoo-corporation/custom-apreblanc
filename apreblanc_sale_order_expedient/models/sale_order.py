@@ -204,7 +204,8 @@ class SaleOrder(models.Model):
         'sale_order_id',
         'onedrive_document_id',
         string='Documentos OneDrive',
-        help='Documentos de OneDrive relacionados con este pedido'
+        help='Documentos de OneDrive relacionados con este pedido',
+        domain=[('is_folder', '=', False)]
     )
 
 
