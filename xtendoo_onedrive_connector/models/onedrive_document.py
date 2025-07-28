@@ -68,7 +68,7 @@ class OneDriveDocument(models.Model):
             }
 
     def action_download_file(self):
-        """Descargar archivo desde OneDrive usando el mismo sistema que la sincronización"""
+        """Descargar archivo directamente desde OneDrive usando la URL almacenada"""
         if not self.file_url or self.is_folder:
             return {
                 'type': 'ir.actions.client',
@@ -81,94 +81,12 @@ class OneDriveDocument(models.Model):
                 }
             }
 
-        try:
-            # Si ya tenemos el archivo almacenado localmente, usar la URL de Odoo
-            if self.file_data:
-                import urllib.parse
-                filename = urllib.parse.quote(self.name)
-                return {
-                    'type': 'ir.actions.act_url',
-                    'url': f'/web/content/onedrive.document/{self.id}/file_data/{filename}?download=true',
-                    'target': 'self',
-                }
-
-            # Si no lo tenemos localmente, usar el servicio de OneDrive para obtener token y descargar
-            else:
-                try:
-                    # Usar exactamente el mismo servicio que funciona en la sincronización
-                    onedrive_service = self.env['onedrive.service']
-                    access_token = onedrive_service._get_token()
-
-                    # Usar el token para descargar el archivo
-                    headers = {
-                        'Authorization': f'Bearer {access_token}',
-                        'User-Agent': 'Mozilla/5.0 (compatible; Odoo OneDrive Integration)',
-                    }
-
-                    response = requests.get(self.file_url, headers=headers, timeout=30)
-
-                    if response.status_code == 200:
-                        import base64
-                        import urllib.parse
-
-                        # Guardar el archivo para futuras descargas
-                        self.file_data = base64.b64encode(response.content)
-
-                        # Redirigir a la URL de descarga de Odoo
-                        filename = urllib.parse.quote(self.name)
-                        return {
-                            'type': 'ir.actions.act_url',
-                            'url': f'/web/content/onedrive.document/{self.id}/file_data/{filename}?download=true',
-                            'target': 'self',
-                        }
-
-                    elif response.status_code in [401, 403]:
-                        return {
-                            'type': 'ir.actions.client',
-                            'tag': 'display_notification',
-                            'params': {
-                                'title': 'Token Expirado',
-                                'message': 'El token de acceso a OneDrive ha expirado. Por favor, sincroniza los archivos nuevamente.',
-                                'type': 'warning',
-                                'sticky': True,
-                            }
-                        }
-
-                    else:
-                        return {
-                            'type': 'ir.actions.client',
-                            'tag': 'display_notification',
-                            'params': {
-                                'title': 'Error de Descarga',
-                                'message': f'No se pudo descargar el archivo desde OneDrive. Código de error: {response.status_code}',
-                                'type': 'warning',
-                                'sticky': True,
-                            }
-                        }
-
-                except Exception as service_error:
-                    return {
-                        'type': 'ir.actions.client',
-                        'tag': 'display_notification',
-                        'params': {
-                            'title': 'Error de Autenticación',
-                            'message': f'Error obteniendo token de OneDrive: {str(service_error)}',
-                            'type': 'danger',
-                            'sticky': True,
-                        }
-                    }
-
-        except Exception as e:
-            return {
-                'type': 'ir.actions.client',
-                'tag': 'display_notification',
-                'params': {
-                    'title': 'Error al descargar',
-                    'message': f'Error: {str(e)}',
-                    'type': 'danger',
-                    'sticky': True,
-                }
-            }
+        # Usar directamente la URL de OneDrive que ya funciona en el navegador
+        return {
+            'type': 'ir.actions.act_url',
+            'url': self.file_url,
+            'target': 'self',
+        }
 
     def action_upload_file(self):
         # Lógica para subir un archivo a OneDrive
