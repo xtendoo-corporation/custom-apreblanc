@@ -229,7 +229,7 @@
             <!-- Añadir nuevos campos en la sección de información del expediente -->
             <xpath expr="//group[@name='expedient_info']/group[1]" position="inside">
                 <group>
-                    <field name="onedrive_documents" widget="many2many_tags" options="{'no_create': True}"/>
+                    <field name="onedrive_documents" widget="many2many_tags" options="{'no_create': True}" domain="[('is_folder', '=', False)]"/>
                     <button name="action_download_onedrive_document" type="object" string="Descargar Documento" class="btn btn-primary"/>
                 </group>
             </xpath>
