@@ -139,7 +139,7 @@ class OneDriveDocument(models.Model):
                 'Content-Type': 'application/json',
             }
 
-            # Obtener el nombre de la venta (asumiendo que viene del contexto o está relacionado)
+            # Obtener el nombre de la venta ANTES de crear/buscar carpetas
             sale_name = self._get_sale_name()
             if not sale_name:
                 return {
@@ -167,7 +167,7 @@ class OneDriveDocument(models.Model):
                     }
                 }
 
-            # Paso 2: Verificar/crear carpeta de la venta dentro de "odoo"
+            # Paso 2: Verificar/crear carpeta de la venta con el nombre correcto desde el inicio
             sale_folder_id = self._ensure_folder_exists(sale_name, root_folder_id, headers)
             if not sale_folder_id:
                 return {
@@ -180,9 +180,6 @@ class OneDriveDocument(models.Model):
                         'sticky': True,
                     }
                 }
-
-            # Renombrar la carpeta si su nombre no coincide con el de la venta
-            self._rename_folder_if_needed(sale_folder_id, sale_name, headers)
 
             # Paso 3: Subir el archivo a la carpeta de la venta
             file_data = self._upload_file_to_folder(sale_folder_id, headers)
