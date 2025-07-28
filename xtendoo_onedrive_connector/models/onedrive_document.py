@@ -456,7 +456,20 @@ class OneDriveDocument(models.Model):
 
         # Para cada registro creado, verificar si tiene archivo para subir
         for record in records:
-            if record.upload_file and record.upload_filename:
+            # Verificar si hay archivo para subir (puede venir en file_data o upload_file)
+            has_file = False
+
+            # Si viene en file_data y name, preparar para subida
+            if record.file_data and record.name and not record.file_url:
+                # Mover file_data a upload_file para procesarlo
+                record.upload_file = record.file_data
+                record.upload_filename = record.name
+                has_file = True
+            # O si viene directamente en upload_file
+            elif record.upload_file and record.upload_filename:
+                has_file = True
+
+            if has_file:
                 try:
                     # Ejecutar automáticamente la subida a OneDrive
                     result = record.action_upload_file()
@@ -467,7 +480,7 @@ class OneDriveDocument(models.Model):
                         _logger = logging.getLogger(__name__)
                         _logger.warning(
                             "Error automático subiendo archivo %s a OneDrive: %s",
-                            record.upload_filename,
+                            record.upload_filename or record.name,
                             result.get('params', {}).get('message', 'Error desconocido')
                         )
                 except Exception as e:
@@ -475,7 +488,7 @@ class OneDriveDocument(models.Model):
                     _logger = logging.getLogger(__name__)
                     _logger.error(
                         "Excepción automática subiendo archivo %s a OneDrive: %s",
-                        record.upload_filename,
+                        record.upload_filename or record.name,
                         str(e)
                     )
 
