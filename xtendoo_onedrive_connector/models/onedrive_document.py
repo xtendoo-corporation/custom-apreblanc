@@ -341,49 +341,104 @@ class OneDriveDocument(models.Model):
 
     def _ensure_folder_exists(self, folder_name, parent_folder_id, headers):
         """Verificar si existe una carpeta, si no existe la crea"""
+        import logging
+        _logger = logging.getLogger(__name__)
+
         try:
+            _logger.info(f"=== Buscando/creando carpeta: '{folder_name}' ===")
+
             # Construir URL para buscar carpetas
             if parent_folder_id:
                 search_url = f'https://graph.microsoft.com/v1.0/me/drive/items/{parent_folder_id}/children'
+                _logger.info(f"Buscando en carpeta padre ID: {parent_folder_id}")
             else:
                 search_url = 'https://graph.microsoft.com/v1.0/me/drive/root/children'
+                _logger.info("Buscando en carpeta raíz")
 
-            # Buscar la carpeta existente - corregir el filtro
-            filter_url = f"{search_url}?$filter=name eq '{folder_name}'"
-            response = requests.get(filter_url, headers=headers, timeout=30)
+            # Limpiar el nombre de carpeta de caracteres problemáticos para OneDrive
+            safe_folder_name = self._sanitize_folder_name(folder_name)
+            _logger.info(f"Nombre original: '{folder_name}' -> Nombre seguro: '{safe_folder_name}'")
+
+            # Primero obtener TODAS las carpetas y filtrar manualmente para ser más preciso
+            _logger.info(f"Obteniendo lista de carpetas desde: {search_url}")
+            response = requests.get(search_url, headers=headers, timeout=30)
 
             if response.status_code == 200:
                 data = response.json()
-                folders = [item for item in data.get('value', []) if item.get('folder') is not None]
-                if folders:
-                    # La carpeta existe, devolver su ID
-                    return folders[0]['id']
+                all_items = data.get('value', [])
+                _logger.info(f"Total de items encontrados: {len(all_items)}")
 
-            # La carpeta no existe, crearla SIN rename para evitar duplicados
+                # Filtrar solo carpetas
+                folders = [item for item in all_items if item.get('folder') is not None]
+                _logger.info(f"Carpetas encontradas: {len(folders)}")
+
+                # Buscar carpeta con nombre exacto
+                for folder in folders:
+                    folder_name_found = folder.get('name', '')
+                    _logger.info(f"Comparando: '{safe_folder_name}' == '{folder_name_found}'")
+                    if folder_name_found == safe_folder_name:
+                        folder_id = folder['id']
+                        _logger.info(f"✅ Carpeta encontrada con ID: {folder_id}")
+                        return folder_id
+
+                _logger.info("❌ No se encontró carpeta con nombre exacto")
+            else:
+                _logger.error(f"Error obteniendo lista de carpetas: {response.status_code} - {response.text}")
+
+            # La carpeta no existe, crearla
+            _logger.info(f"Creando nueva carpeta: '{safe_folder_name}'")
             create_data = {
-                "name": folder_name,
+                "name": safe_folder_name,
                 "folder": {},
-                "@microsoft.graph.conflictBehavior": "fail"  # Cambiar a "fail" para no crear duplicados
+                "@microsoft.graph.conflictBehavior": "fail"  # Fallar si ya existe para evitar duplicados
             }
 
             create_response = requests.post(search_url, headers=headers, json=create_data, timeout=30)
+            _logger.info(f"Respuesta de creación: {create_response.status_code}")
 
             if create_response.status_code == 201:
-                return create_response.json()['id']
+                folder_id = create_response.json()['id']
+                _logger.info(f"✅ Carpeta creada exitosamente con ID: {folder_id}")
+                return folder_id
             elif create_response.status_code == 409:
-                # Si falla porque ya existe (conflicto), buscar nuevamente
-                response = requests.get(filter_url, headers=headers, timeout=30)
+                # Conflicto - la carpeta ya existe, buscar nuevamente
+                _logger.warning("Conflicto 409 - la carpeta ya existe, buscando nuevamente...")
+                response = requests.get(search_url, headers=headers, timeout=30)
                 if response.status_code == 200:
                     data = response.json()
                     folders = [item for item in data.get('value', []) if item.get('folder') is not None]
-                    if folders:
-                        return folders[0]['id']
-                raise Exception(f"Carpeta {folder_name} existe pero no se puede encontrar")
+                    for folder in folders:
+                        if folder.get('name', '') == safe_folder_name:
+                            folder_id = folder['id']
+                            _logger.info(f"✅ Carpeta encontrada después del conflicto con ID: {folder_id}")
+                            return folder_id
+                raise Exception(f"Carpeta {safe_folder_name} causó conflicto pero no se puede encontrar")
             else:
-                raise Exception(f"Error creando carpeta {folder_name}: {create_response.status_code} - {create_response.text}")
+                raise Exception(f"Error creando carpeta {safe_folder_name}: {create_response.status_code} - {create_response.text}")
 
         except Exception as e:
+            _logger.error(f"❌ Error en _ensure_folder_exists para {folder_name}: {str(e)}")
             raise Exception(f"Error en _ensure_folder_exists para {folder_name}: {str(e)}")
+
+    def _sanitize_folder_name(self, folder_name):
+        """Limpiar el nombre de carpeta para OneDrive"""
+        import re
+
+        # Caracteres no permitidos en OneDrive: \ / : * ? " < > |
+        # También espacios al inicio/final y algunos caracteres especiales
+        safe_name = re.sub(r'[\\/:*?"<>|]', '_', folder_name)
+
+        # Remover espacios al inicio y final
+        safe_name = safe_name.strip()
+
+        # Remover puntos al final (OneDrive no los permite)
+        safe_name = safe_name.rstrip('.')
+
+        # Si queda vacío, usar un nombre por defecto
+        if not safe_name:
+            safe_name = "DOCUMENTO"
+
+        return safe_name
 
     def _upload_file_to_folder(self, folder_id, headers):
         """Subir archivo a una carpeta específica de OneDrive"""
