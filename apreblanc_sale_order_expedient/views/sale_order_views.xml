@@ -158,46 +158,9 @@
                            options="{'create_text': 'Agregar documento', 'no_open': False}">
                         <tree>
                             <field name="name"/>
-                            <field name="file_type"/>
                             <field name="file_size"/>
-                            <field name="owner"/>
-                            <field name="last_modified"/>
+                            <button name="action_download_file" type="object" string="Descargar" class="btn-primary"/>
                         </tree>
-                        <form>
-                            <sheet>
-                                <group>
-                                    <field name="name"/>
-                                    <field name="file_url"/>
-                                    <field name="file_type"/>
-                                    <field name="file_size"/>
-                                    <field name="owner"/>
-                                    <field name="last_modified"/>
-                                    <field name="is_folder"/>
-                                </group>
-                                <group>
-                                    <div class="o_form_label">
-                                        <strong>Previsualización del archivo</strong>
-                                    </div>
-
-                                    <!-- Mostrar imágenes -->
-                                    <field name="file_data" widget="image" options="{'size': [600, 400]}" nolabel="1"
-                                           invisible="not file_data or 'pdf' in file_type"/>
-
-                                    <!-- Mostrar PDFs como thumbnail -->
-                                    <div invisible="not pdf_thumbnail" class="text-center">
-                                        <field name="pdf_thumbnail" widget="image" options="{'size': [600, 400]}" nolabel="1"/>
-                                        <p class="text-muted mt-2">
-                                            <i class="fa fa-info-circle"/> Vista previa del PDF
-                                        </p>
-                                    </div>
-
-                                    <!-- Mensaje si no hay previsualización -->
-                                    <div invisible="file_data or pdf_thumbnail" class="alert alert-info" role="alert">
-                                        <i class="fa fa-info-circle"/> No hay previsualización disponible
-                                    </div>
-                                </group>
-                            </sheet>
-                        </form>
                     </field>
                 </page>
 
@@ -229,8 +192,7 @@
             <!-- Añadir nuevos campos en la sección de información del expediente -->
             <xpath expr="//group[@name='expedient_info']/group[1]" position="inside">
                 <group>
-                    <field name="onedrive_documents" widget="many2many_tags" options="{'no_create': True}" domain="[('is_folder', '=', False)]"/>
-                    <button name="action_download_onedrive_document" type="object" string="Descargar Documento" class="btn btn-primary"/>
+                    <field name="onedrive_document_ids" widget="many2many_tags" options="{'no_create': True}" domain="[('is_folder', '=', False)]"/>
                 </group>
             </xpath>
 
@@ -416,7 +378,7 @@
             <tree>
                 <field name="name"/>
                 <field name="file_size"/>
-                <button name="action_download" type="object" string="Descargar" class="btn-primary"/>
+                <button name="action_download_file" type="object" string="Descargar" class="btn-primary"/>
             </tree>
         </field>
     </record>
