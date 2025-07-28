@@ -248,42 +248,15 @@ class OneDriveDocument(models.Model):
             raise Exception(f"Error en _rename_folder_if_needed: {str(e)}")
 
     def _get_sale_name(self):
-        """Obtener el nombre de la venta desde el contexto o relación"""
+        """Obtener el nombre de la venta desde el contexto o relación - MEJORADO"""
         import logging
         _logger = logging.getLogger(__name__)
 
-        _logger.info("=== INICIANDO _get_sale_name ===")
+        _logger.info("=== INICIANDO _get_sale_name MEJORADO ===")
         _logger.info(f"Context completo: {self.env.context}")
         _logger.info(f"Document ID: {self.id}")
 
-        # 1. Intentar obtener desde el contexto (cuando se está creando)
-        if self.env.context.get('sale_name'):
-            sale_name = self.env.context.get('sale_name')
-            _logger.info(f"✅ Encontrado sale_name en contexto: {sale_name}")
-            return sale_name
-        else:
-            _logger.info("❌ No hay 'sale_name' en el contexto")
-
-        # 2. Si viene del contexto de una venta específica
-        active_model = self.env.context.get('active_model')
-        active_id = self.env.context.get('active_id')
-        _logger.info(f"Active model: {active_model}, Active ID: {active_id}")
-
-        if active_model == 'sale.order' and active_id:
-            try:
-                sale_order = self.env['sale.order'].browse(active_id)
-                _logger.info(f"Sale order encontrado: {sale_order}, exists: {sale_order.exists()}")
-                if sale_order.exists():
-                    _logger.info(f"✅ Nombre de sale.order desde active_id: {sale_order.name}")
-                    return sale_order.name
-                else:
-                    _logger.info("❌ Sale order no existe")
-            except Exception as e:
-                _logger.error(f"❌ Error buscando sale.order por active_id: {e}")
-        else:
-            _logger.info("❌ No es active_model='sale.order' o no hay active_id")
-
-        # 3. NUEVO: Buscaar en params del contexto
+        # PRIORIDAD 1: Params del contexto (más confiable para ventas actuales)
         params = self.env.context.get('params', {})
         _logger.info(f"Params del contexto: {params}")
 
@@ -293,7 +266,7 @@ class OneDriveDocument(models.Model):
                 sale_order = self.env['sale.order'].browse(sale_id)
                 _logger.info(f"Sale order desde params: {sale_order}, exists: {sale_order.exists()}")
                 if sale_order.exists():
-                    _logger.info(f"✅ Nombre de sale.order desde params: {sale_order.name}")
+                    _logger.info(f"✅ PRIORIDAD 1 - Nombre de sale.order desde params: {sale_order.name}")
                     return sale_order.name
                 else:
                     _logger.info("❌ Sale order desde params no existe")
@@ -302,8 +275,35 @@ class OneDriveDocument(models.Model):
         else:
             _logger.info("❌ No hay model='sale.order' o id en params")
 
-        # 4. Buscar en el contexto otros posibles identificadores de venta
-        context_keys = ['default_sale_order_id', 'sale_order_id']
+        # PRIORIDAD 2: Active model/id del contexto
+        active_model = self.env.context.get('active_model')
+        active_id = self.env.context.get('active_id')
+        _logger.info(f"Active model: {active_model}, Active ID: {active_id}")
+
+        if active_model == 'sale.order' and active_id:
+            try:
+                sale_order = self.env['sale.order'].browse(active_id)
+                _logger.info(f"Sale order encontrado: {sale_order}, exists: {sale_order.exists()}")
+                if sale_order.exists():
+                    _logger.info(f"✅ PRIORIDAD 2 - Nombre de sale.order desde active_id: {sale_order.name}")
+                    return sale_order.name
+                else:
+                    _logger.info("❌ Sale order no existe")
+            except Exception as e:
+                _logger.error(f"❌ Error buscando sale.order por active_id: {e}")
+        else:
+            _logger.info("❌ No es active_model='sale.order' o no hay active_id")
+
+        # PRIORIDAD 3: Sale_name directo en contexto
+        if self.env.context.get('sale_name'):
+            sale_name = self.env.context.get('sale_name')
+            _logger.info(f"✅ PRIORIDAD 3 - Encontrado sale_name en contexto: {sale_name}")
+            return sale_name
+        else:
+            _logger.info("❌ No hay 'sale_name' en el contexto")
+
+        # PRIORIDAD 4: IDs específicos en contexto
+        context_keys = ['default_sale_order_id', 'sale_order_id', 'sale_id']
         for key in context_keys:
             context_value = self.env.context.get(key)
             _logger.info(f"Verificando contexto '{key}': {context_value}")
@@ -312,7 +312,7 @@ class OneDriveDocument(models.Model):
                     sale_order = self.env['sale.order'].browse(context_value)
                     _logger.info(f"Sale order desde {key}: {sale_order}, exists: {sale_order.exists()}")
                     if sale_order.exists():
-                        _logger.info(f"✅ Nombre de sale.order desde {key}: {sale_order.name}")
+                        _logger.info(f"✅ PRIORIDAD 4 - Nombre de sale.order desde {key}: {sale_order.name}")
                         return sale_order.name
                 except Exception as e:
                     _logger.error(f"❌ Error buscando sale.order por {key}: {e}")
@@ -320,23 +320,54 @@ class OneDriveDocument(models.Model):
             else:
                 _logger.info(f"❌ No hay valor en contexto para '{key}'")
 
-        # 5. Intentar obtener desde la relación inversa (si el documento ya está relacionado)
+        # PRIORIDAD 5: Buscar en la URL o referer si está disponible
+        try:
+            request = self.env.context.get('request')
+            if hasattr(request, 'httprequest') and hasattr(request.httprequest, 'referrer'):
+                referrer = request.httprequest.referrer or ''
+                _logger.info(f"Referrer encontrado: {referrer}")
+
+                # Buscar patrón de ID en la URL
+                import re
+                patterns = [
+                    r'/web#.*model=sale\.order.*id=(\d+)',
+                    r'/sale/order/(\d+)',
+                    r'action=\d+.*id=(\d+)',
+                ]
+
+                for pattern in patterns:
+                    match = re.search(pattern, referrer)
+                    if match:
+                        sale_id = int(match.group(1))
+                        _logger.info(f"ID encontrado en URL: {sale_id}")
+
+                        sale_order = self.env['sale.order'].browse(sale_id)
+                        if sale_order.exists():
+                            _logger.info(f"✅ PRIORIDAD 5 - Nombre desde URL: {sale_order.name}")
+                            return sale_order.name
+                        break
+        except Exception as e:
+            _logger.error(f"❌ Error buscando en referrer: {e}")
+
+        # PRIORIDAD 6: Intentar obtener desde la relación inversa (si el documento ya está relacionado)
         try:
             _logger.info(f"Buscando sales que contengan document ID {self.id}")
             # Buscar órdenes de venta que tengan este documento relacionado
             sales = self.env['sale.order'].search([('onedrive_document_ids', 'in', [self.id])])
             _logger.info(f"Sales encontradas con este documento: {sales}")
             if sales:
-                sale_name = sales[0].name
-                _logger.info(f"✅ Nombre desde relación inversa: {sale_name}")
+                # Tomar la más reciente si hay varias
+                sale_order = sales.sorted('create_date', reverse=True)[0]
+                sale_name = sale_order.name
+                _logger.info(f"✅ PRIORIDAD 6 - Nombre desde relación inversa (más reciente): {sale_name}")
                 return sale_name
             else:
                 _logger.info("❌ No hay sales relacionadas con este documento")
         except Exception as e:
             _logger.error(f"❌ Error en búsqueda de relación inversa: {e}")
 
-        # 6. Como último recurso, usar "GENERAL" - NO buscar la última venta automáticamente
-        _logger.warning("⚠️ Usando 'GENERAL' como último recurso - no se encontró ninguna venta")
+        # PRIORIDAD 7: Como último recurso, usar "GENERAL"
+        _logger.warning("⚠️ ÚLTIMO RECURSO - Usando 'GENERAL' - no se encontró ninguna venta")
         return "GENERAL"
 
     def _ensure_folder_exists(self, folder_name, parent_folder_id, headers):
