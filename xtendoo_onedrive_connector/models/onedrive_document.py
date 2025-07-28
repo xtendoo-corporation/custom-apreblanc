@@ -174,12 +174,13 @@ class OneDriveDocument(models.Model):
             # Paso 4: Actualizar los datos en Odoo
             self._update_document_data(file_data)
 
+            # Cerrar formulario y mostrar notificación de éxito
             return {
                 'type': 'ir.actions.client',
                 'tag': 'display_notification',
                 'params': {
-                    'title': '¡Éxito!',
-                    'message': f'Archivo "{self.upload_filename}" subido correctamente a OneDrive en {ROOT_FOLDER_NAME}/{sale_name}/',
+                    'title': '¡Archivo subido exitosamente!',
+                    'message': f'El archivo "{self.upload_filename}" se ha subido correctamente a OneDrive en la carpeta {ROOT_FOLDER_NAME}/{sale_name}/',
                     'type': 'success',
                     'sticky': False,
                 }
@@ -208,9 +209,42 @@ class OneDriveDocument(models.Model):
             sale_order = self.env['sale.order'].browse(self.env.context.get('active_id'))
             return sale_order.name if sale_order.exists() else None
 
-        # Si no se encuentra, usar un nombre genérico con timestamp
-        from datetime import datetime
-        return f"documento_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        # Buscar en el contexto otros posibles identificadores de venta
+        context_keys = ['active_id', 'default_sale_order_id', 'sale_order_id']
+        for key in context_keys:
+            if self.env.context.get(key):
+                try:
+                    sale_order = self.env['sale.order'].browse(self.env.context.get(key))
+                    if sale_order.exists():
+                        return sale_order.name
+                except:
+                    continue
+
+        # Intentar obtener desde expedientes relacionados si existe el campo
+        try:
+            if hasattr(self.env['sale.order'], 'onedrive_document_ids'):
+                # Buscar órdenes de venta que tengan este documento relacionado
+                sales = self.env['sale.order'].search([('onedrive_document_ids', 'in', [self.id])])
+                if sales:
+                    return sales[0].name
+        except:
+            pass
+
+        # Si estamos en el contexto de creación desde expedientes
+        if self.env.context.get('default_partner_id'):
+            # Buscar la última orden de venta de ese partner
+            try:
+                partner_id = self.env.context.get('default_partner_id')
+                latest_sale = self.env['sale.order'].search([
+                    ('partner_id', '=', partner_id)
+                ], order='create_date desc', limit=1)
+                if latest_sale:
+                    return latest_sale.name
+            except:
+                pass
+
+        # Como último recurso, usar "GENERAL" en lugar de timestamp
+        return "GENERAL"
 
     def _ensure_folder_exists(self, folder_name, parent_folder_id, headers):
         """Verificar si existe una carpeta, si no existe la crea"""
