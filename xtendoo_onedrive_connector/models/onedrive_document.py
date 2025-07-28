@@ -248,11 +248,11 @@ class OneDriveDocument(models.Model):
             raise Exception(f"Error en _rename_folder_if_needed: {str(e)}")
 
     def _get_sale_name(self):
-        """Obtener el nombre de la venta desde el contexto o relación - MEJORADO"""
+        """Obtener el nombre de la venta desde el contexto o relación - ULTRA MEJORADO"""
         import logging
         _logger = logging.getLogger(__name__)
 
-        _logger.info("=== INICIANDO _get_sale_name MEJORADO ===")
+        _logger.info("=== INICIANDO _get_sale_name ULTRA MEJORADO ===")
         _logger.info(f"Context completo: {self.env.context}")
         _logger.info(f"Document ID: {self.id}")
 
@@ -320,36 +320,97 @@ class OneDriveDocument(models.Model):
             else:
                 _logger.info(f"❌ No hay valor en contexto para '{key}'")
 
-        # PRIORIDAD 5: Buscar en la URL o referer si está disponible
+        # PRIORIDAD 5: NUEVO - Buscar en session/cookie del navegador
         try:
-            request = self.env.context.get('request')
-            if hasattr(request, 'httprequest') and hasattr(request.httprequest, 'referrer'):
-                referrer = request.httprequest.referrer or ''
-                _logger.info(f"Referrer encontrado: {referrer}")
+            import json
+            session_info = self.env.context.get('session_info', {})
+            _logger.info(f"Session info: {session_info}")
 
-                # Buscar patrón de ID en la URL
-                import re
-                patterns = [
-                    r'/web#.*model=sale\.order.*id=(\d+)',
-                    r'/sale/order/(\d+)',
-                    r'action=\d+.*id=(\d+)',
-                ]
+            # También buscar en todo el contexto por cualquier clave que contenga 'sale'
+            sale_related_keys = [k for k in self.env.context.keys() if 'sale' in k.lower()]
+            _logger.info(f"Claves relacionadas con 'sale' en contexto: {sale_related_keys}")
 
-                for pattern in patterns:
-                    match = re.search(pattern, referrer)
-                    if match:
-                        sale_id = int(match.group(1))
-                        _logger.info(f"ID encontrado en URL: {sale_id}")
-
+            for key in sale_related_keys:
+                value = self.env.context.get(key)
+                if isinstance(value, (int, str)) and str(value).isdigit():
+                    try:
+                        sale_id = int(value)
                         sale_order = self.env['sale.order'].browse(sale_id)
                         if sale_order.exists():
-                            _logger.info(f"✅ PRIORIDAD 5 - Nombre desde URL: {sale_order.name}")
+                            _logger.info(f"✅ PRIORIDAD 5 - Encontrado en {key}: {sale_order.name}")
                             return sale_order.name
-                        break
+                    except:
+                        continue
+        except Exception as e:
+            _logger.error(f"❌ Error en búsqueda de session: {e}")
+
+        # PRIORIDAD 6: Buscar en la URL o referer si está disponible
+        try:
+            # Intentar obtener información de la request HTTP
+            request = self.env.context.get('request')
+            if request:
+                _logger.info("Request encontrado en contexto")
+
+                # Buscar en headers HTTP
+                if hasattr(request, 'httprequest'):
+                    referrer = getattr(request.httprequest, 'referrer', '') or ''
+                    url = getattr(request.httprequest, 'url', '') or ''
+                    _logger.info(f"Referrer: {referrer}")
+                    _logger.info(f"URL actual: {url}")
+
+                    # Buscar patrón de ID en ambas URLs
+                    import re
+                    patterns = [
+                        r'/web#.*model=sale\.order.*id=(\d+)',
+                        r'/sale/order/(\d+)',
+                        r'action=\d+.*id=(\d+)',
+                        r'id=(\d+).*model=sale\.order',
+                        r'sale.*order.*(\d+)',
+                    ]
+
+                    for url_to_check in [referrer, url]:
+                        if url_to_check:
+                            for pattern in patterns:
+                                match = re.search(pattern, url_to_check)
+                                if match:
+                                    sale_id = int(match.group(1))
+                                    _logger.info(f"ID encontrado en URL '{url_to_check}': {sale_id}")
+
+                                    sale_order = self.env['sale.order'].browse(sale_id)
+                                    if sale_order.exists():
+                                        _logger.info(f"✅ PRIORIDAD 6 - Nombre desde URL: {sale_order.name}")
+                                        return sale_order.name
+                                    break
         except Exception as e:
             _logger.error(f"❌ Error buscando en referrer: {e}")
 
-        # PRIORIDAD 6: Intentar obtener desde la relación inversa (si el documento ya está relacionado)
+        # PRIORIDAD 7: BÚSQUEDA AGRESIVA - Buscar la venta más reciente visitada por el usuario
+        try:
+            _logger.info("Buscando la venta más reciente del usuario...")
+            user_id = self.env.uid
+
+            # Buscar en el historial de accesos del usuario (si existe el modelo de log)
+            try:
+                # Buscar órdenes de venta modificadas recientemente por este usuario
+                recent_sales = self.env['sale.order'].search([
+                    ('write_uid', '=', user_id)
+                ], order='write_date desc', limit=5)
+
+                _logger.info(f"Ventas recientes del usuario: {[s.name for s in recent_sales]}")
+
+                if recent_sales:
+                    # Tomar la más reciente
+                    sale_order = recent_sales[0]
+                    _logger.info(f"✅ PRIORIDAD 7 - Venta más reciente: {sale_order.name}")
+                    return sale_order.name
+
+            except Exception as e:
+                _logger.error(f"Error buscando ventas recientes: {e}")
+
+        except Exception as e:
+            _logger.error(f"❌ Error en búsqueda agresiva: {e}")
+
+        # PRIORIDAD 8: Intentar obtener desde la relación inversa (si el documento ya está relacionado)
         try:
             _logger.info(f"Buscando sales que contengan document ID {self.id}")
             # Buscar órdenes de venta que tengan este documento relacionado
@@ -359,16 +420,21 @@ class OneDriveDocument(models.Model):
                 # Tomar la más reciente si hay varias
                 sale_order = sales.sorted('create_date', reverse=True)[0]
                 sale_name = sale_order.name
-                _logger.info(f"✅ PRIORIDAD 6 - Nombre desde relación inversa (más reciente): {sale_name}")
+                _logger.info(f"✅ PRIORIDAD 8 - Nombre desde relación inversa (más reciente): {sale_name}")
                 return sale_name
             else:
                 _logger.info("❌ No hay sales relacionadas con este documento")
         except Exception as e:
             _logger.error(f"❌ Error en búsqueda de relación inversa: {e}")
 
-        # PRIORIDAD 7: Como último recurso, usar "GENERAL"
-        _logger.warning("⚠️ ÚLTIMO RECURSO - Usando 'GENERAL' - no se encontró ninguna venta")
-        return "GENERAL"
+        # PRIORIDAD 9: Como último recurso, OBLIGAR al usuario a especificar la venta
+        _logger.error("⚠️ NO SE ENCONTRÓ NINGUNA VENTA - Esto NO debería pasar si viene desde una venta")
+
+        # En lugar de devolver "GENERAL", lanzar un error que fuerce al usuario a especificar
+        raise Exception(
+            "No se pudo determinar la venta desde la cual se está subiendo el documento. "
+            "Por favor, asegúrate de estar en la vista de una venta específica antes de subir documentos."
+        )
 
     def _ensure_folder_exists(self, folder_name, parent_folder_id, headers):
         """Verificar si existe una carpeta, si no existe la crea"""
