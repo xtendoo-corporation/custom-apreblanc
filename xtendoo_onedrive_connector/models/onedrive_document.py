@@ -281,18 +281,43 @@ class OneDriveDocument(models.Model):
             # Obtener URL de descarga
             download_url = file_data.get('@microsoft.graph.downloadUrl', '')
 
+            # Convertir fecha de OneDrive al formato que espera Odoo
+            last_modified = None
+            if file_data.get('lastModifiedDateTime'):
+                try:
+                    from datetime import datetime
+                    # OneDrive devuelve fecha en formato ISO: '2025-07-28T09:17:20Z'
+                    iso_date = file_data.get('lastModifiedDateTime')
+                    # Remover la 'Z' del final si existe
+                    if iso_date.endswith('Z'):
+                        iso_date = iso_date[:-1]
+                    # Convertir de ISO a datetime
+                    dt_object = datetime.fromisoformat(iso_date)
+                    # Convertir a string en formato que espera Odoo
+                    last_modified = dt_object.strftime('%Y-%m-%d %H:%M:%S')
+                except Exception as date_error:
+                    import logging
+                    _logger = logging.getLogger(__name__)
+                    _logger.warning("Error convirtiendo fecha %s: %s", file_data.get('lastModifiedDateTime'), str(date_error))
+                    last_modified = None
+
             # Actualizar campos del documento
-            self.write({
+            update_data = {
                 'name': file_data.get('name', self.upload_filename),
                 'onedrive_id': file_data.get('id', ''),
                 'file_url': download_url,
                 'file_size': file_data.get('size', 0),
                 'file_type': file_data.get('file', {}).get('mimeType', ''),
                 'owner': file_data.get('createdBy', {}).get('user', {}).get('displayName', ''),
-                'last_modified': file_data.get('lastModifiedDateTime', ''),
                 'is_folder': False,
                 'file_data': self.upload_file,  # Mantener una copia local
-            })
+            }
+
+            # Solo agregar last_modified si se pudo convertir correctamente
+            if last_modified:
+                update_data['last_modified'] = last_modified
+
+            self.write(update_data)
 
             # Limpiar campos de upload
             self.upload_file = False
