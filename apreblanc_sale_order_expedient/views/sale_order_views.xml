@@ -228,8 +228,10 @@
 
             <!-- Añadir nuevos campos en la sección de información del expediente -->
             <xpath expr="//group[@name='expedient_info']/group[1]" position="inside">
-                <field name="parts_involved" readonly="expedient_state in ['aprobada', 'rechazada'] and not is_expedient_admin"/>
-                <field name="account_numbers" readonly="expedient_state in ['aprobada', 'rechazada'] and not is_expedient_admin"/>
+                <group>
+                    <field name="onedrive_documents" widget="many2many_tags" options="{'no_create': True}"/>
+                    <button name="action_download_onedrive_document" type="object" string="Descargar Documento" class="btn btn-primary"/>
+                </group>
             </xpath>
 
             <xpath expr="//group[@name='expedient_info']/group[2]" position="inside">
