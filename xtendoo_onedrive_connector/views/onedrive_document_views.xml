@@ -55,9 +55,10 @@
         <field name="name">onedrive.document.tree</field>
         <field name="model">onedrive.document</field>
         <field name="arch" type="xml">
-            <tree string="Documentos OneDrive">
+            <tree string="Documentos OneDrive" __validate__="1">
                 <field name="name"/>
                 <field name="file_type"/>
+                <field name="file_url"/>
                 <field name="file_size"/>
                 <field name="owner"/>
                 <field name="last_modified"/>
