@@ -162,15 +162,15 @@
                <!-- Pestaña para documentos OneDrive -->
                 <page name="onedrive_documents" string="Documentos OneDrive" invisible="expedient_type == 'none' or not context.get('show_as_expedient', False)">
                     <field name="onedrive_document_ids"
-                           widget="many2many_list"
+                           widget="many2many"
                            nolabel="1"
                            readonly="expedient_state in ['aprobada', 'rechazada'] and not is_expedient_admin"
                            options="{'create_text': 'Agregar documento', 'no_open': False}">
-                        <form>
+                        <tree>
                             <field name="name"/>
                             <field name="file_size"/>
                             <button name="action_download_file" type="object" string="Descargar" class="btn-primary"/>
-                        </form>
+                        </tree>
                     </field>
                 </page>
 
