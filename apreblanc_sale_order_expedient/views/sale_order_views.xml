@@ -161,7 +161,7 @@
 
                <!-- Pestaña para documentos OneDrive -->
                 <page name="onedrive_documents" string="Documentos OneDrive" invisible="expedient_type == 'none' or not context.get('show_as_expedient', False)">
-                    <field name="onedrive_document_id"
+                    <field name="onedrive_document_ids"
                            widget="many2one"
                            nolabel="1"
                            readonly="expedient_state in ['aprobada', 'rechazada'] and not is_expedient_admin"
