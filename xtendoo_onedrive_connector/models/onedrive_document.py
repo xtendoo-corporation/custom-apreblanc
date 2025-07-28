@@ -181,6 +181,9 @@ class OneDriveDocument(models.Model):
                     }
                 }
 
+            # Renombrar la carpeta si su nombre no coincide con el de la venta
+            self._rename_folder_if_needed(sale_folder_id, sale_name, headers)
+
             # Paso 3: Subir el archivo a la carpeta de la venta
             file_data = self._upload_file_to_folder(sale_folder_id, headers)
             if not file_data:
@@ -221,6 +224,31 @@ class OneDriveDocument(models.Model):
                     'sticky': True,
                 }
             }
+
+    def _rename_folder_if_needed(self, folder_id, desired_name, headers):
+        """Renombrar una carpeta en OneDrive si su nombre no coincide con el deseado"""
+        try:
+            # Obtener información de la carpeta actual
+            folder_url = f'https://graph.microsoft.com/v1.0/me/drive/items/{folder_id}'
+            response = requests.get(folder_url, headers=headers, timeout=30)
+
+            if response.status_code == 200:
+                folder_data = response.json()
+                current_name = folder_data.get('name', '')
+
+                # Renombrar solo si el nombre actual no coincide con el deseado
+                if current_name != desired_name:
+                    rename_data = {"name": desired_name}
+                    rename_response = requests.patch(folder_url, headers=headers, json=rename_data, timeout=30)
+
+                    if rename_response.status_code not in [200, 204]:
+                        raise Exception(f"Error renombrando carpeta: {rename_response.status_code} - {rename_response.text}")
+
+            else:
+                raise Exception(f"Error obteniendo información de la carpeta: {response.status_code} - {response.text}")
+
+        except Exception as e:
+            raise Exception(f"Error en _rename_folder_if_needed: {str(e)}")
 
     def _get_sale_name(self):
         """Obtener el nombre de la venta desde el contexto o relación"""
