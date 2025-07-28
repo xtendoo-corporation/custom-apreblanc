@@ -62,6 +62,7 @@
                 <field name="file_size"/>
                 <field name="owner"/>
                 <field name="last_modified"/>
+                <field name="is_folder"/>
                 <button name="action_download_file"
                         type="object"
                         string="Descargar"
