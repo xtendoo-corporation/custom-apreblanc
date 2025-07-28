@@ -198,13 +198,10 @@ class SaleOrder(models.Model):
     )
 
     # Relación con documentos de OneDrive
-    onedrive_document_ids = fields.Many2many(
+    onedrive_document_id = fields.Many2one(
         'onedrive.document',
-        'sale_order_onedrive_document_rel',
-        'sale_order_id',
-        'onedrive_document_id',
-        string='Documentos OneDrive',
-        help='Documentos de OneDrive relacionados con este pedido',
+        string='Documento OneDrive',
+        help='Documento de OneDrive relacionado con este pedido',
         domain=[('is_folder', '=', False)]
     )
 
