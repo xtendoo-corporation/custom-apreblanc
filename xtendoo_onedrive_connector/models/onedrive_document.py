@@ -437,7 +437,7 @@ class OneDriveDocument(models.Model):
         )
 
     def _ensure_folder_exists(self, folder_name, parent_folder_id, headers):
-        """Verificar si existe una carpeta, si no existe la crea"""
+        """Verificar si existe una carpeta, si no existe la crea - CORREGIDO PARA USAR VENTA ACTUAL"""
         import logging
         _logger = logging.getLogger(__name__)
 
@@ -456,7 +456,7 @@ class OneDriveDocument(models.Model):
             safe_folder_name = self._sanitize_folder_name(folder_name)
             _logger.info(f"Nombre original: '{folder_name}' -> Nombre seguro: '{safe_folder_name}'")
 
-            # Primero obtener TODAS las carpetas y filtrar manualmente para ser más preciso
+            # Obtener TODAS las carpetas para buscar la correcta
             _logger.info(f"Obteniendo lista de carpetas desde: {search_url}")
             response = requests.get(search_url, headers=headers, timeout=30)
 
@@ -475,10 +475,10 @@ class OneDriveDocument(models.Model):
                     _logger.info(f"Comparando: '{safe_folder_name}' == '{folder_name_found}'")
                     if folder_name_found == safe_folder_name:
                         folder_id = folder['id']
-                        _logger.info(f"✅ Carpeta encontrada con ID: {folder_id}")
+                        _logger.info(f"✅ Carpeta encontrada: '{folder_name_found}' con ID: {folder_id}")
                         return folder_id
 
-                _logger.info("❌ No se encontró carpeta con nombre exacto")
+                _logger.info(f"❌ No se encontró carpeta '{safe_folder_name}' - se creará nueva")
             else:
                 _logger.error(f"Error obteniendo lista de carpetas: {response.status_code} - {response.text}")
 
@@ -487,7 +487,7 @@ class OneDriveDocument(models.Model):
             create_data = {
                 "name": safe_folder_name,
                 "folder": {},
-                "@microsoft.graph.conflictBehavior": "fail"  # Fallar si ya existe para evitar duplicados
+                "@microsoft.graph.conflictBehavior": "rename"  # Renombrar automáticamente si hay conflicto
             }
 
             create_response = requests.post(search_url, headers=headers, json=create_data, timeout=30)
@@ -495,21 +495,9 @@ class OneDriveDocument(models.Model):
 
             if create_response.status_code == 201:
                 folder_id = create_response.json()['id']
-                _logger.info(f"✅ Carpeta creada exitosamente con ID: {folder_id}")
+                created_name = create_response.json().get('name', safe_folder_name)
+                _logger.info(f"✅ Carpeta creada exitosamente: '{created_name}' con ID: {folder_id}")
                 return folder_id
-            elif create_response.status_code == 409:
-                # Conflicto - la carpeta ya existe, buscar nuevamente
-                _logger.warning("Conflicto 409 - la carpeta ya existe, buscando nuevamente...")
-                response = requests.get(search_url, headers=headers, timeout=30)
-                if response.status_code == 200:
-                    data = response.json()
-                    folders = [item for item in data.get('value', []) if item.get('folder') is not None]
-                    for folder in folders:
-                        if folder.get('name', '') == safe_folder_name:
-                            folder_id = folder['id']
-                            _logger.info(f"✅ Carpeta encontrada después del conflicto con ID: {folder_id}")
-                            return folder_id
-                raise Exception(f"Carpeta {safe_folder_name} causó conflicto pero no se puede encontrar")
             else:
                 raise Exception(f"Error creando carpeta {safe_folder_name}: {create_response.status_code} - {create_response.text}")
 
