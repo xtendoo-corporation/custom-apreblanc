@@ -68,7 +68,7 @@ class OneDriveDocument(models.Model):
             }
 
     def action_download_file(self):
-        """Descargar archivo desde OneDrive usando token de autenticación"""
+        """Descargar archivo desde OneDrive usando el mismo sistema que la sincronización"""
         if not self.file_url or self.is_folder:
             return {
                 'type': 'ir.actions.client',
@@ -84,33 +84,22 @@ class OneDriveDocument(models.Model):
         try:
             # Si ya tenemos el archivo almacenado localmente, usar la URL de Odoo
             if self.file_data:
+                import urllib.parse
+                filename = urllib.parse.quote(self.name)
                 return {
                     'type': 'ir.actions.act_url',
-                    'url': f'/web/content/onedrive.document/{self.id}/file_data/{self.name}?download=true',
+                    'url': f'/web/content/onedrive.document/{self.id}/file_data/{filename}?download=true',
                     'target': 'self',
                 }
 
-            # Si no lo tenemos localmente, descargar desde OneDrive usando token
+            # Si no lo tenemos localmente, usar el servicio de OneDrive para obtener token y descargar
             else:
-                # Obtener token de acceso válido
                 try:
-                    # Buscar configuración de OneDrive
-                    config = self.env['ir.config_parameter'].sudo()
-                    access_token = config.get_param('onedrive.access_token')
+                    # Usar exactamente el mismo servicio que funciona en la sincronización
+                    onedrive_service = self.env['onedrive.service']
+                    access_token = onedrive_service._get_token()
 
-                    if not access_token:
-                        return {
-                            'type': 'ir.actions.client',
-                            'tag': 'display_notification',
-                            'params': {
-                                'title': 'Error de Configuración',
-                                'message': 'No se encontró token de acceso a OneDrive. Por favor, configura la conexión con OneDrive.',
-                                'type': 'warning',
-                                'sticky': True,
-                            }
-                        }
-
-                    # Descargar el archivo usando el token
+                    # Usar el token para descargar el archivo
                     headers = {
                         'Authorization': f'Bearer {access_token}',
                         'User-Agent': 'Mozilla/5.0 (compatible; Odoo OneDrive Integration)',
@@ -119,11 +108,10 @@ class OneDriveDocument(models.Model):
                     response = requests.get(self.file_url, headers=headers, timeout=30)
 
                     if response.status_code == 200:
-                        # Crear respuesta de descarga directa
                         import base64
                         import urllib.parse
 
-                        # Guardar el archivo temporalmente en Odoo para la descarga
+                        # Guardar el archivo para futuras descargas
                         self.file_data = base64.b64encode(response.content)
 
                         # Redirigir a la URL de descarga de Odoo
@@ -158,13 +146,13 @@ class OneDriveDocument(models.Model):
                             }
                         }
 
-                except requests.exceptions.RequestException as e:
+                except Exception as service_error:
                     return {
                         'type': 'ir.actions.client',
                         'tag': 'display_notification',
                         'params': {
-                            'title': 'Error de Conexión',
-                            'message': f'Error de conexión con OneDrive: {str(e)}',
+                            'title': 'Error de Autenticación',
+                            'message': f'Error obteniendo token de OneDrive: {str(service_error)}',
                             'type': 'danger',
                             'sticky': True,
                         }
