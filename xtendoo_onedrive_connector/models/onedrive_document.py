@@ -248,139 +248,66 @@ class OneDriveDocument(models.Model):
             raise Exception(f"Error en _rename_folder_if_needed: {str(e)}")
 
     def _get_sale_name(self):
-        """Obtener el nombre de la venta actual - CAPTURA DIRECTA DESDE NAVEGADOR"""
+        """Obtener el nombre de la venta actual - CON JAVASCRIPT BROWSER CAPTURE"""
         import logging
         _logger = logging.getLogger(__name__)
 
-        _logger.info("=== INICIANDO _get_sale_name - CAPTURA DIRECTA ===")
+        _logger.info("=== INICIANDO _get_sale_name - JAVASCRIPT CAPTURE ===")
 
-        # PRIORIDAD 0: CAPTURA ULTRA-AGRESIVA DESDE REQUEST HTTP
+        # PRIORIDAD 0: CAPTURAR DESDE JAVASCRIPT DEL NAVEGADOR
         try:
-            import odoo.http
-            import re
-
-            # Obtener request de todas las fuentes posibles
+            # Intentar obtener el ID que el JavaScript capturó desde el navegador
             request_obj = None
 
-            # Intentar desde threading local primero
+            # Obtener request
+            import odoo.http
             if hasattr(odoo.http, 'request') and odoo.http.request:
                 request_obj = odoo.http.request
-                _logger.info("🔍 Request obtenido desde odoo.http.request")
-
-            # Si no, desde contexto
             elif self.env.context.get('request'):
                 request_obj = self.env.context.get('request')
-                _logger.info("🔍 Request obtenido desde contexto")
 
             if request_obj and hasattr(request_obj, 'httprequest'):
-                # Analizar TODAS las fuentes de información del request
-                analysis_sources = []
-
-                # 1. URL actual
-                current_url = getattr(request_obj.httprequest, 'url', '')
-                if current_url:
-                    analysis_sources.append(('current_url', current_url))
-
-                # 2. Referrer
-                referrer = getattr(request_obj.httprequest, 'referrer', '')
-                if referrer:
-                    analysis_sources.append(('referrer', referrer))
-
-                # 3. Headers
+                # Buscar en headers o cookies si el JavaScript almacenó el ID
                 headers = getattr(request_obj.httprequest, 'headers', {})
-                if 'Referer' in headers:
-                    analysis_sources.append(('header_referer', headers['Referer']))
+                cookies = getattr(request_obj.httprequest, 'cookies', {})
 
-                # 4. Args (parámetros GET)
-                args = getattr(request_obj.httprequest, 'args', {})
-                if args:
-                    if 'id' in args and ('model' not in args or args.get('model') == 'sale.order'):
-                        try:
-                            potential_id = int(args['id'])
-                            analysis_sources.append(('args_id', f"id={potential_id}"))
-                        except (ValueError, TypeError):
-                            pass
+                # El JavaScript puede haber almacenado el ID en una cookie o header
+                js_sale_id = None
 
-                # 5. Form data (parámetros POST)
-                form_data = getattr(request_obj.httprequest, 'form', {})
-                if form_data:
-                    if 'id' in form_data:
-                        try:
-                            potential_id = int(form_data['id'])
-                            analysis_sources.append(('form_id', f"id={potential_id}"))
-                        except (ValueError, TypeError):
-                            pass
+                # Buscar en cookies primero
+                if 'odoo_current_sale_id' in cookies:
+                    try:
+                        js_sale_id = int(cookies['odoo_current_sale_id'])
+                        _logger.info(f"🍪 ID capturado desde cookie JavaScript: {js_sale_id}")
+                    except (ValueError, TypeError):
+                        pass
 
-                # 6. JSON data en el body
-                try:
-                    if hasattr(request_obj.httprequest, 'get_json'):
-                        json_data = request_obj.httprequest.get_json(silent=True)
-                        if json_data and isinstance(json_data, dict):
-                            # Buscar ID en datos JSON
-                            if 'params' in json_data and isinstance(json_data['params'], dict):
-                                params = json_data['params']
-                                if params.get('model') == 'sale.order' and 'id' in params:
-                                    analysis_sources.append(('json_params', f"id={params['id']}"))
-                except Exception:
-                    pass
-
-                _logger.info(f"🔍 Fuentes de análisis: {[s[0] for s in analysis_sources]}")
-
-                # Analizar cada fuente con patrones mejorados
-                found_ids = []
-                patterns = [
-                    r'id=(\d+).*model=sale\.order',
-                    r'model=sale\.order.*id=(\d+)',
-                    r'/web#.*id=(\d+).*model=sale\.order',
-                    r'/web#.*model=sale\.order.*id=(\d+)',
-                    r'action=\d+.*id=(\d+)',
-                    r'res_id=(\d+)',
-                    r'id=(\d+)',  # Último patrón más general
-                ]
-
-                for source_name, content in analysis_sources:
-                    _logger.info(f"🔍 Analizando {source_name}: {content}")
-
-                    for pattern in patterns:
-                        matches = re.findall(pattern, content)
-                        for match in matches:
+                # Si no está en cookies, buscar en headers personalizados
+                if not js_sale_id:
+                    for header_name, header_value in headers.items():
+                        if 'sale' in header_name.lower() and 'id' in header_name.lower():
                             try:
-                                sale_id = int(match)
-                                found_ids.append({
-                                    'id': sale_id,
-                                    'source': source_name,
-                                    'pattern': pattern,
-                                    'confidence': self._calculate_confidence(source_name, pattern)
-                                })
-                                _logger.info(f"🎯 ID {sale_id} encontrado en {source_name} con patrón {pattern}")
+                                js_sale_id = int(header_value)
+                                _logger.info(f"📡 ID capturado desde header {header_name}: {js_sale_id}")
+                                break
                             except (ValueError, TypeError):
                                 continue
 
-                # Si encontramos IDs, elegir el de mayor confianza
-                if found_ids:
-                    # Ordenar por confianza
-                    found_ids.sort(key=lambda x: x['confidence'], reverse=True)
-                    best_match = found_ids[0]
-                    sale_id = best_match['id']
-
-                    _logger.info(f"🎯 MEJOR MATCH: ID {sale_id} desde {best_match['source']} (confianza: {best_match['confidence']})")
-
-                    # Verificar en BD con entorno aislado
+                # Verificar el ID capturado
+                if js_sale_id:
                     with self.env.registry.cursor() as new_cr:
                         new_env = self.env(cr=new_cr)
-                        sale_order = new_env['sale.order'].browse(sale_id)
+                        sale_order = new_env['sale.order'].browse(js_sale_id)
                         if sale_order.exists():
-                            _logger.info(f"✅ PRIORIDAD 0 - Sale order DIRECTO: {sale_order.name}")
+                            _logger.info(f"✅ PRIORIDAD 0 - Sale order desde JAVASCRIPT: {sale_order.name}")
                             return sale_order.name
                         else:
-                            _logger.warning(f"⚠️ ID {sale_id} no existe en BD")
+                            _logger.warning(f"⚠️ ID {js_sale_id} desde JavaScript no existe en BD")
 
         except Exception as e:
-            _logger.error(f"❌ Error en captura directa: {e}")
-            import traceback
-            _logger.error(f"Traceback: {traceback.format_exc()}")
+            _logger.error(f"❌ Error capturando desde JavaScript: {e}")
 
-        # PRIORIDAD 1: ANÁLISIS TEMPORAL PARA DETECTAR CONTEXTO OBSOLETO
+        # PRIORIDAD 1: ANÁLISIS ULTRA-AGRESIVO DEL REQUEST (método anterior mejorado)
         try:
             params = self.env.context.get('params', {})
             _logger.info(f"Params del contexto: {params}")

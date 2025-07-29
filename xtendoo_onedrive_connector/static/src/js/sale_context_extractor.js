@@ -1,184 +1,304 @@
 /** @odoo-module **/
 
 import { registry } from "@web/core/registry";
-import { browser } from "@web/core/browser/browser";
 
 /**
- * Extractor de contexto de venta para evitar problemas de cache
+ * Servicio para capturar el contexto real de venta desde el navegador
  */
-export class SaleContextExtractor {
+class SaleContextService {
 
-    /**
-     * Extraer ID de venta desde la URL actual del navegador
-     */
-    static extractSaleIdFromCurrentURL() {
-        try {
+    start() {
+        this.setupURLMonitoring();
+        return this;
+    }
+
+    setupURLMonitoring() {
+        // Monitorear cambios en la URL constantemente
+        let lastURL = window.location.href;
+        let lastHash = window.location.hash;
+
+        // Actualizar inmediatamente al cargar
+        this.updateCurrentSaleContext();
+
+        // Monitorear cada 500ms para capturar cambios rápidos
+        setInterval(() => {
             const currentURL = window.location.href;
             const currentHash = window.location.hash;
 
-            console.log('🔍 SaleContextExtractor - URL actual:', currentURL);
-            console.log('🔍 SaleContextExtractor - Hash actual:', currentHash);
+            if (currentURL !== lastURL || currentHash !== lastHash) {
+                lastURL = currentURL;
+                lastHash = currentHash;
+                this.updateCurrentSaleContext();
+            }
+        }, 500);
 
-            // Patrones para buscar ID de sale.order en la URL
+        // También escuchar eventos de navegación
+        window.addEventListener('popstate', () => {
+            setTimeout(() => this.updateCurrentSaleContext(), 100);
+        });
+
+        // Escuchar cambios en el DOM que indiquen navegación
+        const observer = new MutationObserver(() => {
+            this.updateCurrentSaleContext();
+        });
+
+        // Observar cambios en elementos que contienen información de la vista actual
+        const targetNode = document.querySelector('body');
+        if (targetNode) {
+            observer.observe(targetNode, {
+                attributes: true,
+                attributeFilter: ['data-view-id', 'data-model', 'data-res-id'],
+                subtree: true
+            });
+        }
+    }
+
+    updateCurrentSaleContext() {
+        const saleId = this.extractCurrentSaleId();
+        if (saleId) {
+            this.storeSaleContext(saleId);
+            console.log(`🎯 SaleContext actualizado: ID ${saleId}`);
+        }
+    }
+
+    extractCurrentSaleId() {
+        try {
+            const url = window.location.href;
+            const hash = window.location.hash;
+
+            console.log('🔍 Extracting from URL:', url);
+            console.log('🔍 Extracting from Hash:', hash);
+
+            // Patrones para detectar sale.order
             const patterns = [
-                /id=(\d+).*model=sale\.order/,
-                /model=sale\.order.*id=(\d+)/,
-                /\/web#.*id=(\d+).*model=sale\.order/,
-                /\/web#.*model=sale\.order.*id=(\d+)/,
-                /action=\d+.*id=(\d+)/,
-                /res_id=(\d+).*res_model=sale\.order/,
-                /res_model=sale\.order.*res_id=(\d+)/,
+                // Patrones específicos para sale.order
+                /[#&?]id=(\d+).*model=sale\.order/,
+                /[#&?]model=sale\.order.*id=(\d+)/,
+                /[#&?]res_model=sale\.order.*res_id=(\d+)/,
+                /[#&?]res_id=(\d+).*res_model=sale\.order/,
+                // Patrones en el hash
+                /#.*action=\d+.*id=(\d+)/,
+                /#.*id=(\d+).*action=\d+/,
+                // Patrón más general pero con validación
+                /[#&?]id=(\d+)/
             ];
 
-            // Buscar en URL completa
+            // Buscar en URL completa primero
             for (const pattern of patterns) {
-                const match = currentURL.match(pattern);
+                const match = url.match(pattern);
                 if (match) {
-                    const saleId = parseInt(match[1]);
-                    console.log('✅ SaleContextExtractor - ID encontrado en URL:', saleId);
-                    return saleId;
-                }
-            }
+                    const id = parseInt(match[1]);
+                    console.log(`✅ ID ${id} encontrado en URL con patrón:`, pattern.source);
 
-            // Buscar específicamente en el hash
-            if (currentHash) {
-                for (const pattern of patterns) {
-                    const match = currentHash.match(pattern);
-                    if (match) {
-                        const saleId = parseInt(match[1]);
-                        console.log('✅ SaleContextExtractor - ID encontrado en hash:', saleId);
-                        return saleId;
+                    // Validar que realmente estamos en una vista de sale.order
+                    if (this.validateSaleOrderContext(url, hash)) {
+                        return id;
                     }
                 }
             }
 
-            console.log('❌ SaleContextExtractor - No se encontró ID en URL');
+            // Si no encontramos en URL, buscar en elementos del DOM
+            const domId = this.extractFromDOM();
+            if (domId) {
+                console.log(`✅ ID ${domId} encontrado en DOM`);
+                return domId;
+            }
+
+            console.log('❌ No se encontró ID de sale.order');
             return null;
 
         } catch (error) {
-            console.error('❌ SaleContextExtractor - Error:', error);
+            console.error('❌ Error extrayendo sale ID:', error);
             return null;
         }
     }
 
-    /**
-     * Extraer ID desde el estado de Odoo web client
-     */
-    static extractSaleIdFromOdooState() {
-        try {
-            // Intentar obtener desde el estado actual de Odoo
-            if (window.odoo && window.odoo.__DEBUG__) {
-                const debug = window.odoo.__DEBUG__;
-                if (debug.services && debug.services.action) {
-                    const actionService = debug.services.action;
-                    const currentAction = actionService.currentController;
+    validateSaleOrderContext(url, hash) {
+        // Verificar que estamos realmente en un contexto de sale.order
+        const indicators = [
+            'model=sale.order',
+            'res_model=sale.order',
+            '/sale/',
+            'sale.order'
+        ];
 
-                    if (currentAction && currentAction.props) {
-                        const props = currentAction.props;
-                        if (props.resModel === 'sale.order' && props.resId) {
-                            console.log('✅ SaleContextExtractor - ID desde Odoo state:', props.resId);
-                            return props.resId;
+        const fullContext = url + hash;
+        return indicators.some(indicator => fullContext.includes(indicator));
+    }
+
+    extractFromDOM() {
+        try {
+            // Buscar en atributos del DOM que contengan información del registro actual
+            const selectors = [
+                '[data-res-id]',
+                '[data-record-id]',
+                '.o_form_view[data-res-id]',
+                '.o_list_view .o_data_row.o_selected',
+                '.breadcrumb .active'
+            ];
+
+            for (const selector of selectors) {
+                const elements = document.querySelectorAll(selector);
+                for (const el of elements) {
+                    const resId = el.getAttribute('data-res-id') ||
+                                 el.getAttribute('data-record-id') ||
+                                 el.getAttribute('data-id');
+
+                    if (resId && !isNaN(resId)) {
+                        // Verificar que el contexto del elemento sea sale.order
+                        const model = el.getAttribute('data-model') ||
+                                     el.getAttribute('data-res-model') ||
+                                     document.querySelector('[data-model="sale.order"]');
+
+                        if (model && (model === 'sale.order' || model.includes('sale.order'))) {
+                            return parseInt(resId);
                         }
                     }
                 }
             }
 
-            // Intentar desde variables globales de Odoo
-            if (window.odoo && window.odoo.action_registry) {
-                // Buscar en registry
-                console.log('🔍 SaleContextExtractor - Buscando en registry...');
-            }
-
-            return null;
-
-        } catch (error) {
-            console.error('❌ SaleContextExtractor - Error en Odoo state:', error);
-            return null;
-        }
-    }
-
-    /**
-     * Método principal para obtener el ID de venta actual
-     */
-    static getCurrentSaleId() {
-        // Prioridad 1: URL actual
-        let saleId = this.extractSaleIdFromCurrentURL();
-        if (saleId) return saleId;
-
-        // Prioridad 2: Estado de Odoo
-        saleId = this.extractSaleIdFromOdooState();
-        if (saleId) return saleId;
-
-        console.log('❌ SaleContextExtractor - No se pudo obtener ID de venta');
-        return null;
-    }
-
-    /**
-     * Almacenar ID en sessionStorage para persistencia
-     */
-    static storeSaleId(saleId) {
-        try {
-            const timestamp = Date.now();
-            const data = {
-                saleId: saleId,
-                timestamp: timestamp,
-                url: window.location.href
-            };
-            sessionStorage.setItem('current_sale_context', JSON.stringify(data));
-            console.log('💾 SaleContextExtractor - ID almacenado:', data);
-        } catch (error) {
-            console.error('❌ SaleContextExtractor - Error almacenando:', error);
-        }
-    }
-
-    /**
-     * Recuperar ID desde sessionStorage
-     */
-    static getStoredSaleId() {
-        try {
-            const stored = sessionStorage.getItem('current_sale_context');
-            if (stored) {
-                const data = JSON.parse(stored);
-                const ageMinutes = (Date.now() - data.timestamp) / (1000 * 60);
-
-                // Solo usar si es menor a 5 minutos
-                if (ageMinutes < 5) {
-                    console.log('📂 SaleContextExtractor - ID recuperado del storage:', data.saleId);
-                    return data.saleId;
+            // Buscar en la barra de título o breadcrumb
+            const titleElements = document.querySelectorAll('.breadcrumb .active, .o_form_view .o_control_panel h1');
+            for (const titleEl of titleElements) {
+                const text = titleEl.textContent || '';
+                const match = text.match(/S\d{5}/); // Patrón típico de sale orders
+                if (match) {
+                    // Esto es solo el nombre, necesitaríamos hacer una búsqueda inversa
+                    console.log('🔍 Nombre de venta encontrado en DOM:', match[0]);
                 }
             }
+
             return null;
         } catch (error) {
-            console.error('❌ SaleContextExtractor - Error recuperando:', error);
+            console.error('❌ Error extrayendo del DOM:', error);
             return null;
         }
+    }
+
+    storeSaleContext(saleId) {
+        try {
+            const context = {
+                saleId: saleId,
+                timestamp: Date.now(),
+                url: window.location.href,
+                hash: window.location.hash,
+                userAgent: navigator.userAgent.substring(0, 100) // Identificador de sesión
+            };
+
+            // Almacenar en múltiples lugares para redundancia
+            sessionStorage.setItem('odoo_current_sale_id', saleId.toString());
+            sessionStorage.setItem('odoo_sale_context', JSON.stringify(context));
+            localStorage.setItem('odoo_last_sale_id', saleId.toString());
+
+            // También en una variable global para acceso inmediato
+            window.ODOO_CURRENT_SALE_ID = saleId;
+
+            // NUEVO: Almacenar en cookie para que Python pueda leerlo
+            document.cookie = `odoo_current_sale_id=${saleId}; path=/; max-age=3600; SameSite=Lax`;
+
+            // También enviar como header personalizado en próximas requests
+            if (window.XMLHttpRequest) {
+                const originalOpen = XMLHttpRequest.prototype.open;
+                XMLHttpRequest.prototype.open = function(method, url, async, user, password) {
+                    const result = originalOpen.apply(this, arguments);
+                    this.setRequestHeader('X-Odoo-Sale-ID', saleId.toString());
+                    return result;
+                };
+            }
+
+            console.log('💾 Contexto almacenado con cookie:', context);
+
+        } catch (error) {
+            console.error('❌ Error almacenando contexto:', error);
+        }
+    }
+
+    getCurrentSaleId() {
+        try {
+            // Prioridad 1: Variable global (más fresco)
+            if (window.ODOO_CURRENT_SALE_ID) {
+                console.log('📂 ID desde variable global:', window.ODOO_CURRENT_SALE_ID);
+                return window.ODOO_CURRENT_SALE_ID;
+            }
+
+            // Prioridad 2: SessionStorage
+            const sessionId = sessionStorage.getItem('odoo_current_sale_id');
+            if (sessionId) {
+                const id = parseInt(sessionId);
+                console.log('📂 ID desde sessionStorage:', id);
+                return id;
+            }
+
+            // Prioridad 3: Extraer en tiempo real
+            const liveId = this.extractCurrentSaleId();
+            if (liveId) {
+                console.log('📂 ID extraído en tiempo real:', liveId);
+                return liveId;
+            }
+
+            console.log('❌ No se pudo obtener sale ID');
+            return null;
+
+        } catch (error) {
+            console.error('❌ Error obteniendo sale ID:', error);
+            return null;
+        }
+    }
+
+    // Método para que Python pueda acceder al ID actual
+    getSaleIdForPython() {
+        const id = this.getCurrentSaleId();
+        if (id) {
+            // Actualizar también el contexto almacenado
+            this.storeSaleContext(id);
+            return {
+                success: true,
+                saleId: id,
+                timestamp: Date.now()
+            };
+        }
+
+        return {
+            success: false,
+            error: 'No sale ID found'
+        };
     }
 }
 
 // Registrar el servicio
-registry.category("services").add("saleContextExtractor", {
-    start() {
-        return SaleContextExtractor;
+registry.category("services").add("saleContext", {
+    start(env, services) {
+        const service = new SaleContextService();
+        return service.start();
     },
 });
 
-// Monitorear cambios de URL para actualizar contexto
-let lastURL = window.location.href;
-setInterval(() => {
-    const currentURL = window.location.href;
-    if (currentURL !== lastURL) {
-        lastURL = currentURL;
-        const saleId = SaleContextExtractor.getCurrentSaleId();
-        if (saleId) {
-            SaleContextExtractor.storeSaleId(saleId);
-        }
+// Hacer disponible globalmente para que Python pueda acceder
+window.getSaleContext = () => {
+    const service = odoo.__DEBUG__.services.saleContext;
+    if (service) {
+        return service.getSaleIdForPython();
     }
-}, 1000);
+    return { success: false, error: 'Service not available' };
+};
 
-// También al cargar la página
+// Inicialización inmediata
 document.addEventListener('DOMContentLoaded', () => {
-    const saleId = SaleContextExtractor.getCurrentSaleId();
-    if (saleId) {
-        SaleContextExtractor.storeSaleId(saleId);
-    }
+    console.log('🚀 SaleContext service initializing...');
 });
+
+// También ejecutar inmediatamente si el DOM ya está listo
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initialize);
+} else {
+    initialize();
+}
+
+function initialize() {
+    // Configurar captura inmediata
+    const service = new SaleContextService();
+    service.start();
+
+    // Hacer disponible globalmente
+    window.SALE_CONTEXT_SERVICE = service;
+}
