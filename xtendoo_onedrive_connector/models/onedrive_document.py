@@ -74,7 +74,7 @@ class OneDriveDocument(models.Model):
             }
 
     def action_download_file(self):
-        """Descargar archivo directamente desde OneDrive usando la URL almacenada"""
+        """Descargar archivo directamente desde OneDrive usando la URL almacenada y registrar en el chatter"""
         if not self.file_url or self.is_folder:
             return {
                 'type': 'ir.actions.client',
@@ -86,6 +86,12 @@ class OneDriveDocument(models.Model):
                     'sticky': False,
                 }
             }
+
+        # Registrar en el chatter quién descargó el archivo
+        self.message_post(
+            body=f"El documento '{self.name}' fue descargado por {self.env.user.name}.",
+            subtype_xmlid='mail.mt_note'
+        )
 
         # Usar directamente la URL de OneDrive que ya funciona en el navegador
         return {
