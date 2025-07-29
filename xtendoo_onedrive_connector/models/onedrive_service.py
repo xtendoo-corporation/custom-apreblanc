@@ -338,10 +338,23 @@ class OneDriveService(models.AbstractModel):
                             _logger.info('Elemento actualizado: %s (ID: %s, Parent ID: %s)', item.get('name'), doc.id, parent_doc_id)
                             current_doc_id = doc.id
                         else:
-                            new_doc = OneDriveDocument.create(vals)
-                            created_count += 1
-                            _logger.info('Elemento creado: %s (ID: %s, Parent ID: %s)', item.get('name'), new_doc.id, parent_doc_id)
-                            current_doc_id = new_doc.id
+                            try:
+                                new_doc = OneDriveDocument.create(vals)
+                                # FORZAR COMMIT para asegurar que se guarda
+                                self.env.cr.commit()
+                                created_count += 1
+                                _logger.info('Elemento creado y confirmado: %s (ID: %s, Parent ID: %s)', item.get('name'), new_doc.id, parent_doc_id)
+                                current_doc_id = new_doc.id
+
+                                # Verificar que realmente se creó
+                                verification = OneDriveDocument.search([('id', '=', new_doc.id)], limit=1)
+                                if not verification:
+                                    _logger.error('❌ ERROR: El documento %s no se pudo verificar después de crear!', item.get('name'))
+                                else:
+                                    _logger.info('✅ VERIFICADO: Documento %s existe en BD con ID %s', item.get('name'), new_doc.id)
+                            except Exception as create_error:
+                                _logger.error('❌ ERROR creando documento %s: %s', item.get('name'), str(create_error))
+                                continue
 
                         synced_count += 1
 
