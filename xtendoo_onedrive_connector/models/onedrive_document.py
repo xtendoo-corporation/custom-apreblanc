@@ -814,4 +814,46 @@ class OneDriveDocument(models.Model):
     @api.model_create_multi
     def create(self, vals_list):
         """Override create para crear el documento en Odoo sin subirlo a OneDrive"""
-        return super().create(vals_list)
+        import logging
+        _logger = logging.getLogger(__name__)
+
+        _logger.info(f"🔥 CREANDO DOCUMENTO OneDrive - vals_list: {vals_list}")
+
+        for vals in vals_list:
+            _logger.info(f"📋 Valores recibidos: {list(vals.keys())}")
+
+            # Verificar si tenemos datos de archivo
+            if 'upload_file' in vals:
+                _logger.info(f"📁 upload_file presente: {bool(vals['upload_file'])}")
+                if vals['upload_file']:
+                    try:
+                        import base64
+                        decoded = base64.b64decode(vals['upload_file'])
+                        _logger.info(f"📏 Tamaño upload_file: {len(decoded)} bytes")
+
+                        # FORZAR copia a file_data
+                        vals['file_data'] = vals['upload_file']
+                        _logger.info("✅ upload_file copiado a file_data en create()")
+                    except Exception as e:
+                        _logger.error(f"❌ Error procesando upload_file en create(): {e}")
+
+            if 'file_data' in vals:
+                _logger.info(f"📁 file_data presente: {bool(vals['file_data'])}")
+                if vals['file_data']:
+                    try:
+                        import base64
+                        decoded = base64.b64decode(vals['file_data'])
+                        _logger.info(f"📏 Tamaño file_data: {len(decoded)} bytes")
+                    except Exception as e:
+                        _logger.error(f"❌ Error decodificando file_data: {e}")
+
+            if 'name' in vals:
+                _logger.info(f"📝 Nombre: {vals['name']}")
+
+            if 'upload_filename' in vals:
+                _logger.info(f"📂 upload_filename: {vals['upload_filename']}")
+
+        result = super().create(vals_list)
+        _logger.info(f"✅ Documento creado con IDs: {[r.id for r in result]}")
+
+        return result
