@@ -254,7 +254,7 @@ class OneDriveDocument(models.Model):
 
         _logger.info("=== INICIANDO _get_sale_name - JAVASCRIPT CAPTURE ===")
 
-        # PRIORIDAD 0: CAPTURAR DESDE JAVASCRIPT DEL NAVEGADOR
+        # PRIORIDAD 0: CAAPTURAR DESDE JAVASCRIPT DEL NAVEGADOR
         try:
             # Intentar obtener el ID que el JavaScript capturó desde el navegador
             request_obj = None
