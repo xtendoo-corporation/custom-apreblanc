@@ -291,17 +291,18 @@ class OneDriveDocument(models.Model):
             return None
 
     def _get_sale_name(self):
-        """Obtener el nombre de la venta actual - FORZAR USO DE JAVASCRIPT SIEMPRE"""
+        """Obtener el nombre de la venta asociada al documento"""
         import logging
         _logger = logging.getLogger(__name__)
 
-        _logger.info("=== FORZANDO OBTENCIÓN DESDE URL JAVASCRIPT ===")
-
-        # SIEMPRE devolver el código que active JavaScript
-        # No confiar en el contexto de Odoo que puede estar desactualizado
-        _logger.info("⚠️ Forzando obtención de ID desde URL del navegador")
-
-        return "NEED_BROWSER_URL"
+        if self.sale_ids:
+            # Asumimos que el documento está asociado a una única venta relevante
+            sale_order = self.sale_ids[0]
+            _logger.info(f"✅ Nombre de venta obtenido desde relación: {sale_order.name}")
+            return sale_order.name
+        else:
+            _logger.warning("⚠️ No hay ventas asociadas a este documento")
+            return None
 
     def _ensure_folder_exists(self, folder_name, parent_folder_id, headers):
         """Verificar si existe una carpeta, si no existe la crea - CORREGIDO PARA USAR VENTA ACTUAL"""

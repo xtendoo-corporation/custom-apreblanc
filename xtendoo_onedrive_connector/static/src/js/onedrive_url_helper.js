@@ -144,6 +144,26 @@ export class OneDriveUrlHelper {
 
         return null;
     }
+
+    /**
+     * Método para monitorear cambios en la URL y actualizar el ID de la venta
+     */
+    static monitorUrlChanges(callback) {
+        let lastUrl = window.location.href;
+
+        setInterval(() => {
+            const currentUrl = window.location.href;
+            if (currentUrl !== lastUrl) {
+                lastUrl = currentUrl;
+                console.log("🔄 URL cambiada, verificando nuevo Sale ID");
+                const saleId = this.getCurrentSaleOrderId();
+                if (saleId) {
+                    console.log(`🔄 Nuevo Sale ID detectado: ${saleId}`);
+                    callback(saleId);
+                }
+            }
+        }, 1000); // Verificar cada segundo
+    }
 }
 
 // Registrar el helper globalmente
