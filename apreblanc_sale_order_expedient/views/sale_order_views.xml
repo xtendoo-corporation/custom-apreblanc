@@ -155,6 +155,7 @@
                            widget="many2many"
                            nolabel="1"
                            readonly="expedient_state in ['aprobada', 'rechazada'] and not is_expedient_admin"
+                           domain="['|', ('file_url', 'ilike', name), ('name', 'ilike', name)]"
                            options="{'create_text': 'Agregar documento', 'no_open': False}">
                         <tree>
                             <field name="name"/>
