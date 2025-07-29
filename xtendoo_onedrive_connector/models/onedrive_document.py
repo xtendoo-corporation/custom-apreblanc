@@ -56,11 +56,17 @@ class OneDriveDocument(models.Model):
 
         try:
             # Obtener todos los documentos que no han sido subidos aún
-            documents_to_upload = self.search([('file_url', '=', False), ('upload_file', '!=', False)])
+            documents_to_upload = self.search([('file_url', '=', False), ('file_data', '!=', False)])
             _logger.info(f"Documentos pendientes de subida: {len(documents_to_upload)}")
 
             for document in documents_to_upload:
                 try:
+                    # Obtener el nombre de la venta asociada
+                    sale_name = document._get_sale_name()
+                    if not sale_name:
+                        _logger.warning(f"No se pudo determinar el nombre de la venta para el documento {document.name}")
+                        continue
+
                     # Subir el archivo a OneDrive
                     result = document.action_upload_file()
 
@@ -68,7 +74,7 @@ class OneDriveDocument(models.Model):
                     if result and result.get('params', {}).get('type') == 'success':
                         _logger.info(f"Documento {document.name} subido exitosamente.")
                     else:
-                        _logger.warning(f"Error subiendo documento {document.name}: {result.get('params', {}).get('message', 'Error desconocido')}")
+                        _logger.warning(f"Error subiendo documento {document.name}: {result.get('params', {}).get('message', 'Error desconocido')}\n")
 
                 except Exception as e:
                     _logger.error(f"Excepción subiendo documento {document.name}: {str(e)}")
@@ -123,7 +129,7 @@ class OneDriveDocument(models.Model):
         # Variable configurable para el nombre de la carpeta raíz
         ROOT_FOLDER_NAME = "odoo"
 
-        if not self.upload_file or not self.upload_filename:
+        if not self.file_data or not self.name:
             return {
                 'type': 'ir.actions.client',
                 'tag': 'display_notification',
@@ -188,33 +194,32 @@ class OneDriveDocument(models.Model):
                 }
 
             # Paso 3: Subir el archivo a la carpeta de la venta
-            file_data = self._upload_file_to_folder(sale_folder_id, headers)
-            if not file_data:
+            import base64
+            file_content = base64.b64decode(self.file_data)
+
+            upload_url = f'https://graph.microsoft.com/v1.0/me/drive/items/{sale_folder_id}:/{self.name}:/content'
+            upload_headers = {
+                'Authorization': headers['Authorization'],
+                'Content-Type': 'application/octet-stream',
+            }
+
+            response = requests.put(upload_url, headers=upload_headers, data=file_content, timeout=60)
+
+            if response.status_code in [200, 201]:
+                file_data = response.json()
+                self._update_document_data(file_data)
                 return {
                     'type': 'ir.actions.client',
                     'tag': 'display_notification',
                     'params': {
-                        'title': 'Error',
-                        'message': 'No se pudo subir el archivo a OneDrive.',
-                        'type': 'danger',
-                        'sticky': True,
+                        'title': '¡Archivo subido exitosamente!',
+                        'message': f'El archivo "{self.name}" se ha subido correctamente a OneDrive en la carpeta {ROOT_FOLDER_NAME}/{sale_name}/',
+                        'type': 'success',
+                        'sticky': False,
                     }
                 }
-
-            # Paso 4: Actualizar los datos en Odoo
-            self._update_document_data(file_data)
-
-            # Cerrar formulario y mostrar notificación de éxito
-            return {
-                'type': 'ir.actions.client',
-                'tag': 'display_notification',
-                'params': {
-                    'title': '¡Archivo subido exitosamente!',
-                    'message': f'El archivo "{self.upload_filename}" se ha subido correctamente a OneDrive en la carpeta {ROOT_FOLDER_NAME}/{sale_name}/',
-                    'type': 'success',
-                    'sticky': False,
-                }
-            }
+            else:
+                raise Exception(f"Error subiendo archivo: {response.status_code} - {response.text}")
 
         except Exception as e:
             return {
@@ -519,10 +524,10 @@ class OneDriveDocument(models.Model):
             import base64
 
             # Decodificar el archivo
-            file_content = base64.b64decode(self.upload_file)
+            file_content = base64.b64decode(self.file_data)
 
             # URL para subir archivo
-            upload_url = f'https://graph.microsoft.com/v1.0/me/drive/items/{folder_id}:/{self.upload_filename}:/content'
+            upload_url = f'https://graph.microsoft.com/v1.0/me/drive/items/{folder_id}:/{self.name}:/content'
 
             # Headers para subir archivo binario
             upload_headers = {
@@ -576,7 +581,7 @@ class OneDriveDocument(models.Model):
                 'file_type': file_data.get('file', {}).get('mimeType', ''),
                 'owner': file_data.get('createdBy', {}).get('user', {}).get('displayName', ''),
                 'is_folder': False,
-                'file_data': self.upload_file,  # Mantener una copia local
+                'file_data': self.file_data,  # Mantener una copia local
             }
 
             # Solo agregar last_modified si se pudo convertir correctamente
@@ -586,7 +591,7 @@ class OneDriveDocument(models.Model):
             self.write(update_data)
 
             # Limpiar campos de upload
-            self.upload_file = False
+            self.file_data = False
             self.upload_filename = False
 
         except Exception as e:
@@ -742,45 +747,5 @@ class OneDriveDocument(models.Model):
 
     @api.model_create_multi
     def create(self, vals_list):
-        """Override create para subir automáticamente archivos a OneDrive"""
-        records = super().create(vals_list)
-
-        # Para cada registro creado, verificar si tiene archivo para subir
-        for record in records:
-            # Verificar si hay archivo para subir (puede venir en file_data o upload_file)
-            has_file = False
-
-            # Si viene en file_data y name, preparar para subida
-            if record.file_data and record.name and not record.file_url:
-                # Mover file_data a upload_file para procesarlo
-                record.upload_file = record.file_data
-                record.upload_filename = record.name
-                has_file = True
-            # O si viene directamente en upload_file
-            elif record.upload_file and record.upload_filename:
-                has_file = True
-
-            if has_file:
-                try:
-                    # Ejecutar automáticamente la subida a OneDrive
-                    result = record.action_upload_file()
-
-                    # Si hay error en la subida, registrarlo pero no fallar la creación
-                    if result and result.get('params', {}).get('type') in ['danger', 'warning']:
-                        import logging
-                        _logger = logging.getLogger(__name__)
-                        _logger.warning(
-                            "Error automático subiendo archivo %s a OneDrive: %s",
-                            record.upload_filename or record.name,
-                            result.get('params', {}).get('message', 'Error desconocido')
-                        )
-                except Exception as e:
-                    import logging
-                    _logger = logging.getLogger(__name__)
-                    _logger.error(
-                        "Excepción automática subiendo archivo %s a OneDrive: %s",
-                        record.upload_filename or record.name,
-                        str(e)
-                    )
-
-        return records
+        """Override create para crear el documento en Odoo sin subirlo a OneDrive"""
+        return super().create(vals_list)
