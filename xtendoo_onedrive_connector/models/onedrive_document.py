@@ -4,6 +4,7 @@ import requests
 class OneDriveDocument(models.Model):
     _name = 'onedrive.document'
     _description = 'OneDrive Document'
+    _inherit = ['mail.thread']  # Habilitar funcionalidad de chatter
 
     name = fields.Char(string='Name', required=True)
     onedrive_id = fields.Char(string='OneDrive ID')
