@@ -368,9 +368,60 @@ class OneDriveDocument(models.Model):
             if params.get('model') == 'sale.order' and params.get('id'):
                 sale_id = params.get('id')
 
-                # PRIORIDAD ABSOLUTA: SIEMPRE verificar la URL actual del navegador
-                request = self.env.context.get('request')
+                # PRIORIDAD ABSOLUTA: BUSCAR REQUEST DE MANERA MÁS AGRESIVA
+                request = None
                 current_url_sale_id = None
+
+                # Método 1: Request desde contexto
+                request = self.env.context.get('request')
+
+                # Método 2: Request desde threading local (más agresivo)
+                if not request:
+                    try:
+                        import odoo.http
+                        if hasattr(odoo.http, 'request') and odoo.http.request:
+                            request = odoo.http.request
+                            _logger.info("🔍 Request obtenido desde odoo.http.request")
+                    except:
+                        pass
+
+                # Método 3: Buscar en stack frames para encontrar request
+                if not request:
+                    try:
+                        import inspect
+                        for frame_info in inspect.stack():
+                            frame_locals = frame_info.frame.f_locals
+                            frame_globals = frame_info.frame.f_globals
+
+                            # Buscar 'request' en locals
+                            if 'request' in frame_locals and hasattr(frame_locals['request'], 'httprequest'):
+                                request = frame_locals['request']
+                                _logger.info("🔍 Request encontrado en frame locals")
+                                break
+
+                            # Buscar en globals también
+                            if 'request' in frame_globals and hasattr(frame_globals['request'], 'httprequest'):
+                                request = frame_globals['request']
+                                _logger.info("🔍 Request encontrado en frame globals")
+                                break
+                    except:
+                        pass
+
+                # Método 4: Último recurso - buscar en cualquier variable que contenga httprequest
+                if not request:
+                    try:
+                        import inspect
+                        for frame_info in inspect.stack():
+                            frame_locals = frame_info.frame.f_locals
+                            for var_name, var_value in frame_locals.items():
+                                if hasattr(var_value, 'httprequest'):
+                                    request = var_value
+                                    _logger.info(f"🔍 Request encontrado en variable '{var_name}'")
+                                    break
+                            if request:
+                                break
+                    except:
+                        pass
 
                 if request and hasattr(request, 'httprequest'):
                     # Obtener TODAS las fuentes de URL posibles
@@ -379,7 +430,7 @@ class OneDriveDocument(models.Model):
                     path_info = getattr(request.httprequest, 'path_info', '')
                     full_path = getattr(request.httprequest, 'full_path', '')
 
-                    _logger.info(f"🌐 URL SOURCES:")
+                    _logger.info(f"🌐 URL SOURCES FOUND:")
                     _logger.info(f"  - referrer: {referrer}")
                     _logger.info(f"  - current_url: {current_url}")
                     _logger.info(f"  - path_info: {path_info}")
@@ -408,9 +459,44 @@ class OneDriveDocument(models.Model):
                     else:
                         _logger.info(f"ℹ️ No se encontró ID en URL actual, usando params ID: {sale_id}")
                 else:
-                    _logger.info("⚠️ No hay request disponible para verificar URL actual")
+                    _logger.warning("⚠️ No se pudo obtener request de ninguna manera - POSIBLE CACHE PROBLEM")
 
-                # Buscar con el ID final (ya sea de URL actual o params)
+                    # FORZAR INVALIDACIÓN EXTREMA cuando no tenemos request
+                    import time
+                    cache_bust_key = f"cache_bust_{int(time.time() * 1000)}"
+                    _logger.warning(f"🧹 LIMPIEZA EXTREMA DE CACHE: {cache_bust_key}")
+
+                    # Invalidar registros específicos de sale.order
+                    self.env['sale.order'].invalidate_model()
+
+                    # Buscar sale.order más reciente modificado hace poco (menos de 5 minutos)
+                    # para casos donde el contexto está completamente corrupto
+                    try:
+                        from datetime import datetime, timedelta
+                        recent_time = datetime.now() - timedelta(minutes=5)
+                        recent_sales = self.env['sale.order'].search([
+                            ('write_date', '>=', recent_time.strftime('%Y-%m-%d %H:%M:%S'))
+                        ], order='write_date desc', limit=10)
+
+                        if recent_sales:
+                            _logger.warning(f"🔍 FALLBACK: Ventas recientes (últimos 5 min): {[s.name for s in recent_sales]}")
+
+                            # Si solo hay una venta reciente, usarla
+                            if len(recent_sales) == 1:
+                                sale_id = recent_sales[0].id
+                                _logger.warning(f"🎯 FALLBACK AUTOMÁTICO: Usando única venta reciente {recent_sales[0].name}")
+                            else:
+                                # Si hay múltiples, verificar cuál coincide con el ID del contexto
+                                context_sale_exists = any(s.id == sale_id for s in recent_sales)
+                                if not context_sale_exists and recent_sales:
+                                    # El ID del contexto no está en las ventas recientes, usar la más reciente
+                                    old_sale_id = sale_id
+                                    sale_id = recent_sales[0].id
+                                    _logger.warning(f"🔄 FALLBACK CORRECCIÓN: contexto ID {old_sale_id} no es reciente, usando {recent_sales[0].name}")
+                    except Exception as fallback_error:
+                        _logger.error(f"❌ Error en fallback: {fallback_error}")
+
+                # Buscar con el ID final (ya sea de URL actual, corrección o params)
                 # CREAR UN NUEVO ENTORNO LIMPIO para esta búsqueda específica
                 with self.env.registry.cursor() as new_cr:
                     new_env = self.env(cr=new_cr)
