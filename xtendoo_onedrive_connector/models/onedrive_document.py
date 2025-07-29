@@ -254,55 +254,69 @@ class OneDriveDocument(models.Model):
 
         _logger.info("=== INICIANDO _get_sale_name - ANTI-CACHE ===")
 
-        # NUEVA PRIORIDAD 0: Obtener DIRECTAMENTE desde el request HTTP actual
+        # NUEVA PRIORIDAD 0: Buscar en el DOM/JavaScript del cliente si es posible
         try:
+            # Intentar obtener información desde el request actual del navegador
             import threading
-            import odoo
+            import inspect
 
-            # Obtener el request desde el thread actual
-            current_thread = threading.current_thread()
-            if hasattr(current_thread, 'uid'):
-                # Buscar en la pila de llamadas para encontrar el request
-                import inspect
-                for frame_info in inspect.stack():
-                    frame_locals = frame_info.frame.f_locals
-                    if 'request' in frame_locals:
-                        current_request = frame_locals['request']
-                        if hasattr(current_request, 'httprequest'):
-                            url = getattr(current_request.httprequest, 'url', '')
-                            referrer = getattr(current_request.httprequest, 'referrer', '')
+            # Buscar en todos los frames para encontrar información más actualizada
+            for frame_info in inspect.stack():
+                frame_locals = frame_info.frame.f_locals
+                frame_globals = frame_info.frame.f_globals
 
-                            _logger.info(f"🔥 DIRECTO - URL: {url}")
-                            _logger.info(f"🔥 DIRECTO - Referrer: {referrer}")
+                # Buscar en los parámetros de la función actual
+                if 'self' in frame_locals and hasattr(frame_locals['self'], 'env'):
+                    current_env = frame_locals['self'].env
 
-                            # Buscar patrón de ID con más variaciones
-                            import re
-                            patterns = [
-                                r'id=(\d+)(?=.*sale)',  # id=X con 'sale' en cualquier parte
-                                r'sale.*?(\d+)',        # 'sale' seguido de número
-                                r'/(\d+)(?=/|$)',       # número al final de path
-                                r'action=\d+.*?id=(\d+)', # action seguido de id
-                            ]
+                    # Intentar obtener información del último registro visitado
+                    if hasattr(current_env, 'context'):
+                        context = current_env.context
 
-                            for url_check in [url, referrer]:
-                                if url_check and 'sale' in url_check.lower():
-                                    for pattern in patterns:
-                                        matches = re.findall(pattern, url_check)
-                                        for match in matches:
-                                            try:
-                                                sale_id = int(match)
-                                                if sale_id > 0:  # Validar que es un ID válido
-                                                    sale_order = self.env['sale.order'].browse(sale_id)
-                                                    if sale_order.exists():
-                                                        _logger.info(f"✅ PRIORIDAD 0 - Venta desde request directo: {sale_order.name}")
-                                                        return sale_order.name
-                                            except (ValueError, TypeError):
-                                                continue
-                            break
+                        # Buscar claves que indiquen la venta actual más recientemente accedida
+                        if 'active_ids' in context and context.get('active_model') == 'sale.order':
+                            active_ids = context['active_ids']
+                            if active_ids and isinstance(active_ids, list) and len(active_ids) > 0:
+                                # Tomar el último ID de la lista (más reciente)
+                                sale_id = active_ids[-1]
+                                sale_order = self.env['sale.order'].browse(sale_id)
+                                if sale_order.exists():
+                                    _logger.info(f"✅ PRIORIDAD 0 - Venta desde active_ids: {sale_order.name}")
+                                    return sale_order.name
+
+                # Buscar información de argumentos de llamadas de métodos web
+                if 'args' in frame_locals:
+                    args = frame_locals.get('args', [])
+                    if isinstance(args, (list, tuple)) and len(args) > 0:
+                        for arg in args:
+                            if isinstance(arg, dict):
+                                # Buscar context en los argumentos
+                                if 'context' in arg:
+                                    ctx = arg['context']
+                                    if isinstance(ctx, dict):
+                                        # Buscar active_id más reciente
+                                        if ctx.get('active_model') == 'sale.order' and ctx.get('active_id'):
+                                            sale_id = ctx['active_id']
+                                            sale_order = self.env['sale.order'].browse(sale_id)
+                                            if sale_order.exists():
+                                                _logger.info(f"✅ PRIORIDAD 0 - Venta desde args context: {sale_order.name}")
+                                                return sale_order.name
+
+                                # Buscar params con información de venta
+                                if 'params' in arg:
+                                    params = arg['params']
+                                    if isinstance(params, dict) and params.get('model') == 'sale.order':
+                                        sale_id = params.get('id')
+                                        if sale_id:
+                                            sale_order = self.env['sale.order'].browse(sale_id)
+                                            if sale_order.exists():
+                                                _logger.info(f"✅ PRIORIDAD 0 - Venta desde args params: {sale_order.name}")
+                                                return sale_order.name
+
         except Exception as e:
-            _logger.error(f"❌ Error en búsqueda directa: {e}")
+            _logger.error(f"❌ Error en búsqueda avanzada: {e}")
 
-        # PRIORIDAD 1: Forzar obtención de la venta desde URL/request actual (más confiable)
+        # PRIORIDAD 1: Buscar en request HTTP pero con mejor análisis
         try:
             # Intentar obtener información de la request HTTP ACTUAL
             request = self.env.context.get('request')
@@ -342,15 +356,32 @@ class OneDriveDocument(models.Model):
         except Exception as e:
             _logger.error(f"❌ Error buscando en URL actual: {e}")
 
-        # PRIORIDAD 2: Params del contexto (pero verificar que sean actuales)
-        params = self.env.context.get('params', {})
-        _logger.info(f"Params del contexto: {params}")
+        # PRIORIDAD 2: INVALIDAR COMPLETAMENTE EL CONTEXTO Y FORZAR BÚSQUEDA FRESCA
+        try:
+            # Limpiar TODO el cache antes de buscar en params
+            self.env.invalidate_all()
+            self.env.registry.clear_cache()
 
-        if params.get('model') == 'sale.order' and params.get('id'):
-            try:
+            params = self.env.context.get('params', {})
+            _logger.info(f"Params del contexto (CACHE LIMPIO): {params}")
+
+            if params.get('model') == 'sale.order' and params.get('id'):
                 sale_id = params.get('id')
-                # FORZAR búsqueda fresca
-                self.env.invalidate_all()
+
+                # VERIFICAR que el ID de la venta coincide con la URL actual del navegador
+                request = self.env.context.get('request')
+                if request and hasattr(request, 'httprequest'):
+                    referrer = getattr(request.httprequest, 'referrer', '')
+                    if referrer and str(sale_id) not in referrer:
+                        _logger.warning(f"⚠️ ID {sale_id} en params NO coincide con referrer {referrer}")
+                        # Intentar extraer el ID correcto del referrer
+                        import re
+                        match = re.search(r'id=(\d+)', referrer)
+                        if match:
+                            correct_id = int(match.group(1))
+                            _logger.info(f"🔄 Corrigiendo ID de {sale_id} a {correct_id}")
+                            sale_id = correct_id
+
                 sale_order = self.env['sale.order'].browse(sale_id)
                 _logger.info(f"Sale order desde params: {sale_order}, exists: {sale_order.exists()}")
                 if sale_order.exists():
@@ -358,10 +389,10 @@ class OneDriveDocument(models.Model):
                     return sale_order.name
                 else:
                     _logger.info("❌ Sale order desde params no existe")
-            except Exception as e:
-                _logger.error(f"❌ Error buscando sale.order por params: {e}")
-        else:
-            _logger.info("❌ No hay model='sale.order' o id en params")
+            else:
+                _logger.info("❌ No hay model='sale.order' o id en params")
+        except Exception as e:
+            _logger.error(f"❌ Error buscando sale.order por params: {e}")
 
         # PRIORIDAD 3: Active model/id del contexto (con verificación fresca)
         active_model = self.env.context.get('active_model')
