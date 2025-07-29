@@ -52,43 +52,25 @@ class OneDriveDocument(models.Model):
         Método llamado desde la interfaz para sincronizar con OneDrive
         """
         try:
-            # Usar el servicio mejorado de OneDrivee
+            # Usar el servicio mejorado de OneDrive
             service = self.env['onedrive.service']
             result = service.sync_onedrive_files()
 
-            # Mostrar notificación y recargar la vista
+            # Recargar la vista sin mostrar notificación
             if result['success']:
                 return {
                     'type': 'ir.actions.client',
                     'tag': 'reload',
-                    'params': {
-                        'title': 'Sincronización Exitosa',
-                        'type': 'success',
-                        'message': result['message'],
-                        'sticky': False,
-                    }
                 }
             else:
                 return {
                     'type': 'ir.actions.client',
                     'tag': 'reload',
-                    'params': {
-                        'title': 'Error en la Sincronización',
-                        'type': 'danger',
-                        'message': result['error'],
-                        'sticky': False,
-                    }
                 }
         except Exception as e:
             return {
                 'type': 'ir.actions.client',
                 'tag': 'reload',
-                'params': {
-                    'title': 'Error en la Sincronización',
-                    'type': 'danger',
-                    'message': str(e),
-                    'sticky': False,
-                }
             }
 
     def action_download_file(self):
