@@ -295,83 +295,65 @@ class OneDriveDocument(models.Model):
         import logging
         _logger = logging.getLogger(__name__)
 
-        if self.sale_ids:
-            # Asumimos que el documento está asociado a una única venta relevante
-            sale_order = self.sale_ids[0]
-            _logger.info(f"✅ Nombre de venta obtenido desde relación: {sale_order.name}")
-            return sale_order.name
+        # Acceder a la primera venta asociada al documento
+        sale_orders = self.env['sale.order'].search([('onedrive_document_ids', 'in', self.ids)], limit=1)
+        if sale_orders:
+            sale_name = sale_orders.name
+            _logger.info(f"✅ Nombre de venta obtenido: {sale_name}")
+            return sale_name
         else:
-            _logger.warning("⚠️ No hay ventas asociadas a este documento")
+            _logger.warning("⚠️ No se encontró ninguna venta asociada al documento")
             return None
 
     def _ensure_folder_exists(self, folder_name, parent_folder_id, headers):
-        """Verificar si existe una carpeta, si no existe la crea - CORREGIDO PARA USAR VENTA ACTUAL"""
+        """Verificar si existe una carpeta, si no existe la crea"""
         import logging
         _logger = logging.getLogger(__name__)
 
         try:
-            _logger.info(f"=== Buscando/creando carpeta: '{folder_name}' ===")
+            # Obtener el nombre de la venta asociada
+            sale_name = self._get_sale_name()
+            if not sale_name:
+                raise Exception("No se pudo determinar el nombre de la venta asociada al documento.")
+
+            # Usar el nombre de la venta como nombre de la carpeta
+            folder_name = sale_name
 
             # Construir URL para buscar carpetas
             if parent_folder_id:
                 search_url = f'https://graph.microsoft.com/v1.0/me/drive/items/{parent_folder_id}/children'
-                _logger.info(f"Buscando en carpeta padre ID: {parent_folder_id}")
             else:
                 search_url = 'https://graph.microsoft.com/v1.0/me/drive/root/children'
-                _logger.info("Buscando en carpeta raíz")
 
             # Limpiar el nombre de carpeta de caracteres problemáticos para OneDrive
             safe_folder_name = self._sanitize_folder_name(folder_name)
-            _logger.info(f"Nombre original: '{folder_name}' -> Nombre seguro: '{safe_folder_name}'")
 
             # Obtener TODAS las carpetas para buscar la correcta
-            _logger.info(f"Obteniendo lista de carpetas desde: {search_url}")
             response = requests.get(search_url, headers=headers, timeout=30)
-
             if response.status_code == 200:
                 data = response.json()
-                all_items = data.get('value', [])
-                _logger.info(f"Total de items encontrados: {len(all_items)}")
-
-                # Filtrar solo carpetas
-                folders = [item for item in all_items if item.get('folder') is not None]
-                _logger.info(f"Carpetas encontradas: {len(folders)}")
+                folders = [item for item in data.get('value', []) if item.get('folder') is not None]
 
                 # Buscar carpeta con nombre exacto
                 for folder in folders:
-                    folder_name_found = folder.get('name', '')
-                    _logger.info(f"Comparando: '{safe_folder_name}' == '{folder_name_found}'")
-                    if folder_name_found == safe_folder_name:
-                        folder_id = folder['id']
-                        _logger.info(f"✅ Carpeta encontrada: '{folder_name_found}' con ID: {folder_id}")
-                        return folder_id
+                    if folder.get('name', '') == safe_folder_name:
+                        return folder['id']
 
-                _logger.info(f"❌ No se encontró carpeta '{safe_folder_name}' - se creará nueva")
-            else:
-                _logger.error(f"Error obteniendo lista de carpetas: {response.status_code} - {response.text}")
-
-            # La carpeta no existe, crearla
-            _logger.info(f"Creando nueva carpeta: '{safe_folder_name}'")
+            # Crear la carpeta si no existe
             create_data = {
                 "name": safe_folder_name,
                 "folder": {},
-                "@microsoft.graph.conflictBehavior": "rename"  # Renombrar automáticamente si hay conflicto
+                "@microsoft.graph.conflictBehavior": "rename"
             }
-
             create_response = requests.post(search_url, headers=headers, json=create_data, timeout=30)
-            _logger.info(f"Respuesta de creación: {create_response.status_code}")
-
             if create_response.status_code == 201:
-                folder_id = create_response.json()['id']
-                created_name = create_response.json().get('name', safe_folder_name)
-                _logger.info(f"✅ Carpeta creada exitosamente: '{created_name}' con ID: {folder_id}")
-                return folder_id
+                return create_response.json()['id']
             else:
-                raise Exception(f"Error creando carpeta {safe_folder_name}: {create_response.status_code} - {create_response.text}")
+                raise Exception(f"Error creando carpeta: {create_response.status_code} - {create_response.text}")
 
         except Exception as e:
-            _logger.error(f"❌ Error en _ensure_folder_exists para {folder_name}: {str(e)}")
-            raise Exception(f"Error en _ensure_folder_exists para {folder_name}: {str(e)}")
+            _logger.error(f"Error en _ensure_folder_exists: {str(e)}")
+            raise
 
     def _sanitize_folder_name(self, folder_name):
         """Limpiar el nombre de carpeta para OneDrive"""
