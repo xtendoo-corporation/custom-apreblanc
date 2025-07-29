@@ -232,7 +232,10 @@ class OneDriveService(models.AbstractModel):
             _logger.error('Error de conexión listando archivos OneDrive: %s', str(e))
             raise UserError(_('Error de conexión con OneDrive: %s') % str(e))
 
-    def download_file(self, onedrive_id):
+    def download_file(self, onedrive_id, document_id=None):
+        """
+        Descarga un archivo de OneDrive y registra la acción en el chatter de las órdenes de venta relacionadas
+        """
         token = self._get_token()
         headers = {'Authorization': f'Bearer {token}'}
         url = f'https://graph.microsoft.com/v1.0/me/drive/items/{onedrive_id}/content'
@@ -240,6 +243,36 @@ class OneDriveService(models.AbstractModel):
         if resp.status_code != 200:
             _logger.error('Error descargando archivo OneDrive: %s', resp.text)
             raise UserError(_('No se pudo descargar el archivo de OneDrive.'))
+
+        # Registrar la descarga en el chatter de las órdenes de venta relacionadas
+        try:
+            # Buscar el documento por onedrive_id si no se proporciona document_id
+            if document_id:
+                document = self.env['onedrive.document'].browse(document_id)
+            else:
+                document = self.env['onedrive.document'].search([('onedrive_id', '=', onedrive_id)], limit=1)
+
+            if document and document.exists():
+                # Buscar todas las órdenes de venta relacionadas con este documento
+                sale_orders = self.env['sale.order'].search([('onedrive_document_ids', 'in', document.id)])
+
+                if sale_orders:
+                    for sale_order in sale_orders:
+                        sale_order.message_post(
+                            body=f"El documento '{document.name}' fue descargado por {self.env.user.name}.",
+                            subtype_xmlid='mail.mt_note'
+                        )
+                        _logger.info('Descarga registrada en chatter de orden de venta %s para documento: %s por usuario: %s',
+                                   sale_order.name, document.name, self.env.user.name)
+                else:
+                    _logger.warning('No se encontraron órdenes de venta relacionadas con el documento %s (onedrive_id: %s)',
+                                  document.name, onedrive_id)
+            else:
+                _logger.warning('No se encontró el documento con onedrive_id: %s para registrar descarga', onedrive_id)
+        except Exception as e:
+            _logger.error('Error registrando descarga en chatter: %s', str(e))
+            # No interrumpir la descarga por un error en el chatter
+
         return resp.content
 
     def upload_file(self, folder_id, file_name, file_content):
