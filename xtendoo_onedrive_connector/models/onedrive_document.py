@@ -604,47 +604,33 @@ class OneDriveDocument(models.Model):
 
     @api.model_create_multi
     def create(self, vals_list):
-        """Override create para subir automáticamente archivos a OneDrive"""
+        """Override create para crear el documento en Odoo primero y luego subirlo a OneDrive"""
         records = super().create(vals_list)
-        print("*"*50)
-        print("vals_list:", vals_list)
-        print("*"*50)
 
-        # Para cada registro creado, verificar si tiene archivo para subir
         for record in records:
-            # Verificar si hay archivo para subir (puede venir en file_data o upload_file)
-            has_file = False
-
-            # Si viene en file_data y name, preparar para subida
-            if record.file_data and record.name and not record.file_url:
-                # Mover file_data a upload_file para procesarlo
-                record.upload_file = record.file_data
-                record.upload_filename = record.name
-                has_file = True
-            # O si viene directamente en upload_file
-            elif record.upload_file and record.upload_filename:
-                has_file = True
-
-            if has_file:
+            # Verificar si hay archivo para subir
+            if record.upload_file and record.upload_filename:
                 try:
-                    # Ejecutar automáticamente la subida a OneDrive
+                    # Subir el archivo a OneDrive
                     result = record.action_upload_file()
 
-                    # Si hay error en la subida, registrarlo pero no fallar la creación
-                    if result and result.get('params', {}).get('type') in ['danger', 'warning']:
+                    # Si la subida fue exitosa, actualizar los datos del documento
+                    if result and result.get('params', {}).get('type') == 'success':
+                        record._update_document_data(result)
+                    else:
                         import logging
                         _logger = logging.getLogger(__name__)
                         _logger.warning(
-                            "Error automático subiendo archivo %s a OneDrive: %s",
-                            record.upload_filename or record.name,
+                            "Error subiendo archivo %s a OneDrive: %s",
+                            record.upload_filename,
                             result.get('params', {}).get('message', 'Error desconocido')
                         )
                 except Exception as e:
                     import logging
                     _logger = logging.getLogger(__name__)
                     _logger.error(
-                        "Excepción automática subiendo archivo %s a OneDrive: %s",
-                        record.upload_filename or record.name,
+                        "Excepción subiendo archivo %s a OneDrive: %s",
+                        record.upload_filename,
                         str(e)
                     )
 
