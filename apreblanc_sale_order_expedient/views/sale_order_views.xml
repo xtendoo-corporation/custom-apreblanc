@@ -182,12 +182,12 @@
                 <attribute name="invisible">expedient_type != 'none' and context.get('show_as_expedient', False)</attribute>
             </xpath>
 
-            <!-- Añadir nuevos campos en la sección de información del expediente -->
-            <xpath expr="//group[@name='expedient_info']/group[1]" position="inside">
-                <group>
-                    <field name="onedrive_document_ids" widget="many2many_tags" options="{'no_create': True}" domain="[('is_folder', '=', False)]"/>
-                </group>
-            </xpath>
+<!--            &lt;!&ndash; Añadir nuevos campos en la sección de información del expediente &ndash;&gt;-->
+<!--            <xpath expr="//group[@name='expedient_info']/group[1]" position="inside">-->
+<!--                <group>-->
+<!--                    <field name="onedrive_document_ids" widget="many2many_tags" options="{'no_create': True}" domain="[('is_folder', '=', False)]"/>-->
+<!--                </group>-->
+<!--            </xpath>-->
 
             <xpath expr="//group[@name='expedient_info']/group[2]" position="inside">
                 <field name="expedient_difficulty" readonly="expedient_state in ['aprobada', 'rechazada'] and not is_expedient_admin"/>
