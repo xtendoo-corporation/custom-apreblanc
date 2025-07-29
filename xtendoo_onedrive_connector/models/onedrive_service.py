@@ -352,6 +352,9 @@ class OneDriveService(models.AbstractModel):
                                     _logger.error('❌ ERROR: El documento %s no se pudo verificar después de crear!', item.get('name'))
                                 else:
                                     _logger.info('✅ VERIFICADO: Documento %s existe en BD con ID %s', item.get('name'), new_doc.id)
+
+                                # REFRESCAR VISTA DESPUÉS DE CREAR
+                                self.env['ir.actions.client'].with_context({'tag': 'reload'}).run()
                             except Exception as create_error:
                                 _logger.error('❌ ERROR creando documento %s: %s', item.get('name'), str(create_error))
                                 continue
@@ -395,6 +398,13 @@ class OneDriveService(models.AbstractModel):
 
             _logger.info('Sincronización completada (profundidad %d). Total: %s, Creados: %s, Actualizados: %s',
                         current_depth, synced_count, created_count, updated_count)
+
+            # REFRESCAR VISTA DESPUÉS DE COMPLETAR TODA LA SINCRONIZACIÓN
+            if current_depth == 0:  # Solo refrescar al finalizar la sincronización completa
+                return {
+                    'type': 'ir.actions.client',
+                    'tag': 'reload',
+                }
 
             return {
                 'success': True,
