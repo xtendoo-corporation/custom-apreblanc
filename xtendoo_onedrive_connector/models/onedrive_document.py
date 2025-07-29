@@ -75,7 +75,7 @@ class OneDriveDocument(models.Model):
             }
 
     def action_download_file(self):
-        """Descargar archivo directamente desde OneDrive usando la URL almacenada y registrar en el chatter"""
+        """Descargar archivo directamente desde OneDrive usando la URL almacenada y registrar en el chatter de las órdenes de venta"""
         if not self.file_url or self.is_folder:
             return {
                 'type': 'ir.actions.client',
@@ -88,18 +88,25 @@ class OneDriveDocument(models.Model):
                 }
             }
 
-        # Registrar en el chatter quién descargó el archivo
-        if len(self) == 1:
-            self.message_post(
-                body=f"El documento '{self.name}' fue descargado por {self.env.user.name}.",
-                subtype_xmlid='mail.mt_note'
-            )
-        else:
-            for record in self:
-                record.message_post(
-                    body=f"El documento '{record.name}' fue descargado por {record.env.user.name}.",
-                    subtype_xmlid='mail.mt_note'
-                )
+        # Registrar la descarga en el chatter de las órdenes de venta relacionadas
+        try:
+            # Buscar todas las órdenes de venta relacionadas con este documento
+            sale_orders = self.env['sale.order'].search([('onedrive_document_ids', 'in', self.id)])
+
+            if sale_orders:
+                for sale_order in sale_orders:
+                    sale_order.message_post(
+                        body=f"El documento '{self.name}' fue descargado por {self.env.user.name}.",
+                        subtype_xmlid='mail.mt_note'
+                    )
+                    _logger.info('Descarga registrada en chatter de orden de venta %s para documento: %s por usuario: %s',
+                               sale_order.name, self.name, self.env.user.name)
+            else:
+                _logger.warning('No se encontraron órdenes de venta relacionadas con el documento %s (ID: %s)',
+                              self.name, self.id)
+        except Exception as e:
+            _logger.error('Error registrando descarga en chatter: %s', str(e))
+            # No interrumpir la descarga por un error en el chatter
 
         # Usar directamente la URL de OneDrive que ya funciona en el navegador
         return {
