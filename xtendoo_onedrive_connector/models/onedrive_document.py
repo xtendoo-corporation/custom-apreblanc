@@ -141,13 +141,25 @@ class OneDriveDocument(models.Model):
 
             # Obtener el nombre de la venta ANTES de crear/buscar carpetas
             sale_name = self._get_sale_name()
-            if not sale_name:
+
+            # Si el contexto está desactualizado, usar JavaScript para obtener el ID
+            if sale_name == "NEED_BROWSER_URL":
+                return {
+                    'type': 'ir.actions.client',
+                    'tag': 'onedrive_upload_with_url_detection',
+                    'params': {
+                        'record_id': self.id,
+                        'title': 'Detectando venta actual...',
+                        'message': 'Obteniendo información de la venta desde la URL del navegador...',
+                    }
+                }
+            elif not sale_name:
                 return {
                     'type': 'ir.actions.client',
                     'tag': 'display_notification',
                     'params': {
-                        'title': 'Error',
-                        'message': 'No se pudo determinar el nombre de la venta.',
+                        'title': 'Error - No se pudo determinar la venta',
+                        'message': 'No se pudo determinar la venta actual. Por favor, recarga la página (F5) y vuelve a intentar.',
                         'type': 'warning',
                         'sticky': True,
                     }
@@ -247,66 +259,76 @@ class OneDriveDocument(models.Model):
         except Exception as e:
             raise Exception(f"Error en _rename_folder_if_needed: {str(e)}")
 
+    @api.model
+    def get_sale_name_from_browser_url(self):
+        """Método llamado desde JavaScript para obtener el nombre de venta usando el ID de la URL del navegador"""
+        import logging
+        _logger = logging.getLogger(__name__)
+
+        # Este método espera recibir el sale_id desde JavaScript via contexto
+        sale_id = self.env.context.get('sale_id_from_url')
+
+        if not sale_id:
+            _logger.error("No se recibió sale_id_from_url en el contexto")
+            return None
+
+        try:
+            _logger.info(f"Obteniendo nombre para sale_id desde URL: {sale_id}")
+
+            # Obtener la venta directamente (sin cache)
+            self.env.invalidate_all()
+            sale_order = self.env['sale.order'].browse(sale_id)
+
+            if sale_order.exists():
+                _logger.info(f"✅ Nombre de venta obtenido desde URL: {sale_order.name}")
+                return sale_order.name
+            else:
+                _logger.warning(f"Sale ID {sale_id} no existe")
+                return None
+
+        except Exception as e:
+            _logger.error(f"Error obteniendo venta desde URL: {e}")
+            return None
+
     def _get_sale_name(self):
-        """Obtener el nombre de la venta actual directamente"""
+        """Obtener el nombre de la venta actual - MEJORADO con detección desde URL"""
         import logging
         _logger = logging.getLogger(__name__)
 
         _logger.info("=== OBTENIENDO NOMBRE DE VENTA ACTUAL ===")
-        _logger.info(f"Context: {self.env.context}")
 
-        # PRIORIDAD 1: ID desde params del contexto (más directo)
-        params = self.env.context.get('params', {})
-        if params.get('model') == 'sale.order' and params.get('id'):
-            sale_id = params.get('id')
-            _logger.info(f"Sale ID desde params: {sale_id}")
+        # PRIORIDAD 1: Intentar obtener desde contexto actual (más rápido si está disponible)
+        try:
+            sale_id = None
 
-            # Obtener la venta actual
-            self.env.invalidate_all()
-            sale_order = self.env['sale.order'].browse(sale_id)
-            if sale_order.exists():
-                _logger.info(f"✅ Venta encontrada: {sale_order.name}")
-                return sale_order.name
+            # Buscar en params del contexto
+            params = self.env.context.get('params', {})
+            if params.get('model') == 'sale.order' and params.get('id'):
+                sale_id = params.get('id')
+                _logger.info(f"Sale ID desde params: {sale_id}")
 
-        # PRIORIDAD 2: Active model/id del contexto
-        active_model = self.env.context.get('active_model')
-        active_id = self.env.context.get('active_id')
-        if active_model == 'sale.order' and active_id:
-            _logger.info(f"Sale ID desde active_id: {active_id}")
+            # Si no está en params, buscar en active_id
+            elif self.env.context.get('active_model') == 'sale.order' and self.env.context.get('active_id'):
+                sale_id = self.env.context.get('active_id')
+                _logger.info(f"Sale ID desde active_id: {sale_id}")
 
-            self.env.invalidate_all()
-            sale_order = self.env['sale.order'].browse(active_id)
-            if sale_order.exists():
-                _logger.info(f"✅ Venta encontrada: {sale_order.name}")
-                return sale_order.name
+            # Si encontramos un sale_id, verificar que la venta existe
+            if sale_id:
+                self.env.invalidate_all()
+                sale_order = self.env['sale.order'].browse(sale_id)
+                if sale_order.exists():
+                    _logger.info(f"✅ Venta encontrada desde contexto: {sale_order.name}")
+                    return sale_order.name
 
-        # PRIORIDAD 3: Buscar en URL actual
-        request = self.env.context.get('request')
-        if request and hasattr(request, 'httprequest'):
-            referrer = getattr(request.httprequest, 'referrer', '') or ''
-            url = getattr(request.httprequest, 'url', '') or ''
+        except Exception as e:
+            _logger.error(f"Error obteniendo sale_id del contexto: {e}")
 
-            import re
-            for url_to_check in [url, referrer]:
-                if url_to_check:
-                    # Buscar patrón id=NUMERO con model=sale.order
-                    match = re.search(r'id=(\d+).*model=sale\.order', url_to_check)
-                    if match:
-                        sale_id = int(match.group(1))
-                        _logger.info(f"Sale ID desde URL: {sale_id}")
+        # PRIORIDAD 2: Si el contexto está desactualizado, forzar obtención desde URL JavaScript
+        # Esto requiere que se haga una segunda llamada desde el frontend
+        _logger.warning("⚠️ Contexto posiblemente desactualizado - se requiere obtener ID desde URL del navegador")
 
-                        self.env.invalidate_all()
-                        sale_order = self.env['sale.order'].browse(sale_id)
-                        if sale_order.exists():
-                            _logger.info(f"✅ Venta encontrada en URL: {sale_order.name}")
-                            return sale_order.name
-
-        # Si no encontramos nada, mostrar error claro
-        _logger.error("❌ NO SE PUDO DETERMINAR LA VENTA ACTUAL")
-        raise Exception(
-            "No se pudo determinar la venta actual. "
-            "Por favor, recarga la página (F5) y vuelve a intentar."
-        )
+        # Devolver un código especial que indique que se necesita el ID desde JavaScript
+        return "NEED_BROWSER_URL"
 
     def _ensure_folder_exists(self, folder_name, parent_folder_id, headers):
         """Verificar si existe una carpeta, si no existe la crea - CORREGIDO PARA USAR VENTA ACTUAL"""
@@ -671,3 +693,94 @@ class OneDriveDocument(models.Model):
                     )
 
         return records
+
+    @api.model
+    def action_upload_file_with_sale_id(self, record_id, sale_id):
+        """Método específico para subir archivo cuando se proporciona el sale_id desde JavaScript"""
+        import logging
+        _logger = logging.getLogger(__name__)
+
+        try:
+            # Obtener el record específico
+            record = self.browse(record_id)
+            if not record.exists():
+                raise Exception(f"Documento con ID {record_id} no encontrado")
+
+            _logger.info(f"=== UPLOAD CON SALE_ID DESDE URL: {sale_id} ===")
+
+            # Variable configurable para el nombre de la carpeta raíz
+            ROOT_FOLDER_NAME = "odoo"
+
+            if not record.upload_file or not record.upload_filename:
+                return {
+                    'type': 'ir.actions.client',
+                    'tag': 'display_notification',
+                    'params': {
+                        'title': 'Error',
+                        'message': 'Por favor, selecciona un archivo para subir.',
+                        'type': 'warning',
+                        'sticky': False,
+                    }
+                }
+
+            # Obtener el servicio de OneDrive
+            onedrive_service = self.env['onedrive.service']
+            access_token = onedrive_service._get_token()
+
+            headers = {
+                'Authorization': f'Bearer {access_token}',
+                'Content-Type': 'application/json',
+            }
+
+            # Obtener el nombre de la venta usando el sale_id proporcionado
+            self.env.invalidate_all()
+            sale_order = self.env['sale.order'].browse(sale_id)
+
+            if not sale_order.exists():
+                raise Exception(f"Venta con ID {sale_id} no encontrada")
+
+            sale_name = sale_order.name
+            _logger.info(f"✅ Nombre de venta obtenido: {sale_name}")
+
+            # Paso 1: Verificar/crear carpeta raíz "odoo"
+            root_folder_id = record._ensure_folder_exists(ROOT_FOLDER_NAME, None, headers)
+            if not root_folder_id:
+                raise Exception(f'No se pudo crear o encontrar la carpeta "{ROOT_FOLDER_NAME}".')
+
+            # Paso 2: Verificar/crear carpeta de la venta
+            sale_folder_id = record._ensure_folder_exists(sale_name, root_folder_id, headers)
+            if not sale_folder_id:
+                raise Exception(f'No se pudo crear o encontrar la carpeta "{sale_name}".')
+
+            # Paso 3: Subir el archivo a la carpeta de la venta
+            file_data = record._upload_file_to_folder(sale_folder_id, headers)
+            if not file_data:
+                raise Exception('No se pudo subir el archivo a OneDrive.')
+
+            # Paso 4: Actualizar los datos en Odoo
+            record._update_document_data(file_data)
+
+            # Retornar éxito
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': '¡Archivo subido exitosamente!',
+                    'message': f'El archivo "{record.upload_filename}" se ha subido correctamente a OneDrive en la carpeta {ROOT_FOLDER_NAME}/{sale_name}/',
+                    'type': 'success',
+                    'sticky': False,
+                }
+            }
+
+        except Exception as e:
+            _logger.error(f"Error en upload con sale_id: {e}")
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': 'Error al subir archivo',
+                    'message': f'Error: {str(e)}',
+                    'type': 'danger',
+                    'sticky': True,
+                }
+            }
