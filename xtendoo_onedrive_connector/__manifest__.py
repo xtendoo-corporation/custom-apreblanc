@@ -21,5 +21,8 @@
     },
     "installable": "true",
     "application": "true",
-    "license": "LGPL-3"
+    "license": "LGPL-3",
+    "images": [
+        "static/description/xtendoo_one_drive_connector_logo.png"
+    ],
 }

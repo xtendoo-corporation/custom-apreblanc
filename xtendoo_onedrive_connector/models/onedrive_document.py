@@ -291,43 +291,16 @@ class OneDriveDocument(models.Model):
             return None
 
     def _get_sale_name(self):
-        """Obtener el nombre de la venta actual - MEJORADO con detección desde URL"""
+        """Obtener el nombre de la venta actual - FORZAR USO DE JAVASCRIPT SIEMPRE"""
         import logging
         _logger = logging.getLogger(__name__)
 
-        _logger.info("=== OBTENIENDO NOMBRE DE VENTA ACTUAL ===")
+        _logger.info("=== FORZANDO OBTENCIÓN DESDE URL JAVASCRIPT ===")
 
-        # PRIORIDAD 1: Intentar obtener desde contexto actual (más rápido si está disponible)
-        try:
-            sale_id = None
+        # SIEMPRE devolver el código que active JavaScript
+        # No confiar en el contexto de Odoo que puede estar desactualizado
+        _logger.info("⚠️ Forzando obtención de ID desde URL del navegador")
 
-            # Buscar en params del contexto
-            params = self.env.context.get('params', {})
-            if params.get('model') == 'sale.order' and params.get('id'):
-                sale_id = params.get('id')
-                _logger.info(f"Sale ID desde params: {sale_id}")
-
-            # Si no está en params, buscar en active_id
-            elif self.env.context.get('active_model') == 'sale.order' and self.env.context.get('active_id'):
-                sale_id = self.env.context.get('active_id')
-                _logger.info(f"Sale ID desde active_id: {sale_id}")
-
-            # Si encontramos un sale_id, verificar que la venta existe
-            if sale_id:
-                self.env.invalidate_all()
-                sale_order = self.env['sale.order'].browse(sale_id)
-                if sale_order.exists():
-                    _logger.info(f"✅ Venta encontrada desde contexto: {sale_order.name}")
-                    return sale_order.name
-
-        except Exception as e:
-            _logger.error(f"Error obteniendo sale_id del contexto: {e}")
-
-        # PRIORIDAD 2: Si el contexto está desactualizado, forzar obtención desde URL JavaScript
-        # Esto requiere que se haga una segunda llamada desde el frontend
-        _logger.warning("⚠️ Contexto posiblemente desactualizado - se requiere obtener ID desde URL del navegador")
-
-        # Devolver un código especial que indique que se necesita el ID desde JavaScript
         return "NEED_BROWSER_URL"
 
     def _ensure_folder_exists(self, folder_name, parent_folder_id, headers):
