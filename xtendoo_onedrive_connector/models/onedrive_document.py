@@ -58,17 +58,27 @@ class OneDriveDocument(models.Model):
 
             # Mostrar notificación correcta Y refrescar vista
             if result.get('success'):
-                # Primero mostrar la notificación de éxito
-                self.env.user.notify_success(
-                    title='Sincronización Exitosa',
-                    message=result.get('message', 'Sincronización completada'),
-                    sticky=False
-                )
+                # Crear el mensaje de éxito con estadísticas
+                message = result.get('message', 'Sincronización completada')
+                synced_count = result.get('synced_count', 0)
+                created_count = result.get('created_count', 0)
+                updated_count = result.get('updated_count', 0)
 
-                # Luego refrescar la vista completa
+                detailed_message = f"{message}\nProcesados: {synced_count} | Nuevos: {created_count} | Actualizados: {updated_count}"
+
                 return {
                     'type': 'ir.actions.client',
-                    'tag': 'reload',
+                    'tag': 'display_notification',
+                    'params': {
+                        'title': 'Sincronización Exitosa',
+                        'message': detailed_message,
+                        'type': 'success',
+                        'sticky': False,
+                        'next': {
+                            'type': 'ir.actions.client',
+                            'tag': 'reload',
+                        }
+                    }
                 }
             else:
                 # En caso de error, solo mostrar notificación
