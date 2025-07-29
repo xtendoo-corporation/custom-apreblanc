@@ -46,120 +46,48 @@ class OneDriveDocument(models.Model):
             # Asignar el nombre limpio
             self.name = clean_filename
 
-    @api.onchange('upload_file')
-    def _onchange_upload_file(self):
-        """Actualizar automáticamente el nombre cuando se selecciona un archivo en upload_file"""
-        import logging
-        _logger = logging.getLogger(__name__)
-
-        _logger.info(f"🔍 _onchange_upload_file llamado - upload_file presente: {bool(self.upload_file)}")
-
-        if self.upload_file:
-            # Verificar tamaño del archivo
-            import base64
-            try:
-                decoded_data = base64.b64decode(self.upload_file)
-                file_size = len(decoded_data)
-                _logger.info(f"📁 Archivo detectado - Tamaño: {file_size} bytes")
-
-                # Copiar a file_data inmediatamente
-                self.file_data = self.upload_file
-                _logger.info("✅ Archivo copiado a file_data")
-
-            except Exception as e:
-                _logger.error(f"❌ Error procesando archivo: {e}")
-
-            if not self.name:
-                # Si tenemos upload_filename, usarlo
-                if self.upload_filename:
-                    filename = self.upload_filename
-                    _logger.info(f"📝 Usando upload_filename: {filename}")
-                else:
-                    # Generar nombre basado en timestamp
-                    from datetime import datetime
-                    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-                    filename = f'documento_{timestamp}'
-                    _logger.info(f"📝 Generando nombre automático: {filename}")
-
-                # Limpiar el nombre del archivo de caracteres no válidos
-                import re
-                clean_filename = re.sub(r'[<>:"/\\|?*]', '_', filename)
-
-                # Asignar el nombre limpio
-                self.name = clean_filename
-                _logger.info(f"✅ Nombre asignado: {self.name}")
-        else:
-            _logger.warning("⚠️ upload_file está vacío")
-
     @api.model
     def action_sync_onedrive(self):
         """
-        Método llamado desde la interfaz para sincronizar con OneDrive y subir documentos pendientes.
+        Método llamado desde la interfaz para sincronizar con OneDrive
         """
-        import logging
-        _logger = logging.getLogger(__name__)
-
         try:
-            # Obtener todos los documentos que no han sido subidos aún
-            # CORREGIDO: buscar documentos con file_data O upload_file
-            documents_to_upload = self.search([
-                ('file_url', '=', False),
-                '|',
-                ('file_data', '!=', False),
-                ('upload_file', '!=', False)
-            ])
-            _logger.info(f"Documentos pendientes de subida: {len(documents_to_upload)}")
+            # Usar el servicio mejorado de OneDrivee
+            service = self.env['onedrive.service']
+            result = service.sync_onedrive_files()
 
-            for document in documents_to_upload:
-                try:
-                    # CORREGIDO: Asegurar que tenemos datos de archivo en file_data
-                    if document.upload_file and not document.file_data:
-                        document.file_data = document.upload_file
-
-                    # Verificar que tenemos datos y nombre
-                    if not document.file_data or not document.name:
-                        _logger.warning(f"Documento {document.name} no tiene archivo o nombre válido")
-                        continue
-
-                    # Obtener el nombre de la venta asociada
-                    sale_name = document._get_sale_name()
-                    if not sale_name:
-                        _logger.warning(f"No se pudo determinar el nombre de la venta para el documento {document.name}")
-                        continue
-
-                    # Subir el archivo a OneDrive
-                    result = document.action_upload_file()
-
-                    # Si la subida fue exitosa, actualizar los datos del documento
-                    if result and result.get('params', {}).get('type') == 'success':
-                        _logger.info(f"Documento {document.name} subido exitosamente.")
-                    else:
-                        _logger.warning(f"Error subiendo documento {document.name}: {result.get('params', {}).get('message', 'Error desconocido')}\n")
-
-                except Exception as e:
-                    _logger.error(f"Excepción subiendo documento {document.name}: {str(e)}")
-
-            return {
-                'type': 'ir.actions.client',
-                'tag': 'display_notification',
-                'params': {
-                    'title': 'Sincronización Completa',
-                    'message': 'Todos los documentos pendientes han sido procesados.',
-                    'type': 'success',
-                    'sticky': False,
+            # Mostrar notificación y recargar la vista
+            if result['success']:
+                return {
+                    'type': 'ir.actions.client',
+                    'tag': 'reload',
+                    'params': {
+                        'title': 'Sincronización Exitosa',
+                        'type': 'success',
+                        'message': result['message'],
+                        'sticky': False,
+                    }
                 }
-            }
-
+            else:
+                return {
+                    'type': 'ir.actions.client',
+                    'tag': 'reload',
+                    'params': {
+                        'title': 'Error en la Sincronización',
+                        'type': 'danger',
+                        'message': result['error'],
+                        'sticky': False,
+                    }
+                }
         except Exception as e:
-            _logger.error(f"Error en la sincronización con OneDrive: {str(e)}")
             return {
                 'type': 'ir.actions.client',
-                'tag': 'display_notification',
+                'tag': 'reload',
                 'params': {
                     'title': 'Error en la Sincronización',
-                    'message': f'Error: {str(e)}',
                     'type': 'danger',
-                    'sticky': True,
+                    'message': str(e),
+                    'sticky': False,
                 }
             }
 
@@ -189,7 +117,7 @@ class OneDriveDocument(models.Model):
         # Variable configurable para el nombre de la carpeta raíz
         ROOT_FOLDER_NAME = "odoo"
 
-        if not self.file_data or not self.name:
+        if not self.upload_file or not self.upload_filename:
             return {
                 'type': 'ir.actions.client',
                 'tag': 'display_notification',
@@ -254,32 +182,33 @@ class OneDriveDocument(models.Model):
                 }
 
             # Paso 3: Subir el archivo a la carpeta de la venta
-            import base64
-            file_content = base64.b64decode(self.file_data)
-
-            upload_url = f'https://graph.microsoft.com/v1.0/me/drive/items/{sale_folder_id}:/{self.name}:/content'
-            upload_headers = {
-                'Authorization': headers['Authorization'],
-                'Content-Type': 'application/octet-stream',
-            }
-
-            response = requests.put(upload_url, headers=upload_headers, data=file_content, timeout=60)
-
-            if response.status_code in [200, 201]:
-                file_data = response.json()
-                self._update_document_data(file_data)
+            file_data = self._upload_file_to_folder(sale_folder_id, headers)
+            if not file_data:
                 return {
                     'type': 'ir.actions.client',
                     'tag': 'display_notification',
                     'params': {
-                        'title': '¡Archivo subido exitosamente!',
-                        'message': f'El archivo "{self.name}" se ha subido correctamente a OneDrive en la carpeta {ROOT_FOLDER_NAME}/{sale_name}/',
-                        'type': 'success',
-                        'sticky': False,
+                        'title': 'Error',
+                        'message': 'No se pudo subir el archivo a OneDrive.',
+                        'type': 'danger',
+                        'sticky': True,
                     }
                 }
-            else:
-                raise Exception(f"Error subiendo archivo: {response.status_code} - {response.text}")
+
+            # Paso 4: Actualizar los datos en Odoo
+            self._update_document_data(file_data)
+
+            # Cerrar formulario y mostrar notificación de éxito
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': '¡Archivo subido exitosamente!',
+                    'message': f'El archivo "{self.upload_filename}" se ha subido correctamente a OneDrive en la carpeta {ROOT_FOLDER_NAME}/{sale_name}/',
+                    'type': 'success',
+                    'sticky': False,
+                }
+            }
 
         except Exception as e:
             return {
@@ -584,10 +513,10 @@ class OneDriveDocument(models.Model):
             import base64
 
             # Decodificar el archivo
-            file_content = base64.b64decode(self.file_data)
+            file_content = base64.b64decode(self.upload_file)
 
             # URL para subir archivo
-            upload_url = f'https://graph.microsoft.com/v1.0/me/drive/items/{folder_id}:/{self.name}:/content'
+            upload_url = f'https://graph.microsoft.com/v1.0/me/drive/items/{folder_id}:/{self.upload_filename}:/content'
 
             # Headers para subir archivo binario
             upload_headers = {
@@ -634,15 +563,14 @@ class OneDriveDocument(models.Model):
 
             # Actualizar campos del documento
             update_data = {
-                'name': file_data.get('name', self.name),  # CORREGIDO: usar self.name en lugar de self.upload_filename
+                'name': file_data.get('name', self.upload_filename),
                 'onedrive_id': file_data.get('id', ''),
                 'file_url': download_url,
                 'file_size': file_data.get('size', 0),
                 'file_type': file_data.get('file', {}).get('mimeType', ''),
                 'owner': file_data.get('createdBy', {}).get('user', {}).get('displayName', ''),
                 'is_folder': False,
-                # CORREGIDO: NO limpiar file_data, mantener los datos del archivo
-                'file_data': self.file_data,  # Mantener una copia local
+                'file_data': self.upload_file,  # Mantener una copia local
             }
 
             # Solo agregar last_modified si se pudo convertir correctamente
@@ -651,14 +579,9 @@ class OneDriveDocument(models.Model):
 
             self.write(update_data)
 
-            # CORREGIDO: NO limpiar campos hasta confirmar que todo funciona
-            # Solo limpiar upload_filename si es diferente del name final
-            if self.upload_filename and self.upload_filename != self.name:
-                self.upload_filename = False
-
-            import logging
-            _logger = logging.getLogger(__name__)
-            _logger.info(f"✅ Documento {self.name} actualizado correctamente con datos de OneDrive")
+            # Limpiar campos de upload
+            self.upload_file = False
+            self.upload_filename = False
 
         except Exception as e:
             raise Exception(f"Error actualizando datos en Odoo: {str(e)}")
@@ -813,47 +736,78 @@ class OneDriveDocument(models.Model):
 
     @api.model_create_multi
     def create(self, vals_list):
-        """Override create para crear el documento en Odoo sin subirlo a OneDrive"""
-        import logging
-        _logger = logging.getLogger(__name__)
+        """Override create para subir automáticamente archivos a OneDrive"""
+        records = super().create(vals_list)
 
-        _logger.info(f"🔥 CREANDO DOCUMENTO OneDrive - vals_list: {vals_list}")
+        # Para cada registro creado, verificar si tiene archivo para subir
+        for record in records:
+            # Verificar si hay archivo para subir (puede venir en file_data o upload_file)
+            has_file = False
 
-        for vals in vals_list:
-            _logger.info(f"📋 Valores recibidos: {list(vals.keys())}")
+            # Si viene en file_data y name, preparar para subida
+            if record.file_data and record.name and not record.file_url:
+                # Mover file_data a upload_file para procesarlo
+                record.upload_file = record.file_data
+                record.upload_filename = record.name
+                has_file = True
+            # O si viene directamente en upload_file
+            elif record.upload_file and record.upload_filename:
+                has_file = True
 
-            # Verificar si tenemos datos de archivo
-            if 'upload_file' in vals:
-                _logger.info(f"📁 upload_file presente: {bool(vals['upload_file'])}")
-                if vals['upload_file']:
-                    try:
-                        import base64
-                        decoded = base64.b64decode(vals['upload_file'])
-                        _logger.info(f"📏 Tamaño upload_file: {len(decoded)} bytes")
+            if has_file:
+                try:
+                    # FORZAR ACTUALIZACIÓN DEL CONTEXTO antes de la subida
+                    # Esto asegura que tenemos la información más reciente de la venta
+                    record.env.invalidate_all()  # Limpiar cache de Odoo
 
-                        # FORZAR copia a file_data
-                        vals['file_data'] = vals['upload_file']
-                        _logger.info("✅ upload_file copiado a file_data en create()")
-                    except Exception as e:
-                        _logger.error(f"❌ Error procesando upload_file en create(): {e}")
+                    # Intentar obtener el contexto fresco desde la request actual
+                    current_request = record.env.context.get('request')
+                    if current_request and hasattr(current_request, 'httprequest'):
+                        # Obtener información fresca de la URL actual
+                        url = getattr(current_request.httprequest, 'url', '')
+                        referrer = getattr(current_request.httprequest, 'referrer', '')
 
-            if 'file_data' in vals:
-                _logger.info(f"📁 file_data presente: {bool(vals['file_data'])}")
-                if vals['file_data']:
-                    try:
-                        import base64
-                        decoded = base64.b64decode(vals['file_data'])
-                        _logger.info(f"📏 Tamaño file_data: {len(decoded)} bytes")
-                    except Exception as e:
-                        _logger.error(f"❌ Error decodificando file_data: {e}")
+                        # Buscar ID de la venta en la URL
+                        import re
+                        sale_id = None
+                        for url_check in [url, referrer]:
+                            if url_check:
+                                match = re.search(r'id=(\d+).*model=sale\.order|model=sale\.order.*id=(\d+)', url_check)
+                                if match:
+                                    sale_id = int(match.group(1) or match.group(2))
+                                    break
 
-            if 'name' in vals:
-                _logger.info(f"📝 Nombre: {vals['name']}")
+                        # Si encontramos el ID, crear un contexto fresco
+                        if sale_id:
+                            fresh_context = record.env.context.copy()
+                            fresh_context.update({
+                                'active_model': 'sale.order',
+                                'active_id': sale_id,
+                                'sale_order_id': sale_id,
+                                'params': {'model': 'sale.order', 'id': sale_id}
+                            })
+                            # Crear un nuevo environment con el contexto fresco
+                            record = record.with_context(fresh_context)
 
-            if 'upload_filename' in vals:
-                _logger.info(f"📂 upload_filename: {vals['upload_filename']}")
+                    # Ejecutar automáticamente la subida a OneDrive con contexto fresco
+                    result = record.action_upload_file()
 
-        result = super().create(vals_list)
-        _logger.info(f"✅ Documento creado con IDs: {[r.id for r in result]}")
+                    # Si hay error en la subida, registrarlo pero no fallar la creación
+                    if result and result.get('params', {}).get('type') in ['danger', 'warning']:
+                        import logging
+                        _logger = logging.getLogger(__name__)
+                        _logger.warning(
+                            "Error automático subiendo archivo %s a OneDrive: %s",
+                            record.upload_filename or record.name,
+                            result.get('params', {}).get('message', 'Error desconocido')
+                        )
+                except Exception as e:
+                    import logging
+                    _logger = logging.getLogger(__name__)
+                    _logger.error(
+                        "Excepción automática subiendo archivo %s a OneDrive: %s",
+                        record.upload_filename or record.name,
+                        str(e)
+                    )
 
-        return result
+        return records
