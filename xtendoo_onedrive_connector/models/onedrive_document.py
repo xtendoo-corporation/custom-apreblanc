@@ -46,6 +46,26 @@ class OneDriveDocument(models.Model):
             # Asignar el nombre limpio
             self.name = clean_filename
 
+    @api.onchange('upload_file')
+    def _onchange_upload_file(self):
+        """Actualizar automáticamente el nombre cuando se selecciona un archivo en upload_file"""
+        if self.upload_file and not self.name:
+            # Si tenemos upload_filename, usarlo
+            if self.upload_filename:
+                filename = self.upload_filename
+            else:
+                # Generar nombre basado en timestamp
+                from datetime import datetime
+                timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+                filename = f'documento_{timestamp}'
+
+            # Limpiar el nombre del archivo de caracteres no válidos
+            import re
+            clean_filename = re.sub(r'[<>:"/\\|?*]', '_', filename)
+
+            # Asignar el nombre limpio
+            self.name = clean_filename
+
     @api.model
     def action_sync_onedrive(self):
         """
