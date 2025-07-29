@@ -56,38 +56,43 @@ class OneDriveDocument(models.Model):
             service = self.env['onedrive.service']
             result = service.sync_onedrive_files()
 
-            # Mostrar notificación y recargar la vista
-            if result['success']:
+            # Mostrar notificación correcta
+            if result.get('success'):
                 return {
                     'type': 'ir.actions.client',
-                    'tag': 'reload',
+                    'tag': 'display_notification',
                     'params': {
                         'title': 'Sincronización Exitosa',
                         'type': 'success',
-                        'message': result['message'],
+                        'message': result.get('message', 'Sincronización completada'),
                         'sticky': False,
                     }
                 }
             else:
                 return {
                     'type': 'ir.actions.client',
-                    'tag': 'reload',
+                    'tag': 'display_notification',
                     'params': {
                         'title': 'Error en la Sincronización',
                         'type': 'danger',
-                        'message': result['error'],
-                        'sticky': False,
+                        'message': result.get('error', 'Error desconocido durante la sincronización'),
+                        'sticky': True,
                     }
                 }
+
         except Exception as e:
+            import logging
+            _logger = logging.getLogger(__name__)
+            _logger.error(f"Error en action_sync_onedrive: {e}")
+
             return {
                 'type': 'ir.actions.client',
-                'tag': 'reload',
+                'tag': 'display_notification',
                 'params': {
                     'title': 'Error en la Sincronización',
                     'type': 'danger',
-                    'message': str(e),
-                    'sticky': False,
+                    'message': f'Error inesperado: {str(e)}',
+                    'sticky': True,
                 }
             }
 
