@@ -89,11 +89,17 @@ class OneDriveDocument(models.Model):
             }
 
         # Registrar en el chatter quién descargó el archivo
-        for record in self:
-            record.message_post(
-                body=f"El documento '{record.name}' fue descargado por {record.env.user.name}.",
+        if len(self) == 1:
+            self.message_post(
+                body=f"El documento '{self.name}' fue descargado por {self.env.user.name}.",
                 subtype_xmlid='mail.mt_note'
             )
+        else:
+            for record in self:
+                record.message_post(
+                    body=f"El documento '{record.name}' fue descargado por {record.env.user.name}.",
+                    subtype_xmlid='mail.mt_note'
+                )
 
         # Usar directamente la URL de OneDrive que ya funciona en el navegador
         return {
