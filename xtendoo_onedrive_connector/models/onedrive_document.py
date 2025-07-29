@@ -738,6 +738,9 @@ class OneDriveDocument(models.Model):
     def create(self, vals_list):
         """Override create para subir automáticamente archivos a OneDrive"""
         records = super().create(vals_list)
+        print("*"*50)
+        print("vals_list:", vals_list)
+        print("*"*50)
 
         # Para cada registro creado, verificar si tiene archivo para subir
         for record in records:
