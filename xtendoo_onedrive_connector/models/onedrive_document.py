@@ -248,177 +248,64 @@ class OneDriveDocument(models.Model):
             raise Exception(f"Error en _rename_folder_if_needed: {str(e)}")
 
     def _get_sale_name(self):
-        """Obtener el nombre de la venta actual - SOLUCIONADO PARA CONTEXTO CACHEADO"""
+        """Obtener el nombre de la venta actual directamente"""
         import logging
         _logger = logging.getLogger(__name__)
 
-        _logger.info("=== INICIANDO _get_sale_name - ANTI-CACHE ===")
-        _logger.info(f"Context completo: {self.env.context}")
-        _logger.info(f"Document ID: {self.id}")
+        _logger.info("=== OBTENIENDO NOMBRE DE VENTA ACTUAL ===")
+        _logger.info(f"Context: {self.env.context}")
 
-        # PRIORIDAD 1: Forzar obtención de la venta desde URL/request actual (más confiable)
-        try:
-            # Intentar obtener información de la request HTTP ACTUAL
-            request = self.env.context.get('request')
-            if request and hasattr(request, 'httprequest'):
-                referrer = getattr(request.httprequest, 'referrer', '') or ''
-                url = getattr(request.httprequest, 'url', '') or ''
-                _logger.info(f"URL actual: {url}")
-                _logger.info(f"Referrer: {referrer}")
-
-                # Buscar patrón de ID en ambas URLs con patrones más específicos
-                import re
-                patterns = [
-                    r'id=(\d+).*model=sale\.order',  # id=2138&model=sale.order
-                    r'model=sale\.order.*id=(\d+)',  # model=sale.order&id=2138
-                    r'/web#.*id=(\d+).*model=sale\.order',
-                    r'/web#.*model=sale\.order.*id=(\d+)',
-                    r'action=\d+.*id=(\d+)',
-                    r'sale.*order.*(\d+)',
-                ]
-                print("/"*50)
-                print("Patrones de búsqueda:", patterns)
-                print("/"*50)
-
-                for url_to_check in [url, referrer]:
-                    if url_to_check:
-                        _logger.info(f"Analizando URL: {url_to_check}")
-                        for pattern in patterns:
-                            match = re.search(pattern, url_to_check)
-                            if match:
-                                sale_id = int(match.group(1))
-                                _logger.info(f"ID encontrado en URL con patrón '{pattern}': {sale_id}")
-
-                                # FORZAR búsqueda fresca en base de datos
-                                self.env.invalidate_all()  # Limpiar cache de Odoo
-                                sale_order = self.env['sale.order'].browse(sale_id)
-                                if sale_order.exists():
-                                    _logger.info(f"✅ PRIORIDAD 1 - Venta ACTUAL desde URL: {sale_order.name}")
-                                    return sale_order.name
-                                break
-        except Exception as e:
-            _logger.error(f"❌ Error buscando en URL actual: {e}")
-
-        # PRIORIDAD 2: Params del contexto (pero verificar que sean actuales)
+        # PRIORIDAD 1: ID desde params del contexto (más directo)
         params = self.env.context.get('params', {})
-        _logger.info(f"Params del contexto: {params}")
-
         if params.get('model') == 'sale.order' and params.get('id'):
-            try:
-                sale_id = params.get('id')
-                # FORZAR búsqueda fresca
-                self.env.invalidate_all()
-                sale_order = self.env['sale.order'].browse(sale_id)
-                _logger.info(f"Sale order desde params: {sale_order}, exists: {sale_order.exists()}")
-                if sale_order.exists():
-                    _logger.info(f"✅ PRIORIDAD 2 - Nombre de sale.order desde params: {sale_order.name}")
-                    return sale_order.name
-                else:
-                    _logger.info("❌ Sale order desde params no existe")
-            except Exception as e:
-                _logger.error(f"❌ Error buscando sale.order por params: {e}")
-        else:
-            _logger.info("❌ No hay model='sale.order' o id en params")
+            sale_id = params.get('id')
+            _logger.info(f"Sale ID desde params: {sale_id}")
 
-        # PRIORIDAD 3: Active model/id del contexto (con verificación fresca)
+            # Obtener la venta actual
+            self.env.invalidate_all()
+            sale_order = self.env['sale.order'].browse(sale_id)
+            if sale_order.exists():
+                _logger.info(f"✅ Venta encontrada: {sale_order.name}")
+                return sale_order.name
+
+        # PRIORIDAD 2: Active model/id del contexto
         active_model = self.env.context.get('active_model')
         active_id = self.env.context.get('active_id')
-        _logger.info(f"Active model: {active_model}, Active ID: {active_id}")
-
         if active_model == 'sale.order' and active_id:
-            try:
-                # FORZAR búsqueda fresca
-                self.env.invalidate_all()
-                sale_order = self.env['sale.order'].browse(active_id)
-                _logger.info(f"Sale order encontrado: {sale_order}, exists: {sale_order.exists()}")
-                if sale_order.exists():
-                    _logger.info(f"✅ PRIORIDAD 3 - Nombre de sale.order desde active_id: {sale_order.name}")
-                    return sale_order.name
-                else:
-                    _logger.info("❌ Sale order no existe")
-            except Exception as e:
-                _logger.error(f"❌ Error buscando sale.order por active_id: {e}")
-        else:
-            _logger.info("❌ No es active_model='sale.order' o no hay active_id")
+            _logger.info(f"Sale ID desde active_id: {active_id}")
 
-        # PRIORIDAD 4: Sale_name directo en contexto (si está presente)
-        if self.env.context.get('sale_name'):
-            sale_name = self.env.context.get('sale_name')
-            _logger.info(f"✅ PRIORIDAD 4 - Encontrado sale_name en contexto: {sale_name}")
-            return sale_name
-        else:
-            _logger.info("❌ No hay 'sale_name' en el contexto")
+            self.env.invalidate_all()
+            sale_order = self.env['sale.order'].browse(active_id)
+            if sale_order.exists():
+                _logger.info(f"✅ Venta encontrada: {sale_order.name}")
+                return sale_order.name
 
-        # PRIORIDAD 5: IDs específicos en contexto (con verificación fresca)
-        context_keys = ['default_sale_order_id', 'sale_order_id', 'sale_id']
-        for key in context_keys:
-            context_value = self.env.context.get(key)
-            _logger.info(f"Verificando contexto '{key}': {context_value}")
-            if context_value:
-                try:
-                    # FORZAR búsqueda fresca
-                    self.env.invalidate_all()
-                    sale_order = self.env['sale.order'].browse(context_value)
-                    _logger.info(f"Sale order desde {key}: {sale_order}, exists: {sale_order.exists()}")
-                    if sale_order.exists():
-                        _logger.info(f"✅ PRIORIDAD 5 - Nombre de sale.order desde {key}: {sale_order.name}")
-                        return sale_order.name
-                except Exception as e:
-                    _logger.error(f"❌ Error buscando sale.order por {key}: {e}")
-                    continue
-            else:
-                _logger.info(f"❌ No hay valor en contexto para '{key}'")
+        # PRIORIDAD 3: Buscar en URL actual
+        request = self.env.context.get('request')
+        if request and hasattr(request, 'httprequest'):
+            referrer = getattr(request.httprequest, 'referrer', '') or ''
+            url = getattr(request.httprequest, 'url', '') or ''
 
-        # PRIORIDAD 6: Buscar en session/cookie del navegador
-        try:
-            # También buscar en todo el contexto por cualquier clave que contenga 'sale'
-            sale_related_keys = [k for k in self.env.context.keys() if 'sale' in k.lower()]
-            _logger.info(f"Claves relacionadas con 'sale' en contexto: {sale_related_keys}")
+            import re
+            for url_to_check in [url, referrer]:
+                if url_to_check:
+                    # Buscar patrón id=NUMERO con model=sale.order
+                    match = re.search(r'id=(\d+).*model=sale\.order', url_to_check)
+                    if match:
+                        sale_id = int(match.group(1))
+                        _logger.info(f"Sale ID desde URL: {sale_id}")
 
-            for key in sale_related_keys:
-                value = self.env.context.get(key)
-                if isinstance(value, (int, str)) and str(value).isdigit():
-                    try:
-                        sale_id = int(value)
-                        # FORZAR búsqueda fresca
                         self.env.invalidate_all()
                         sale_order = self.env['sale.order'].browse(sale_id)
                         if sale_order.exists():
-                            _logger.info(f"✅ PRIORIDAD 6 - Encontrado en {key}: {sale_order.name}")
+                            _logger.info(f"✅ Venta encontrada en URL: {sale_order.name}")
                             return sale_order.name
-                    except:
-                        continue
-        except Exception as e:
-            _logger.error(f"❌ Error en búsqueda de contexto sale: {e}")
 
-        # PRIORIDAD 7: ÚLTIMO RECURSO - Buscar la venta más reciente del usuario
-        try:
-            _logger.info("ÚLTIMO RECURSO: Buscando la venta más reciente del usuario...")
-            user_id = self.env.uid
-
-            # Buscar órdenes de venta accedidas recientemente por este usuario
-            recent_sales = self.env['sale.order'].search([
-                ('write_uid', '=', user_id)
-            ], order='write_date desc', limit=3)
-
-            _logger.info(f"Ventas recientes del usuario: {[s.name for s in recent_sales]}")
-
-            if recent_sales:
-                # Tomar la más reciente
-                sale_order = recent_sales[0]
-                _logger.warning(f"⚠️ PRIORIDAD 7 - Usando venta más reciente (puede no ser correcta): {sale_order.name}")
-                return sale_order.name
-
-        except Exception as e:
-            _logger.error(f"❌ Error en búsqueda de ventas recientes: {e}")
-
-        # PRIORIDAD 8: Como último recurso, OBLIGAR al usuario a especificar la venta
-        _logger.error("⚠️ NO SE ENCONTRÓ NINGUNA VENTA - Contexto posiblemente cacheado")
-
-        # En lugar de devolver "GENERAL", lanzar un error que fuerce al usuario a recargar
+        # Si no encontramos nada, mostrar error claro
+        _logger.error("❌ NO SE PUDO DETERMINAR LA VENTA ACTUAL")
         raise Exception(
-            "No se pudo determinar la venta actual. Esto puede deberse a que el contexto del navegador está desactualizado. "
-            "Por favor, RECARGA LA PÁGINA (F5) y vuelve a intentar subir el documento."
+            "No se pudo determinar la venta actual. "
+            "Por favor, recarga la página (F5) y vuelve a intentar."
         )
 
     def _ensure_folder_exists(self, folder_name, parent_folder_id, headers):
