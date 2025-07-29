@@ -5,7 +5,7 @@
     "summary": "Conector Odoo con OneDrive para ver, subir y descargar documentos.",
     "author": "Tu Empresa / Xtendoo",
     "website": "https://www.xtendoo.es/",
-    "depends": ["base"],
+    "depends": ["base", "mail"],
     "data": [
         "security/ir.model.access.csv",
         "data/server_actions.xml",
