@@ -248,13 +248,59 @@ class OneDriveDocument(models.Model):
             raise Exception(f"Error en _rename_folder_if_needed: {str(e)}")
 
     def _get_sale_name(self):
-        """Obtener el nombre de la venta actual - SOLUCIONADO PARA CONTEXTO CACHEADO"""
+        """Obtener el nombre de la venta actual - MEJORADO con obtención directa desde request"""
         import logging
         _logger = logging.getLogger(__name__)
 
         _logger.info("=== INICIANDO _get_sale_name - ANTI-CACHE ===")
-        _logger.info(f"Context completo: {self.env.context}")
-        _logger.info(f"Document ID: {self.id}")
+
+        # NUEVA PRIORIDAD 0: Obtener DIRECTAMENTE desde el request HTTP actual
+        try:
+            import threading
+            import odoo
+
+            # Obtener el request desde el thread actual
+            current_thread = threading.current_thread()
+            if hasattr(current_thread, 'uid'):
+                # Buscar en la pila de llamadas para encontrar el request
+                import inspect
+                for frame_info in inspect.stack():
+                    frame_locals = frame_info.frame.f_locals
+                    if 'request' in frame_locals:
+                        current_request = frame_locals['request']
+                        if hasattr(current_request, 'httprequest'):
+                            url = getattr(current_request.httprequest, 'url', '')
+                            referrer = getattr(current_request.httprequest, 'referrer', '')
+
+                            _logger.info(f"🔥 DIRECTO - URL: {url}")
+                            _logger.info(f"🔥 DIRECTO - Referrer: {referrer}")
+
+                            # Buscar patrón de ID con más variaciones
+                            import re
+                            patterns = [
+                                r'id=(\d+)(?=.*sale)',  # id=X con 'sale' en cualquier parte
+                                r'sale.*?(\d+)',        # 'sale' seguido de número
+                                r'/(\d+)(?=/|$)',       # número al final de path
+                                r'action=\d+.*?id=(\d+)', # action seguido de id
+                            ]
+
+                            for url_check in [url, referrer]:
+                                if url_check and 'sale' in url_check.lower():
+                                    for pattern in patterns:
+                                        matches = re.findall(pattern, url_check)
+                                        for match in matches:
+                                            try:
+                                                sale_id = int(match)
+                                                if sale_id > 0:  # Validar que es un ID válido
+                                                    sale_order = self.env['sale.order'].browse(sale_id)
+                                                    if sale_order.exists():
+                                                        _logger.info(f"✅ PRIORIDAD 0 - Venta desde request directo: {sale_order.name}")
+                                                        return sale_order.name
+                                            except (ValueError, TypeError):
+                                                continue
+                            break
+        except Exception as e:
+            _logger.error(f"❌ Error en búsqueda directa: {e}")
 
         # PRIORIDAD 1: Forzar obtención de la venta desde URL/request actual (más confiable)
         try:
