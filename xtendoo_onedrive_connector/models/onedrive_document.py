@@ -56,38 +56,38 @@ class OneDriveDocument(models.Model):
             service = self.env['onedrive.service']
             result = service.sync_onedrive_files()
 
-            # Solo refrescar la vista después de una sincronización exitosa
-            if result.get('success'):
+            # Mostrar notificación y recargar la vista
+            if result['success']:
                 return {
                     'type': 'ir.actions.client',
                     'tag': 'reload',
+                    'params': {
+                        'title': 'Sincronización Exitosa',
+                        'type': 'success',
+                        'message': result['message'],
+                        'sticky': False,
+                    }
                 }
             else:
-                # En caso de error, mostrar notificación
                 return {
                     'type': 'ir.actions.client',
-                    'tag': 'display_notification',
+                    'tag': 'reload',
                     'params': {
                         'title': 'Error en la Sincronización',
                         'type': 'danger',
-                        'message': result.get('error', 'Error desconocido durante la sincronización'),
-                        'sticky': True,
+                        'message': result['error'],
+                        'sticky': False,
                     }
                 }
-
         except Exception as e:
-            import logging
-            _logger = logging.getLogger(__name__)
-            _logger.error(f"Error en action_sync_onedrive: {e}")
-
             return {
                 'type': 'ir.actions.client',
-                'tag': 'display_notification',
+                'tag': 'reload',
                 'params': {
-                    'title': 'Error Inesperado',
+                    'title': 'Error en la Sincronización',
                     'type': 'danger',
-                    'message': f'Error inesperado durante la sincronización: {str(e)}',
-                    'sticky': True,
+                    'message': str(e),
+                    'sticky': False,
                 }
             }
 
