@@ -49,45 +49,51 @@ class OneDriveDocument(models.Model):
     @api.model
     def action_sync_onedrive(self):
         """
-        Método llamado desde la interfaz para sincronizar con OneDrive
+        Método llamado desde la interfaz para sincronizar con OneDrive y subir documentos pendientes.
         """
-        try:
-            # Usar el servicio mejorado de OneDrivee
-            service = self.env['onedrive.service']
-            result = service.sync_onedrive_files()
+        import logging
+        _logger = logging.getLogger(__name__)
 
-            # Mostrar notificación y recargar la vista
-            if result['success']:
-                return {
-                    'type': 'ir.actions.client',
-                    'tag': 'reload',
-                    'params': {
-                        'title': 'Sincronización Exitosa',
-                        'type': 'success',
-                        'message': result['message'],
-                        'sticky': False,
-                    }
-                }
-            else:
-                return {
-                    'type': 'ir.actions.client',
-                    'tag': 'reload',
-                    'params': {
-                        'title': 'Error en la Sincronización',
-                        'type': 'danger',
-                        'message': result['error'],
-                        'sticky': False,
-                    }
-                }
-        except Exception as e:
+        try:
+            # Obtener todos los documentos que no han sido subidos aún
+            documents_to_upload = self.search([('file_url', '=', False), ('upload_file', '!=', False)])
+            _logger.info(f"Documentos pendientes de subida: {len(documents_to_upload)}")
+
+            for document in documents_to_upload:
+                try:
+                    # Subir el archivo a OneDrive
+                    result = document.action_upload_file()
+
+                    # Si la subida fue exitosa, actualizar los datos del documento
+                    if result and result.get('params', {}).get('type') == 'success':
+                        _logger.info(f"Documento {document.name} subido exitosamente.")
+                    else:
+                        _logger.warning(f"Error subiendo documento {document.name}: {result.get('params', {}).get('message', 'Error desconocido')}")
+
+                except Exception as e:
+                    _logger.error(f"Excepción subiendo documento {document.name}: {str(e)}")
+
             return {
                 'type': 'ir.actions.client',
-                'tag': 'reload',
+                'tag': 'display_notification',
+                'params': {
+                    'title': 'Sincronización Completa',
+                    'message': 'Todos los documentos pendientes han sido procesados.',
+                    'type': 'success',
+                    'sticky': False,
+                }
+            }
+
+        except Exception as e:
+            _logger.error(f"Error en la sincronización con OneDrive: {str(e)}")
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
                 'params': {
                     'title': 'Error en la Sincronización',
+                    'message': f'Error: {str(e)}',
                     'type': 'danger',
-                    'message': str(e),
-                    'sticky': False,
+                    'sticky': True,
                 }
             }
 
@@ -141,25 +147,13 @@ class OneDriveDocument(models.Model):
 
             # Obtener el nombre de la venta ANTES de crear/buscar carpetas
             sale_name = self._get_sale_name()
-
-            # Si el contexto está desactualizado, usar JavaScript para obtener el ID
-            if sale_name == "NEED_BROWSER_URL":
-                return {
-                    'type': 'ir.actions.client',
-                    'tag': 'onedrive_upload_with_url_detection',
-                    'params': {
-                        'record_id': self.id,
-                        'title': 'Detectando venta actual...',
-                        'message': 'Obteniendo información de la venta desde la URL del navegador...',
-                    }
-                }
-            elif not sale_name:
+            if not sale_name:
                 return {
                     'type': 'ir.actions.client',
                     'tag': 'display_notification',
                     'params': {
-                        'title': 'Error - No se pudo determinar la venta',
-                        'message': 'No se pudo determinar la venta actual. Por favor, recarga la página (F5) y vuelve a intentar.',
+                        'title': 'Error',
+                        'message': 'No se pudo determinar el nombre de la venta.',
                         'type': 'warning',
                         'sticky': True,
                     }
@@ -259,101 +253,245 @@ class OneDriveDocument(models.Model):
         except Exception as e:
             raise Exception(f"Error en _rename_folder_if_needed: {str(e)}")
 
-    @api.model
-    def get_sale_name_from_browser_url(self):
-        """Método llamado desde JavaScript para obtener el nombre de venta usando el ID de la URL del navegador"""
-        import logging
-        _logger = logging.getLogger(__name__)
-
-        # Este método espera recibir el sale_id desde JavaScript via contexto
-        sale_id = self.env.context.get('sale_id_from_url')
-
-        if not sale_id:
-            _logger.error("No se recibió sale_id_from_url en el contexto")
-            return None
-
-        try:
-            _logger.info(f"Obteniendo nombre para sale_id desde URL: {sale_id}")
-
-            # Obtener la venta directamente (sin cache)
-            self.env.invalidate_all()
-            sale_order = self.env['sale.order'].browse(sale_id)
-
-            if sale_order.exists():
-                _logger.info(f"✅ Nombre de venta obtenido desde URL: {sale_order.name}")
-                return sale_order.name
-            else:
-                _logger.warning(f"Sale ID {sale_id} no existe")
-                return None
-
-        except Exception as e:
-            _logger.error(f"Error obteniendo venta desde URL: {e}")
-            return None
-
     def _get_sale_name(self):
-        """Obtener el nombre de la venta asociada al documento"""
+        """Obtener el nombre de la venta actual - SOLUCIONADO PARA CONTEXTO CACHEADO"""
         import logging
         _logger = logging.getLogger(__name__)
 
-        # Acceder a la primera venta asociada al documento
-        sale_orders = self.env['sale.order'].search([('onedrive_document_ids', 'in', self.ids)], limit=1)
-        if sale_orders:
-            sale_name = sale_orders.name
-            _logger.info(f"✅ Nombre de venta obtenido: {sale_name}")
+        _logger.info("=== INICIANDO _get_sale_name - ANTI-CACHE ===")
+        _logger.info(f"Context completo: {self.env.context}")
+        _logger.info(f"Document ID: {self.id}")
+
+        # PRIORIDAD 1: Forzar obtención de la venta desde URL/request actual (más confiable)
+        try:
+            # Intentar obtener información de la request HTTP ACTUAL
+            request = self.env.context.get('request')
+            if request and hasattr(request, 'httprequest'):
+                referrer = getattr(request.httprequest, 'referrer', '') or ''
+                url = getattr(request.httprequest, 'url', '') or ''
+                _logger.info(f"URL actual: {url}")
+                _logger.info(f"Referrer: {referrer}")
+
+                # Buscar patrón de ID en ambas URLs con patrones más específicos
+                import re
+                patterns = [
+                    r'id=(\d+).*model=sale\.order',  # id=2138&model=sale.order
+                    r'model=sale\.order.*id=(\d+)',  # model=sale.order&id=2138
+                    r'/web#.*id=(\d+).*model=sale\.order',
+                    r'/web#.*model=sale\.order.*id=(\d+)',
+                    r'action=\d+.*id=(\d+)',
+                    r'sale.*order.*(\d+)',
+                ]
+
+                for url_to_check in [url, referrer]:
+                    if url_to_check:
+                        _logger.info(f"Analizando URL: {url_to_check}")
+                        for pattern in patterns:
+                            match = re.search(pattern, url_to_check)
+                            if match:
+                                sale_id = int(match.group(1))
+                                _logger.info(f"ID encontrado en URL con patrón '{pattern}': {sale_id}")
+
+                                # FORZAR búsqueda fresca en base de datos
+                                self.env.invalidate_all()  # Limpiar cache de Odoo
+                                sale_order = self.env['sale.order'].browse(sale_id)
+                                if sale_order.exists():
+                                    _logger.info(f"✅ PRIORIDAD 1 - Venta ACTUAL desde URL: {sale_order.name}")
+                                    return sale_order.name
+                                break
+        except Exception as e:
+            _logger.error(f"❌ Error buscando en URL actual: {e}")
+
+        # PRIORIDAD 2: Params del contexto (pero verificar que sean actuales)
+        params = self.env.context.get('params', {})
+        _logger.info(f"Params del contexto: {params}")
+
+        if params.get('model') == 'sale.order' and params.get('id'):
+            try:
+                sale_id = params.get('id')
+                # FORZAR búsqueda fresca
+                self.env.invalidate_all()
+                sale_order = self.env['sale.order'].browse(sale_id)
+                _logger.info(f"Sale order desde params: {sale_order}, exists: {sale_order.exists()}")
+                if sale_order.exists():
+                    _logger.info(f"✅ PRIORIDAD 2 - Nombre de sale.order desde params: {sale_order.name}")
+                    return sale_order.name
+                else:
+                    _logger.info("❌ Sale order desde params no existe")
+            except Exception as e:
+                _logger.error(f"❌ Error buscando sale.order por params: {e}")
+        else:
+            _logger.info("❌ No hay model='sale.order' o id en params")
+
+        # PRIORIDAD 3: Active model/id del contexto (con verificación fresca)
+        active_model = self.env.context.get('active_model')
+        active_id = self.env.context.get('active_id')
+        _logger.info(f"Active model: {active_model}, Active ID: {active_id}")
+
+        if active_model == 'sale.order' and active_id:
+            try:
+                # FORZAR búsqueda fresca
+                self.env.invalidate_all()
+                sale_order = self.env['sale.order'].browse(active_id)
+                _logger.info(f"Sale order encontrado: {sale_order}, exists: {sale_order.exists()}")
+                if sale_order.exists():
+                    _logger.info(f"✅ PRIORIDAD 3 - Nombre de sale.order desde active_id: {sale_order.name}")
+                    return sale_order.name
+                else:
+                    _logger.info("❌ Sale order no existe")
+            except Exception as e:
+                _logger.error(f"❌ Error buscando sale.order por active_id: {e}")
+        else:
+            _logger.info("❌ No es active_model='sale.order' o no hay active_id")
+
+        # PRIORIDAD 4: Sale_name directo en contexto (si está presente)
+        if self.env.context.get('sale_name'):
+            sale_name = self.env.context.get('sale_name')
+            _logger.info(f"✅ PRIORIDAD 4 - Encontrado sale_name en contexto: {sale_name}")
             return sale_name
         else:
-            _logger.warning("⚠️ No se encontró ninguna venta asociada al documento")
-            return None
+            _logger.info("❌ No hay 'sale_name' en el contexto")
+
+        # PRIORIDAD 5: IDs específicos en contexto (con verificación fresca)
+        context_keys = ['default_sale_order_id', 'sale_order_id', 'sale_id']
+        for key in context_keys:
+            context_value = self.env.context.get(key)
+            _logger.info(f"Verificando contexto '{key}': {context_value}")
+            if context_value:
+                try:
+                    # FORZAR búsqueda fresca
+                    self.env.invalidate_all()
+                    sale_order = self.env['sale.order'].browse(context_value)
+                    _logger.info(f"Sale order desde {key}: {sale_order}, exists: {sale_order.exists()}")
+                    if sale_order.exists():
+                        _logger.info(f"✅ PRIORIDAD 5 - Nombre de sale.order desde {key}: {sale_order.name}")
+                        return sale_order.name
+                except Exception as e:
+                    _logger.error(f"❌ Error buscando sale.order por {key}: {e}")
+                    continue
+            else:
+                _logger.info(f"❌ No hay valor en contexto para '{key}'")
+
+        # PRIORIDAD 6: Buscar en session/cookie del navegador
+        try:
+            # También buscar en todo el contexto por cualquier clave que contenga 'sale'
+            sale_related_keys = [k for k in self.env.context.keys() if 'sale' in k.lower()]
+            _logger.info(f"Claves relacionadas con 'sale' en contexto: {sale_related_keys}")
+
+            for key in sale_related_keys:
+                value = self.env.context.get(key)
+                if isinstance(value, (int, str)) and str(value).isdigit():
+                    try:
+                        sale_id = int(value)
+                        # FORZAR búsqueda fresca
+                        self.env.invalidate_all()
+                        sale_order = self.env['sale.order'].browse(sale_id)
+                        if sale_order.exists():
+                            _logger.info(f"✅ PRIORIDAD 6 - Encontrado en {key}: {sale_order.name}")
+                            return sale_order.name
+                    except:
+                        continue
+        except Exception as e:
+            _logger.error(f"❌ Error en búsqueda de contexto sale: {e}")
+
+        # PRIORIDAD 7: ÚLTIMO RECURSO - Buscar la venta más reciente del usuario
+        try:
+            _logger.info("ÚLTIMO RECURSO: Buscando la venta más reciente del usuario...")
+            user_id = self.env.uid
+
+            # Buscar órdenes de venta accedidas recientemente por este usuario
+            recent_sales = self.env['sale.order'].search([
+                ('write_uid', '=', user_id)
+            ], order='write_date desc', limit=3)
+
+            _logger.info(f"Ventas recientes del usuario: {[s.name for s in recent_sales]}")
+
+            if recent_sales:
+                # Tomar la más reciente
+                sale_order = recent_sales[0]
+                _logger.warning(f"⚠️ PRIORIDAD 7 - Usando venta más reciente (puede no ser correcta): {sale_order.name}")
+                return sale_order.name
+
+        except Exception as e:
+            _logger.error(f"❌ Error en búsqueda de ventas recientes: {e}")
+
+        # PRIORIDAD 8: Como último recurso, OBLIGAR al usuario a especificar la venta
+        _logger.error("⚠️ NO SE ENCONTRÓ NINGUNA VENTA - Contexto posiblemente cacheado")
+
+        # En lugar de devolver "GENERAL", lanzar un error que fuerce al usuario a recargar
+        raise Exception(
+            "No se pudo determinar la venta actual. Esto puede deberse a que el contexto del navegador está desactualizado. "
+            "Por favor, RECARGA LA PÁGINA (F5) y vuelve a intentar subir el documento."
+        )
 
     def _ensure_folder_exists(self, folder_name, parent_folder_id, headers):
-        """Verificar si existe una carpeta, si no existe la crea"""
+        """Verificar si existe una carpeta, si no existe la crea - CORREGIDO PARA USAR VENTA ACTUAL"""
         import logging
         _logger = logging.getLogger(__name__)
 
         try:
-            # Obtener el nombre de la venta asociada
-            sale_name = self._get_sale_name()
-            if not sale_name:
-                raise Exception("No se pudo determinar el nombre de la venta asociada al documento.")
-
-            # Usar el nombre de la venta como nombre de la carpeta
-            folder_name = sale_name
+            _logger.info(f"=== Buscando/creando carpeta: '{folder_name}' ===")
 
             # Construir URL para buscar carpetas
             if parent_folder_id:
                 search_url = f'https://graph.microsoft.com/v1.0/me/drive/items/{parent_folder_id}/children'
+                _logger.info(f"Buscando en carpeta padre ID: {parent_folder_id}")
             else:
                 search_url = 'https://graph.microsoft.com/v1.0/me/drive/root/children'
+                _logger.info("Buscando en carpeta raíz")
 
             # Limpiar el nombre de carpeta de caracteres problemáticos para OneDrive
             safe_folder_name = self._sanitize_folder_name(folder_name)
+            _logger.info(f"Nombre original: '{folder_name}' -> Nombre seguro: '{safe_folder_name}'")
 
             # Obtener TODAS las carpetas para buscar la correcta
+            _logger.info(f"Obteniendo lista de carpetas desde: {search_url}")
             response = requests.get(search_url, headers=headers, timeout=30)
+
             if response.status_code == 200:
                 data = response.json()
-                folders = [item for item in data.get('value', []) if item.get('folder') is not None]
+                all_items = data.get('value', [])
+                _logger.info(f"Total de items encontrados: {len(all_items)}")
+
+                # Filtrar solo carpetas
+                folders = [item for item in all_items if item.get('folder') is not None]
+                _logger.info(f"Carpetas encontradas: {len(folders)}")
 
                 # Buscar carpeta con nombre exacto
                 for folder in folders:
-                    if folder.get('name', '') == safe_folder_name:
-                        return folder['id']
+                    folder_name_found = folder.get('name', '')
+                    _logger.info(f"Comparando: '{safe_folder_name}' == '{folder_name_found}'")
+                    if folder_name_found == safe_folder_name:
+                        folder_id = folder['id']
+                        _logger.info(f"✅ Carpeta encontrada: '{folder_name_found}' con ID: {folder_id}")
+                        return folder_id
 
-            # Crear la carpeta si no existe
+                _logger.info(f"❌ No se encontró carpeta '{safe_folder_name}' - se creará nueva")
+            else:
+                _logger.error(f"Error obteniendo lista de carpetas: {response.status_code} - {response.text}")
+
+            # La carpeta no existe, crearla
+            _logger.info(f"Creando nueva carpeta: '{safe_folder_name}'")
             create_data = {
                 "name": safe_folder_name,
                 "folder": {},
-                "@microsoft.graph.conflictBehavior": "rename"
+                "@microsoft.graph.conflictBehavior": "rename"  # Renombrar automáticamente si hay conflicto
             }
+
             create_response = requests.post(search_url, headers=headers, json=create_data, timeout=30)
+            _logger.info(f"Respuesta de creación: {create_response.status_code}")
+
             if create_response.status_code == 201:
-                return create_response.json()['id']
+                folder_id = create_response.json()['id']
+                created_name = create_response.json().get('name', safe_folder_name)
+                _logger.info(f"✅ Carpeta creada exitosamente: '{created_name}' con ID: {folder_id}")
+                return folder_id
             else:
-                raise Exception(f"Error creando carpeta: {create_response.status_code} - {create_response.text}")
+                raise Exception(f"Error creando carpeta {safe_folder_name}: {create_response.status_code} - {create_response.text}")
 
         except Exception as e:
-            _logger.error(f"Error en _ensure_folder_exists: {str(e)}")
-            raise
+            _logger.error(f"❌ Error en _ensure_folder_exists para {folder_name}: {str(e)}")
+            raise Exception(f"Error en _ensure_folder_exists para {folder_name}: {str(e)}")
 
     def _sanitize_folder_name(self, folder_name):
         """Limpiar el nombre de carpeta para OneDrive"""
@@ -604,125 +742,45 @@ class OneDriveDocument(models.Model):
 
     @api.model_create_multi
     def create(self, vals_list):
-        """Override create para crear el documento en Odoo primero y luego subirlo a OneDrive"""
+        """Override create para subir automáticamente archivos a OneDrive"""
         records = super().create(vals_list)
 
+        # Para cada registro creado, verificar si tiene archivo para subir
         for record in records:
-            # Verificar si hay archivo para subir
-            if record.upload_file and record.upload_filename:
+            # Verificar si hay archivo para subir (puede venir en file_data o upload_file)
+            has_file = False
+
+            # Si viene en file_data y name, preparar para subida
+            if record.file_data and record.name and not record.file_url:
+                # Mover file_data a upload_file para procesarlo
+                record.upload_file = record.file_data
+                record.upload_filename = record.name
+                has_file = True
+            # O si viene directamente en upload_file
+            elif record.upload_file and record.upload_filename:
+                has_file = True
+
+            if has_file:
                 try:
-                    # Subir el archivo a OneDrive
+                    # Ejecutar automáticamente la subida a OneDrive
                     result = record.action_upload_file()
 
-                    # Si la subida fue exitosa, actualizar los datos del documento
-                    if result and result.get('params', {}).get('type') == 'success':
-                        record._update_document_data(result)
-                    else:
+                    # Si hay error en la subida, registrarlo pero no fallar la creación
+                    if result and result.get('params', {}).get('type') in ['danger', 'warning']:
                         import logging
                         _logger = logging.getLogger(__name__)
                         _logger.warning(
-                            "Error subiendo archivo %s a OneDrive: %s",
-                            record.upload_filename,
+                            "Error automático subiendo archivo %s a OneDrive: %s",
+                            record.upload_filename or record.name,
                             result.get('params', {}).get('message', 'Error desconocido')
                         )
                 except Exception as e:
                     import logging
                     _logger = logging.getLogger(__name__)
                     _logger.error(
-                        "Excepción subiendo archivo %s a OneDrive: %s",
-                        record.upload_filename,
+                        "Excepción automática subiendo archivo %s a OneDrive: %s",
+                        record.upload_filename or record.name,
                         str(e)
                     )
 
         return records
-
-    @api.model
-    def action_upload_file_with_sale_id(self, record_id, sale_id):
-        """Método específico para subir archivo cuando se proporciona el sale_id desde JavaScript"""
-        import logging
-        _logger = logging.getLogger(__name__)
-
-        try:
-            # Obtener el record específico
-            record = self.browse(record_id)
-            if not record.exists():
-                raise Exception(f"Documento con ID {record_id} no encontrado")
-
-            _logger.info(f"=== UPLOAD CON SALE_ID DESDE URL: {sale_id} ===")
-
-            # Variable configurable para el nombre de la carpeta raíz
-            ROOT_FOLDER_NAME = "odoo"
-
-            if not record.upload_file or not record.upload_filename:
-                return {
-                    'type': 'ir.actions.client',
-                    'tag': 'display_notification',
-                    'params': {
-                        'title': 'Error',
-                        'message': 'Por favor, selecciona un archivo para subir.',
-                        'type': 'warning',
-                        'sticky': False,
-                    }
-                }
-
-            # Obtener el servicio de OneDrive
-            onedrive_service = self.env['onedrive.service']
-            access_token = onedrive_service._get_token()
-
-            headers = {
-                'Authorization': f'Bearer {access_token}',
-                'Content-Type': 'application/json',
-            }
-
-            # Obtener el nombre de la venta usando el sale_id proporcionado
-            self.env.invalidate_all()
-            sale_order = self.env['sale.order'].browse(sale_id)
-
-            if not sale_order.exists():
-                raise Exception(f"Venta con ID {sale_id} no encontrada")
-
-            sale_name = sale_order.name
-            _logger.info(f"✅ Nombre de venta obtenido: {sale_name}")
-
-            # Paso 1: Verificar/crear carpeta raíz "odoo"
-            root_folder_id = record._ensure_folder_exists(ROOT_FOLDER_NAME, None, headers)
-            if not root_folder_id:
-                raise Exception(f'No se pudo crear o encontrar la carpeta "{ROOT_FOLDER_NAME}".')
-
-            # Paso 2: Verificar/crear carpeta de la venta
-            sale_folder_id = record._ensure_folder_exists(sale_name, root_folder_id, headers)
-            if not sale_folder_id:
-                raise Exception(f'No se pudo crear o encontrar la carpeta "{sale_name}".')
-
-            # Paso 3: Subir el archivo a la carpeta de la venta
-            file_data = record._upload_file_to_folder(sale_folder_id, headers)
-            if not file_data:
-                raise Exception('No se pudo subir el archivo a OneDrive.')
-
-            # Paso 4: Actualizar los datos en Odoo
-            record._update_document_data(file_data)
-
-            # Retornar éxito
-            return {
-                'type': 'ir.actions.client',
-                'tag': 'display_notification',
-                'params': {
-                    'title': '¡Archivo subido exitosamente!',
-                    'message': f'El archivo "{record.upload_filename}" se ha subido correctamente a OneDrive en la carpeta {ROOT_FOLDER_NAME}/{sale_name}/',
-                    'type': 'success',
-                    'sticky': False,
-                }
-            }
-
-        except Exception as e:
-            _logger.error(f"Error en upload con sale_id: {e}")
-            return {
-                'type': 'ir.actions.client',
-                'tag': 'display_notification',
-                'params': {
-                    'title': 'Error al subir archivo',
-                    'message': f'Error: {str(e)}',
-                    'type': 'danger',
-                    'sticky': True,
-                }
-            }
