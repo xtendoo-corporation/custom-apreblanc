@@ -49,22 +49,47 @@ class OneDriveDocument(models.Model):
     @api.onchange('upload_file')
     def _onchange_upload_file(self):
         """Actualizar automáticamente el nombre cuando se selecciona un archivo en upload_file"""
-        if self.upload_file and not self.name:
-            # Si tenemos upload_filename, usarlo
-            if self.upload_filename:
-                filename = self.upload_filename
-            else:
-                # Generar nombre basado en timestamp
-                from datetime import datetime
-                timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-                filename = f'documento_{timestamp}'
+        import logging
+        _logger = logging.getLogger(__name__)
 
-            # Limpiar el nombre del archivo de caracteres no válidos
-            import re
-            clean_filename = re.sub(r'[<>:"/\\|?*]', '_', filename)
+        _logger.info(f"🔍 _onchange_upload_file llamado - upload_file presente: {bool(self.upload_file)}")
 
-            # Asignar el nombre limpio
-            self.name = clean_filename
+        if self.upload_file:
+            # Verificar tamaño del archivo
+            import base64
+            try:
+                decoded_data = base64.b64decode(self.upload_file)
+                file_size = len(decoded_data)
+                _logger.info(f"📁 Archivo detectado - Tamaño: {file_size} bytes")
+
+                # Copiar a file_data inmediatamente
+                self.file_data = self.upload_file
+                _logger.info("✅ Archivo copiado a file_data")
+
+            except Exception as e:
+                _logger.error(f"❌ Error procesando archivo: {e}")
+
+            if not self.name:
+                # Si tenemos upload_filename, usarlo
+                if self.upload_filename:
+                    filename = self.upload_filename
+                    _logger.info(f"📝 Usando upload_filename: {filename}")
+                else:
+                    # Generar nombre basado en timestamp
+                    from datetime import datetime
+                    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+                    filename = f'documento_{timestamp}'
+                    _logger.info(f"📝 Generando nombre automático: {filename}")
+
+                # Limpiar el nombre del archivo de caracteres no válidos
+                import re
+                clean_filename = re.sub(r'[<>:"/\\|?*]', '_', filename)
+
+                # Asignar el nombre limpio
+                self.name = clean_filename
+                _logger.info(f"✅ Nombre asignado: {self.name}")
+        else:
+            _logger.warning("⚠️ upload_file está vacío")
 
     @api.model
     def action_sync_onedrive(self):
@@ -609,13 +634,14 @@ class OneDriveDocument(models.Model):
 
             # Actualizar campos del documento
             update_data = {
-                'name': file_data.get('name', self.upload_filename),
+                'name': file_data.get('name', self.name),  # CORREGIDO: usar self.name en lugar de self.upload_filename
                 'onedrive_id': file_data.get('id', ''),
                 'file_url': download_url,
                 'file_size': file_data.get('size', 0),
                 'file_type': file_data.get('file', {}).get('mimeType', ''),
                 'owner': file_data.get('createdBy', {}).get('user', {}).get('displayName', ''),
                 'is_folder': False,
+                # CORREGIDO: NO limpiar file_data, mantener los datos del archivo
                 'file_data': self.file_data,  # Mantener una copia local
             }
 
@@ -625,9 +651,14 @@ class OneDriveDocument(models.Model):
 
             self.write(update_data)
 
-            # Limpiar campos de upload
-            self.file_data = False
-            self.upload_filename = False
+            # CORREGIDO: NO limpiar campos hasta confirmar que todo funciona
+            # Solo limpiar upload_filename si es diferente del name final
+            if self.upload_filename and self.upload_filename != self.name:
+                self.upload_filename = False
+
+            import logging
+            _logger = logging.getLogger(__name__)
+            _logger.info(f"✅ Documento {self.name} actualizado correctamente con datos de OneDrive")
 
         except Exception as e:
             raise Exception(f"Error actualizando datos en Odoo: {str(e)}")
