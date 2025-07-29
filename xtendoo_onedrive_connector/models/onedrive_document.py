@@ -56,19 +56,22 @@ class OneDriveDocument(models.Model):
             service = self.env['onedrive.service']
             result = service.sync_onedrive_files()
 
-            # Mostrar notificación correcta
+            # Mostrar notificación correcta Y refrescar vista
             if result.get('success'):
+                # Primero mostrar la notificación de éxito
+                self.env.user.notify_success(
+                    title='Sincronización Exitosa',
+                    message=result.get('message', 'Sincronización completada'),
+                    sticky=False
+                )
+
+                # Luego refrescar la vista completa
                 return {
                     'type': 'ir.actions.client',
-                    'tag': 'display_notification',
-                    'params': {
-                        'title': 'Sincronización Exitosa',
-                        'type': 'success',
-                        'message': result.get('message', 'Sincronización completada'),
-                        'sticky': False,
-                    }
+                    'tag': 'reload',
                 }
             else:
+                # En caso de error, solo mostrar notificación
                 return {
                     'type': 'ir.actions.client',
                     'tag': 'display_notification',
@@ -89,9 +92,9 @@ class OneDriveDocument(models.Model):
                 'type': 'ir.actions.client',
                 'tag': 'display_notification',
                 'params': {
-                    'title': 'Error en la Sincronización',
+                    'title': 'Error Inesperado',
                     'type': 'danger',
-                    'message': f'Error inesperado: {str(e)}',
+                    'message': f'Error inesperado durante la sincronización: {str(e)}',
                     'sticky': True,
                 }
             }
