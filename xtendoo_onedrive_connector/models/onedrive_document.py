@@ -372,15 +372,25 @@ class OneDriveDocument(models.Model):
                 request = self.env.context.get('request')
                 if request and hasattr(request, 'httprequest'):
                     referrer = getattr(request.httprequest, 'referrer', '')
-                    if referrer and str(sale_id) not in referrer:
-                        _logger.warning(f"⚠️ ID {sale_id} en params NO coincide con referrer {referrer}")
-                        # Intentar extraer el ID correcto del referrer
+
+                    # NUEVA VALIDACIÓN: Extraer ID específicamente del hash de la URL
+                    if referrer and '#' in referrer:
+                        hash_part = referrer.split('#')[1]  # Obtener solo la parte después del #
+                        _logger.info(f"🔍 Analizando hash: {hash_part}")
+
                         import re
-                        match = re.search(r'id=(\d+)', referrer)
-                        if match:
-                            correct_id = int(match.group(1))
-                            _logger.info(f"🔄 Corrigiendo ID de {sale_id} a {correct_id}")
-                            sale_id = correct_id
+                        # Buscar específicamente id=XXXX en el hash
+                        hash_match = re.search(r'id=(\d+)', hash_part)
+                        if hash_match:
+                            url_sale_id = int(hash_match.group(1))
+                            _logger.info(f"📍 ID en URL hash: {url_sale_id}, ID en params: {sale_id}")
+
+                            if url_sale_id != sale_id:
+                                _logger.warning(f"⚠️ CONFLICTO DETECTADO: params={sale_id}, URL hash={url_sale_id}")
+                                sale_id = url_sale_id
+                                _logger.info(f"🔄 CORRIGIENDO: Usando ID {sale_id} de la URL hash")
+                            else:
+                                _logger.info(f"✅ IDs coinciden: {sale_id}")
 
                 sale_order = self.env['sale.order'].browse(sale_id)
                 _logger.info(f"Sale order desde params: {sale_order}, exists: {sale_order.exists()}")
