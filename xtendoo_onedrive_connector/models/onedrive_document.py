@@ -276,6 +276,9 @@ class OneDriveDocument(models.Model):
                     r'action=\d+.*id=(\d+)',
                     r'sale.*order.*(\d+)',
                 ]
+                print("/"*50)
+                print("Patrones de búsqueda:", patterns)
+                print("/"*50)
 
                 for url_to_check in [url, referrer]:
                     if url_to_check:
