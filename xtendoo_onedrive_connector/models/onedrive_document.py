@@ -52,36 +52,18 @@ class OneDriveDocument(models.Model):
         Método llamado desde la interfaz para sincronizar con OneDrive
         """
         try:
-            # Usar el servicio mejorado de OneDrivee
+            # Usar el servicio mejorado de OneDrive
             service = self.env['onedrive.service']
             result = service.sync_onedrive_files()
 
-            # Mostrar notificación correcta Y refrescar vista
+            # Solo refrescar la vista después de una sincronización exitosa
             if result.get('success'):
-                # Crear el mensaje de éxito con estadísticas
-                message = result.get('message', 'Sincronización completada')
-                synced_count = result.get('synced_count', 0)
-                created_count = result.get('created_count', 0)
-                updated_count = result.get('updated_count', 0)
-
-                detailed_message = f"{message}\nProcesados: {synced_count} | Nuevos: {created_count} | Actualizados: {updated_count}"
-
                 return {
                     'type': 'ir.actions.client',
-                    'tag': 'display_notification',
-                    'params': {
-                        'title': 'Sincronización Exitosa',
-                        'message': detailed_message,
-                        'type': 'success',
-                        'sticky': False,
-                        'next': {
-                            'type': 'ir.actions.client',
-                            'tag': 'reload',
-                        }
-                    }
+                    'tag': 'reload',
                 }
             else:
-                # En caso de error, solo mostrar notificación
+                # En caso de error, mostrar notificación
                 return {
                     'type': 'ir.actions.client',
                     'tag': 'display_notification',
