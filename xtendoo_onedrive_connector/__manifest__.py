@@ -13,6 +13,11 @@
         "views/onedrive_callback_template.xml",
         "views/onedrive_menu_views.xml"
     ],
+    "assets": {
+        "web.assets_backend": [
+            "xtendoo_onedrive_connector/static/src/js/sale_context_extractor.js",
+        ],
+    },
     "installable": "true",
     "application": "true",
     "license": "LGPL-3"
