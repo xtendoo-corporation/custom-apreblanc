@@ -368,41 +368,67 @@ class OneDriveDocument(models.Model):
             if params.get('model') == 'sale.order' and params.get('id'):
                 sale_id = params.get('id')
 
-                # VERIFICAR que el ID de la venta coincide con la URL actual del navegador
+                # PRIORIDAD ABSOLUTA: SIEMPRE verificar la URL actual del navegador
                 request = self.env.context.get('request')
+                current_url_sale_id = None
+
                 if request and hasattr(request, 'httprequest'):
+                    # Obtener TODAS las fuentes de URL posibles
                     referrer = getattr(request.httprequest, 'referrer', '')
+                    current_url = getattr(request.httprequest, 'url', '')
+                    path_info = getattr(request.httprequest, 'path_info', '')
+                    full_path = getattr(request.httprequest, 'full_path', '')
 
-                    # NUEVA VALIDACIÓN: Extraer ID específicamente del hash de la URL
-                    if referrer and '#' in referrer:
-                        hash_part = referrer.split('#')[1]  # Obtener solo la parte después del #
-                        _logger.info(f"🔍 Analizando hash: {hash_part}")
+                    _logger.info(f"🌐 URL SOURCES:")
+                    _logger.info(f"  - referrer: {referrer}")
+                    _logger.info(f"  - current_url: {current_url}")
+                    _logger.info(f"  - path_info: {path_info}")
+                    _logger.info(f"  - full_path: {full_path}")
 
-                        import re
-                        # Buscar específicamente id=XXXX en el hash
-                        hash_match = re.search(r'id=(\d+)', hash_part)
-                        if hash_match:
-                            url_sale_id = int(hash_match.group(1))
-                            _logger.info(f"📍 ID en URL hash: {url_sale_id}, ID en params: {sale_id}")
+                    # Analizar TODAS las URLs para encontrar el ID más actual
+                    urls_to_check = [current_url, referrer, full_path]
+                    import re
 
-                            if url_sale_id != sale_id:
-                                _logger.warning(f"⚠️ CONFLICTO DETECTADO: params={sale_id}, URL hash={url_sale_id}")
-                                sale_id = url_sale_id
-                                _logger.info(f"🔄 CORRIGIENDO: Usando ID {sale_id} de la URL hash")
-                            else:
-                                _logger.info(f"✅ IDs coinciden: {sale_id}")
+                    for url_source in urls_to_check:
+                        if url_source and '#' in url_source:
+                            hash_part = url_source.split('#')[1]
+                            _logger.info(f"🔍 Analizando hash de {url_source}: {hash_part}")
 
-                sale_order = self.env['sale.order'].browse(sale_id)
-                _logger.info(f"Sale order desde params: {sale_order}, exists: {sale_order.exists()}")
-                if sale_order.exists():
-                    _logger.info(f"✅ PRIORIDAD 2 - Nombre de sale.order desde params: {sale_order.name}")
-                    return sale_order.name
+                            # Buscar específicamente id=XXXX en el hash
+                            hash_match = re.search(r'id=(\d+)', hash_part)
+                            if hash_match:
+                                current_url_sale_id = int(hash_match.group(1))
+                                _logger.info(f"🎯 ID ACTUAL DETECTADO en URL: {current_url_sale_id}")
+                                break
+
+                    # Si encontramos ID en URL actual, SIEMPRE usar ese en lugar del contexto
+                    if current_url_sale_id is not None:
+                        _logger.info(f"🚨 ANULANDO CONTEXTO: params ID={sale_id} → URL ACTUAL ID={current_url_sale_id}")
+                        sale_id = current_url_sale_id
+                    else:
+                        _logger.info(f"ℹ️ No se encontró ID en URL actual, usando params ID: {sale_id}")
                 else:
-                    _logger.info("❌ Sale order desde params no existe")
+                    _logger.info("⚠️ No hay request disponible para verificar URL actual")
+
+                # Buscar con el ID final (ya sea de URL actual o params)
+                # CREAR UN NUEVO ENTORNO LIMPIO para esta búsqueda específica
+                with self.env.registry.cursor() as new_cr:
+                    new_env = self.env(cr=new_cr)
+                    sale_order = new_env['sale.order'].browse(sale_id)
+                    _logger.info(f"🔍 Búsqueda AISLADA con ID {sale_id}: exists={sale_order.exists()}")
+
+                    if sale_order.exists():
+                        sale_name = sale_order.name
+                        _logger.info(f"✅ PRIORIDAD 2 - Sale order AISLADO: {sale_name}")
+                        return sale_name
+                    else:
+                        _logger.info(f"❌ Sale order con ID {sale_id} no existe en búsqueda aislada")
             else:
                 _logger.info("❌ No hay model='sale.order' o id en params")
         except Exception as e:
             _logger.error(f"❌ Error buscando sale.order por params: {e}")
+            import traceback
+            _logger.error(f"Traceback: {traceback.format_exc()}")
 
         # PRIORIDAD 3: Active model/id del contexto (con verificación fresca)
         active_model = self.env.context.get('active_model')
