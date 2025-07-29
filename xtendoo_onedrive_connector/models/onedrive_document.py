@@ -56,11 +56,26 @@ class OneDriveDocument(models.Model):
 
         try:
             # Obtener todos los documentos que no han sido subidos aún
-            documents_to_upload = self.search([('file_url', '=', False), ('file_data', '!=', False)])
+            # CORREGIDO: buscar documentos con file_data O upload_file
+            documents_to_upload = self.search([
+                ('file_url', '=', False),
+                '|',
+                ('file_data', '!=', False),
+                ('upload_file', '!=', False)
+            ])
             _logger.info(f"Documentos pendientes de subida: {len(documents_to_upload)}")
 
             for document in documents_to_upload:
                 try:
+                    # CORREGIDO: Asegurar que tenemos datos de archivo en file_data
+                    if document.upload_file and not document.file_data:
+                        document.file_data = document.upload_file
+
+                    # Verificar que tenemos datos y nombre
+                    if not document.file_data or not document.name:
+                        _logger.warning(f"Documento {document.name} no tiene archivo o nombre válido")
+                        continue
+
                     # Obtener el nombre de la venta asociada
                     sale_name = document._get_sale_name()
                     if not sale_name:
