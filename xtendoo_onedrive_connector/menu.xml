@@ -1,6 +1,4 @@
 <odoo>
     <menuitem id="menu_onedrive_root" name="OneDrive" sequence="10"/>
     <menuitem id="menu_onedrive_documents" name="Documentos" parent="menu_onedrive_root" action="action_onedrive_document" sequence="20"/>
-    <menuitem id="menu_onedrive_config" name="Configuración" parent="menu_onedrive_root" action="action_onedrive_config_settings" sequence="30"/>
 </odoo>
-

@@ -164,6 +164,12 @@
                         </tree>
                     </field>
                 </page>
+                <page name="authorization" string="Autorización" invisible="expedient_type == 'none' or not context.get('show_as_expedient', False)">
+                    <field name="authorization"
+                           readonly="expedient_state in ['aprobada', 'rechazada'] and not is_expedient_admin"
+                           placeholder="Detalles de la autorización del expediente..."
+                           nolabel="1"/>
+                </page>
 
             </xpath>
 

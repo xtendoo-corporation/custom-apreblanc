@@ -19,6 +19,25 @@ class ExpedientCreateWizard(models.TransientModel):
         default=False,
         help='Indica si se debe mostrar un mensaje de advertencia al crear el expediente'
     )
+    show_warning_text_person = fields.Boolean(
+        string='Mostrar Mensaje de Advertencia',
+        compute='_compute_show_warning_message',
+        default=False,
+        help='Indica si se debe mostrar un mensaje de advertencia al crear el expediente'
+    )
+
+    show_warning_text_client = fields.Boolean(
+        string='Mostrar Mensaje de Advertencia',
+        compute='_compute_show_warning_message',
+        default=False,
+        help='Indica si se debe mostrar un mensaje de advertencia al crear el expediente'
+    )
+    show_warning_text_numberexp = fields.Boolean(
+        string='Mostrar Mensaje de Advertencia',
+        compute='_compute_show_warning_message',
+        default=False,
+        help='Indica si se debe mostrar un mensaje de advertencia al crear el expediente'
+    )
 
     # El tipo de expediente se define por defecto desde el contexto
     expedient_type = fields.Selection([
@@ -244,13 +263,42 @@ class ExpedientCreateWizard(models.TransientModel):
 
         return sale_order
 
-    @api.depends('person_under_study')
+    @api.depends('person_under_study', 'client_id', 'expedient_number')
     def _compute_show_warning_message(self):
         for record in self:
-            if not record.person_under_study:
-                record.show_warning_message = False
-                continue
-            existing_orders = self.env['sale.order'].search([
-                ('person_under_study', '=', record.person_under_study)
-            ])
-            record.show_warning_message = bool(existing_orders)
+            # Inicializar todos los campos de advertencia en False
+            record.show_warning_text_person = False
+            record.show_warning_text_client = False
+            record.show_warning_text_numberexp = False
+            record.show_warning_message = False
+
+            # Buscar expedientes existentes con la misma persona bajo estudio si el campo tiene valor
+            if record.person_under_study:
+                existing_orders_study = self.env['sale.order'].search([
+                    ('person_under_study', '=', record.person_under_study)
+                ])
+                if existing_orders_study:
+                    record.show_warning_text_person = True
+
+            # Buscar expedientes existentes con el mismo número de expediente si el campo tiene valor
+            if record.expedient_number:
+                existing_orders_number = self.env['sale.order'].search([
+                    ('expedient_number', '=', record.expedient_number)
+                ])
+                if existing_orders_number:
+                    record.show_warning_text_numberexp = True
+
+            # Buscar expedientes existentes con el mismo ID de cliente si el campo tiene valor
+            if record.client_id:
+                existing_orders_client = self.env['sale.order'].search([
+                    ('client_id', '=', record.client_id),
+                ])
+                if existing_orders_client:
+                    record.show_warning_text_client = True
+
+            # Establecer show_warning_message en True si cualquiera de los campos de advertencia es True
+            record.show_warning_message = (
+                record.show_warning_text_numberexp or
+                record.show_warning_text_person or
+                record.show_warning_text_client
+            )

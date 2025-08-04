@@ -9,9 +9,14 @@
                 <field name="expedient_type" invisible="1"/>
                 <field name="partner_readonly" invisible="1"/>
                 <field name="show_warning_message" invisible="1"/>
+                <field name="show_warning_text_person" invisible="1"/>
+                <field name="show_warning_text_numberexp" invisible="1"/>
+                <field name="show_warning_text_client" invisible="1"/>
                 <!-- Mensaje de advertencia condicional -->
                 <div invisible="not show_warning_message" class="alert alert-warning" role="alert">
-                    <p><strong>Nota:</strong> La persona a estudiar ya pertenece a otro expediente</p>
+                    <p invisible="not show_warning_text_person"><strong>Nota:</strong> La persona a estudiar ya pertenece a otro expediente</p>
+                    <p invisible="not show_warning_text_numberexp"><strong>Nota:</strong> El número de expediente ya pertenece a otro expediente</p>
+                    <p invisible="not show_warning_text_client"><strong>Nota:</strong> El ID de cliente ya pertenece a otro expediente</p>
                 </div>
                 <group>
                     <field name="sale_order_template_id" options="{'no_create': True}" required="1"/>

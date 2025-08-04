@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Crear un menú directo en la sección de ajustes que lleve a la configuración de OneDrive -->
+    <menuitem
+        id="menu_settings_onedrive"
+        name="OneDrive"
+        parent="base.menu_administration"
+        action="action_onedrive_settings"
+        sequence="100"/>
+</odoo>
+
