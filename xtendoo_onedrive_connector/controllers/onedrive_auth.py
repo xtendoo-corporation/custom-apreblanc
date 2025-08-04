@@ -34,8 +34,8 @@ class OneDriveAuthController(http.Controller):
 
         # Intercambiar código por refresh_token
         try:
-            # Usar endpoint común para cuentas personales y empresariales
-            token_url = "https://login.microsoftonline.com/common/oauth2/v2.0/token"
+            # Usar tenant específico en lugar del endpoint común
+            token_url = f"https://login.microsoftonline.com/{settings.onedrive_tenant_id}/oauth2/v2.0/token"
             token_data = {
                 'client_id': settings.onedrive_client_id,
                 'client_secret': settings.onedrive_client_secret,
