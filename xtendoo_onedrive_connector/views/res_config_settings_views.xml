@@ -29,21 +29,8 @@
                     <field name="onedrive_tenant_id"/>
                     <field name="onedrive_redirect_uri"/>
                     <field name="onedrive_refresh_token"/>
-                    <div class="row">
-                        <div class="col-12">
-                            <label for="onedrive_sync_folder"/>
-                            <div class="d-flex align-items-center">
-                                <field name="onedrive_sync_folder" placeholder="ID de la carpeta" class="me-2"/>
-                                <span class="text-muted" invisible="not onedrive_sync_folder_name">
-                                    <i class="fa fa-folder-o me-1"/>
-                                    <field name="onedrive_sync_folder_name" readonly="1" class="oe_inline"/>
-                                </span>
-                            </div>
-                            <div class="text-muted" invisible="onedrive_sync_folder">
-                                Se usará la carpeta raíz si no se especifica otra.
-                            </div>
-                        </div>
-                    </div>
+                    <field name="onedrive_sync_folder" placeholder="Ej.: odoo"/>
+                    <field name="onedrive_sync_folder_name" readonly="1" />
                 </group>
             </form>
         </field>

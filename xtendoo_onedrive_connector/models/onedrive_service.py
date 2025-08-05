@@ -758,6 +758,15 @@ class OneDriveService(models.AbstractModel):
                             if item_resp.status_code == 200:
                                 folder_info = item_resp.json()
                                 _logger.info('Carpeta con ID %s encontrada: %s', folder_path, folder_info.get('name'))
+
+                                # Actualizar el nombre de la carpeta en la configuración
+                                if settings:
+                                    settings.write({
+                                        'onedrive_sync_folder_name': folder_info.get('name')
+                                    })
+                                    self.env.cr.commit()
+                                    _logger.info('Nombre de carpeta actualizado en la configuración: %s', folder_info.get('name'))
+
                                 success_msg = _('Conexión establecida. Carpeta de sincronización verificada.')
                                 self._notify_user(
                                     message=success_msg,
