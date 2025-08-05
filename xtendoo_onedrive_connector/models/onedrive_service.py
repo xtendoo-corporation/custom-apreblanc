@@ -41,24 +41,52 @@ class OneDriveService(models.AbstractModel):
         if not config['client_id'] or not config['client_secret']:
             raise UserError(_('Cliente ID o Cliente Secret no configurados correctamente. Por favor, verifica la configuración en Odoo.'))
 
-        token_url = f"https://login.microsoftonline.com/{config['tenant_id']}/oauth2/v2.0/token"
+        # Determinar el tipo de grant a usar
+        # Si tenemos refresh_token, usamos flujo delegado (usuario específico)
+        # Si no, usamos client_credentials (aplicación)
+        if config['refresh_token']:
+            _logger.info('Usando flujo de autenticación delegada (refresh_token)')
+            token_url = f"https://login.microsoftonline.com/{config['tenant_id']}/oauth2/v2.0/token"
 
-        headers = {
-            'Content-Type': 'application/x-www-form-urlencoded',
-        }
+            headers = {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            }
 
-        data = {
-            'client_id': config['client_id'],
-            'scope': 'https://graph.microsoft.com/.default',
-            'client_secret': config['client_secret'],
-            'grant_type': 'client_credentials',
-        }
+            data = {
+                'client_id': config['client_id'],
+                'client_secret': config['client_secret'],
+                'grant_type': 'refresh_token',
+                'refresh_token': config['refresh_token'],
+                'redirect_uri': config['redirect_uri'],
+                'scope': 'https://graph.microsoft.com/.default offline_access Files.ReadWrite.All',
+            }
+
+            grant_type = 'delegated'
+        else:
+            _logger.info('Usando flujo de autenticación de aplicación (client_credentials)')
+            token_url = f"https://login.microsoftonline.com/{config['tenant_id']}/oauth2/v2.0/token"
+
+            headers = {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            }
+
+            data = {
+                'client_id': config['client_id'],
+                'scope': 'https://graph.microsoft.com/.default',
+                'client_secret': config['client_secret'],
+                'grant_type': 'client_credentials',
+            }
+
+            grant_type = 'application'
 
         response = requests.post(token_url, headers=headers, data=data)
 
         if response.status_code == 200:
-            token = response.json().get('access_token')
-            _logger.info('Token obtenido exitosamente: %s', token)
+            token_data = response.json()
+            token = token_data.get('access_token')
+            # Guardar también el tipo de autenticación en la sesión para usarlo después
+            self.env.context = dict(self.env.context, onedrive_auth_type=grant_type)
+            _logger.info('Token obtenido exitosamente (tipo: %s): %s', grant_type, token)
             return token
         else:
             _logger.error('Error obteniendo token de OneDrive: %s - %s', response.status_code, response.text)
@@ -84,51 +112,86 @@ class OneDriveService(models.AbstractModel):
         """
         headers = {'Authorization': f'Bearer {token}'}
 
-        try:
-            # Intentar acceder al perfil del usuario para determinar el tipo de cuenta
-            profile_url = 'https://graph.microsoft.com/v1.0/me'
-            resp = requests.get(profile_url, headers=headers, timeout=10)
+        # Determinar si estamos usando autenticación de app o delegada
+        auth_type = self.env.context.get('onedrive_auth_type', 'application')
+        _logger.info('Detectando tipo de cuenta con autenticación: %s', auth_type)
 
-            if resp.status_code == 200:
-                user_data = resp.json()
-                # Si tiene 'businessPhones' y no está vacío, probablemente es cuenta empresarial
-                # Si tiene 'userPrincipalName' con dominio corporativo, es empresarial
-                user_principal = user_data.get('userPrincipalName', '')
-                business_phones = user_data.get('businessPhones', [])
+        # Si es autenticación delegada, podemos usar /me
+        if auth_type == 'delegated':
+            try:
+                # Intentar acceder al perfil del usuario para determinar el tipo de cuenta
+                profile_url = 'https://graph.microsoft.com/v1.0/me'
+                resp = requests.get(profile_url, headers=headers, timeout=10)
 
-                # Verificar si es un dominio corporativo conocido vs personal (outlook.com, hotmail.com, live.com)
-                personal_domains = ['outlook.com', 'hotmail.com', 'live.com', 'gmail.com']
-                is_personal_domain = any(domain in user_principal.lower() for domain in personal_domains)
+                if resp.status_code == 200:
+                    user_data = resp.json()
+                    # Si tiene 'businessPhones' y no está vacío, probablemente es cuenta empresarial
+                    # Si tiene 'userPrincipalName' con dominio corporativo, es empresarial
+                    user_principal = user_data.get('userPrincipalName', '')
+                    business_phones = user_data.get('businessPhones', [])
 
-                if is_personal_domain:
-                    _logger.info('Detectada cuenta personal de OneDrive: %s', user_principal)
-                    return 'personal'
+                    # Verificar si es un dominio corporativo conocido vs personal (outlook.com, hotmail.com, live.com)
+                    personal_domains = ['outlook.com', 'hotmail.com', 'live.com', 'gmail.com']
+                    is_personal_domain = any(domain in user_principal.lower() for domain in personal_domains)
+
+                    if is_personal_domain:
+                        _logger.info('Detectada cuenta personal de OneDrive: %s', user_principal)
+                        return 'personal'
+                    else:
+                        _logger.info('Detectada cuenta empresarial de OneDrive: %s', user_principal)
+                        return 'business'
                 else:
-                    _logger.info('Detectada cuenta empresarial de OneDrive: %s', user_principal)
+                    _logger.warning('Error detectando tipo de cuenta con /me: %s - %s',
+                                  resp.status_code, resp.text)
+            except Exception as e:
+                _logger.warning('Error detectando tipo de cuenta con /me: %s', str(e))
+        else:
+            # Si es autenticación de aplicación, intentamos determinar por el sitio raíz
+            try:
+                # Intentar acceder al sitio raíz para determinar si tiene SharePoint
+                site_url = 'https://graph.microsoft.com/v1.0/sites/root'
+                resp = requests.get(site_url, headers=headers, timeout=10)
+
+                if resp.status_code == 200:
+                    _logger.info('Detectada cuenta empresarial (con sitio SharePoint)')
                     return 'business'
+                else:
+                    _logger.warning('No se pudo acceder al sitio raíz: %s - %s',
+                                  resp.status_code, resp.text)
+            except Exception as e:
+                _logger.warning('Error detectando tipo de cuenta con /sites/root: %s', str(e))
 
-        except Exception as e:
-            _logger.warning('No se pudo detectar el tipo de cuenta: %s', str(e))
-
-        # Por defecto, asumir que es empresarial y luego manejar el error si no tiene licencia SPO
+        # Por defecto, intentaremos con business primero y si falla cambiaremos a personal
+        _logger.info('No se pudo detectar el tipo de cuenta. Usando business por defecto')
         return 'business'
 
     def _get_drive_endpoint(self, account_type, folder_id=None):
         """
-        Obtiene el endpoint correcto según el tipo de cuenta
+        Obtiene el endpoint correcto según el tipo de cuenta y tipo de autenticación
         """
-        if account_type == 'personal':
-            # Para cuentas personales, usar el endpoint estándar
-            if folder_id:
-                return f'https://graph.microsoft.com/v1.0/me/drive/items/{folder_id}/children'
+        # Determinar si estamos usando autenticación de app o delegada
+        auth_type = self.env.context.get('onedrive_auth_type', 'application')
+        _logger.info('Usando endpoint para autenticación tipo: %s', auth_type)
+
+        # Para autenticación delegada, podemos usar /me
+        if auth_type == 'delegated':
+            if account_type == 'personal':
+                # Para cuentas personales con auth delegada
+                if folder_id:
+                    return f'https://graph.microsoft.com/v1.0/me/drive/items/{folder_id}/children'
+                else:
+                    return 'https://graph.microsoft.com/v1.0/me/drive/root/children'
             else:
-                return 'https://graph.microsoft.com/v1.0/me/drive/root/children'
+                # Para cuentas empresariales con auth delegada
+                if folder_id:
+                    return f'https://graph.microsoft.com/v1.0/me/drive/items/{folder_id}/children'
+                else:
+                    return 'https://graph.microsoft.com/v1.0/me/drive/root/children'
         else:
-            # Para cuentas empresariales, usar el mismo endpoint pero manejar errores de SPO
-            if folder_id:
-                return f'https://graph.microsoft.com/v1.0/me/drive/items/{folder_id}/children'
-            else:
-                return 'https://graph.microsoft.com/v1.0/me/drive/root/children'
+            # Para autenticación de aplicación, no podemos usar /me
+            # Necesitamos usar /users/{userId} o /sites/{siteId}
+            # Intentaremos con el primer sitio SharePoint que encontremos
+            return f'https://graph.microsoft.com/v1.0/sites/root/drive/root/children'
 
     def list_files(self, folder_id=None):
         token = self._get_token()
