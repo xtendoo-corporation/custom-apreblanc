@@ -7,12 +7,10 @@
         <field name="state">code</field>
         <field name="code">
 service = env['onedrive.service']
+# Llamar al método sin suprimir errores para usar solo notificaciones laterales
 result = service.diagnose_connection()
 
-if result['success']:
-    raise UserError("✅ Conexión OneDrive OK: " + result['message'])
-else:
-    raise UserError("❌ Error OneDrive: " + result['error'])
+# No levantar UserError, las notificaciones se manejan en el método diagnose_connection
         </field>
     </record>
 
@@ -26,9 +24,9 @@ service = env['onedrive.service']
 result = service.sync_onedrive_files()
 
 if result['success']:
-    raise UserError("✅ Sincronización completada: " + result['message'])
+    env.user.notify_success(message=result['message'], title="Sincronización OneDrive", sticky=False)
 else:
-    raise UserError("❌ Error en sincronización: " + result['message'])
+    env.user.notify_danger(message=result['message'], title="Error en sincronización", sticky=True)
         </field>
     </record>
 
