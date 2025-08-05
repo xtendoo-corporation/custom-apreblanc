@@ -734,7 +734,11 @@ class OneDriveService(models.AbstractModel):
                                     }
 
                     # Si no hay carpeta configurada
-                    return {'success': True, 'message': 'Conexión exitosa con OneDrive.'}
+                    return {
+                        'success': True,
+                        'message': 'Conexión exitosa',
+                        'title': 'Operación válida'
+                    }
                 else:
                     _logger.error('Error en respuesta JSON: %s', response_json)
 
@@ -744,19 +748,22 @@ class OneDriveService(models.AbstractModel):
                         if auth_url:
                             return {
                                 'success': False,
-                                'error': f'Refresh token inválido o expirado. Reautoriza en: {auth_url}',
-                                'auth_url': auth_url
+                                'error': 'Conexión fallida',
+                                'auth_url': auth_url,
+                                'title': 'Operación no válida'
                             }
                         else:
                             return {
                                 'success': False,
-                                'error': 'Refresh token inválido o expirado. Necesitas reautorizar la aplicación.'
+                                'error': 'Conexión fallida',
+                                'title': 'Operación no válida'
                             }
 
                     return {
                         'success': False,
-                        'error': f"Error {resp.status_code}: {response_json.get('error', 'unknown')}",
-                        'details': response_json
+                        'error': 'Conexión fallida',
+                        'details': response_json,
+                        'title': 'Operación no válida'
                     }
             except Exception as json_error:
                 _logger.error('Error parseando respuesta JSON: %s', str(json_error))
