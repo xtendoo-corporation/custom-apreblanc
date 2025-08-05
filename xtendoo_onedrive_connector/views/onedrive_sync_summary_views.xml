@@ -10,16 +10,16 @@
                     <div class="text-center mb-3">
                         <h1><field name="name" readonly="1" class="oe_inline"/></h1>
                     </div>
-                    <div attrs="{'invisible': [('success', '=', False)]}" class="alert alert-success text-center" role="alert">
+                    <div class="alert alert-success text-center" invisible_if="not success" role="alert">
                         <i class="fa fa-check-circle fa-2x me-2" />
                         <span>Sincronización completada exitosamente</span>
                     </div>
-                    <div attrs="{'invisible': [('success', '=', True)]}" class="alert alert-danger text-center" role="alert">
+                    <div class="alert alert-danger text-center" invisible_if="success" role="alert">
                         <i class="fa fa-exclamation-circle fa-2x me-2" />
                         <span>Error durante la sincronización</span>
                     </div>
 
-                    <group attrs="{'invisible': [('success', '=', False)]}">
+                    <group invisible_if="not success">
                         <group>
                             <field name="success" invisible="1"/>
                             <field name="synced_count" string="Total elementos procesados"/>
@@ -30,7 +30,7 @@
                         </group>
                     </group>
 
-                    <group attrs="{'invisible': [('success', '=', True)]}">
+                    <group invisible_if="success">
                         <field name="error_message" readonly="1" nolabel="1"/>
                     </group>
                 </sheet>
