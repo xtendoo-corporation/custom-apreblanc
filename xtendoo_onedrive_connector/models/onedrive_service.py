@@ -516,6 +516,41 @@ class OneDriveService(models.AbstractModel):
                 'message': _('Error durante la sincronización: %s') % str(e)
             }
 
+    def sync(self):
+        """
+        Método simplificado para sincronizar archivos de OneDrive.
+        Utiliza la configuración predeterminada para la sincronización.
+
+        Returns:
+            dict: Resultado de la sincronización con información de éxito y estadísticas.
+        """
+        _logger.info('Iniciando sincronización simplificada de OneDrive')
+
+        try:
+            # Obtener la configuración con la carpeta configurada en los ajustes
+            config = self._get_config()
+            folder_id = config.get('sync_folder')
+
+            # Llamar al método completo de sincronización con la carpeta configurada
+            result = self.sync_onedrive_files(
+                folder_id=folder_id,
+                recursive=True,
+                parent_doc_id=None,
+                max_depth=3,
+                current_depth=0
+            )
+
+            _logger.info('Sincronización simplificada completada: %s', result.get('message'))
+            return result
+
+        except Exception as e:
+            _logger.error('Error durante la sincronización simplificada: %s', str(e))
+            return {
+                'success': False,
+                'error': str(e),
+                'message': _('Error durante la sincronización: %s') % str(e)
+            }
+
     def diagnose_connection(self):
         """
         Método para diagnosticar problemas de conexión con OneDrive
@@ -660,7 +695,7 @@ class OneDriveService(models.AbstractModel):
 
                                     return {
                                         'success': True,
-                                        'message': f'Conexión exitosa. Se creó la carpeta "{folder_name}" para sincronización'
+                                        'message': f'Conexión exitosa.'
                                     }
                                 else:
                                     _logger.error('❌ Error creando carpeta en OneDrive: %s', create_resp.text)
@@ -671,7 +706,7 @@ class OneDriveService(models.AbstractModel):
                             else:
                                 return {
                                     'success': True,
-                                    'message': f'Conexión exitosa. La carpeta "{folder_name}" ya existe.'
+                                    'message': f'Conexión exitosa.'
                                 }
                         else:
                             # Es un ID, verificar que exista

@@ -55,7 +55,7 @@ class OneDriveDocument(models.Model):
         try:
             # Usar el servicio mejorado de OneDrive
             service = self.env['onedrive.service']
-            result = service.sync_onedrive_files()
+            result = service.sync()
 
             # Recargar la vista sin mostrar notificación
             if result['success']:
