@@ -571,7 +571,7 @@ class OneDriveService(models.AbstractModel):
                 'grant_type': 'refresh_token',
                 'refresh_token': config['refresh_token'],
                 'redirect_uri': config['redirect_uri'],
-                'scope': 'openid offline_access Files.ReadWrite.All',  # Corregir para incluir openid
+                'scope': 'openid offline_access Files.ReadWrite.All',
             }
 
             _logger.info('URL de token: %s', url)
@@ -584,103 +584,149 @@ class OneDriveService(models.AbstractModel):
 
             resp = requests.post(url, data=data, timeout=30)
             _logger.info('Respuesta HTTP: %s', resp.status_code)
-            _logger.info('Headers de respuesta: %s', dict(resp.headers))
 
             try:
                 response_json = resp.json()
                 if resp.status_code == 200:
+                    token = response_json.get('access_token')
                     _logger.info('Token obtenido exitosamente')
 
                     # 4. Verificar y crear carpeta de sincronización si está configurada
                     if config['sync_folder']:
                         _logger.info('Verificando existencia de la carpeta de sincronización: %s', config['sync_folder'])
-                        token = response_json.get('access_token')
 
-                        # Verificar si es una ruta o un ID
-                        if '/' in config['sync_folder'] or '\\' in config['sync_folder']:
-                            # Es una ruta, buscar o crear la carpeta
-                            folder_path = config['sync_folder'].replace('\\', '/').strip('/')
-                            folder_parts = folder_path.split('/')
+                        # Determinar si es un ID o nombre/ruta
+                        folder_path = config['sync_folder']
+                        is_path = '/' in folder_path or '\\' in folder_path or not folder_path.startswith('0')
 
-                            # Obtener lista de carpetas en la raíz
-                            headers = {'Authorization': f'Bearer {token}'}
-                            root_url = 'https://graph.microsoft.com/v1.0/me/drive/root/children?$filter=folder ne null'
-                            _logger.info('Verificando carpetas en la raíz...')
+                        headers = {
+                            'Authorization': f'Bearer {token}',
+                            'Content-Type': 'application/json'
+                        }
 
-                            resp = requests.get(root_url, headers=headers, timeout=30)
+                        if is_path:
+                            # Es un nombre de carpeta o ruta
+                            folder_name = folder_path.replace('\\', '/').strip('/').split('/')[0]
 
-                            if resp.status_code != 200:
-                                _logger.warning('Error obteniendo carpetas de OneDrive: %s', resp.text)
-                                return {'success': True, 'message': 'Token obtenido correctamente, pero no se pudo verificar la carpeta de sincronización.'}
+                            # Listar carpetas en la raíz para ver si existe
+                            list_url = 'https://graph.microsoft.com/v1.0/me/drive/root/children?$filter=folder ne null'
+                            list_resp = requests.get(list_url, headers=headers, timeout=30)
 
-                            root_folders = resp.json().get('value', [])
-                            root_folder_names = [f.get('name') for f in root_folders]
-                            _logger.info('Carpetas existentes en raíz: %s', ', '.join(root_folder_names))
+                            if list_resp.status_code != 200:
+                                _logger.error('Error listando carpetas de OneDrive: %s', list_resp.text)
+                                return {'success': False, 'error': f'Error al listar carpetas: {list_resp.text[:100]}'}
 
-                            if folder_parts[0] not in root_folder_names:
-                                # La carpeta no existe, crearla
-                                _logger.info('Carpeta de sincronización no encontrada. Creando: %s', folder_parts[0])
+                            root_folders = list_resp.json().get('value', [])
+                            folder_exists = False
+                            folder_id = None
 
-                                # Crear carpeta
-                                create_folder_url = 'https://graph.microsoft.com/v1.0/me/drive/root/children'
+                            # Verificar si la carpeta existe
+                            for folder in root_folders:
+                                if folder.get('name').lower() == folder_name.lower():
+                                    folder_exists = True
+                                    folder_id = folder.get('id')
+                                    _logger.info('Carpeta encontrada: %s (ID: %s)', folder_name, folder_id)
+                                    break
+
+                            if not folder_exists:
+                                # Crear la carpeta si no existe
+                                _logger.info('Carpeta "%s" no encontrada. Procediendo a crearla...', folder_name)
+
+                                create_url = 'https://graph.microsoft.com/v1.0/me/drive/root/children'
                                 create_data = {
-                                    "name": folder_parts[0],
+                                    "name": folder_name,
                                     "folder": {},
                                     "@microsoft.graph.conflictBehavior": "rename"
                                 }
 
                                 create_resp = requests.post(
-                                    create_folder_url,
-                                    headers={
-                                        'Authorization': f'Bearer {token}',
-                                        'Content-Type': 'application/json'
-                                    },
+                                    create_url,
+                                    headers=headers,
                                     json=create_data,
                                     timeout=30
                                 )
 
                                 if create_resp.status_code in (200, 201):
-                                    _logger.info('Carpeta creada exitosamente: %s', folder_parts[0])
+                                    created_folder = create_resp.json()
+                                    _logger.info('✅ Carpeta creada exitosamente: %s (ID: %s)',
+                                              created_folder.get('name'),
+                                              created_folder.get('id'))
+
+                                    # Actualizar la configuración con el ID de la carpeta creada
+                                    if settings:
+                                        settings.onedrive_sync_folder = created_folder.get('id')
+                                        self.env.cr.commit()
+                                        _logger.info('ID de carpeta actualizado en la configuración: %s', created_folder.get('id'))
+
                                     return {
                                         'success': True,
-                                        'message': f'Conexión exitosa. Se creó la carpeta de sincronización: {folder_parts[0]}'
+                                        'message': f'Conexión exitosa. Se creó la carpeta "{folder_name}" para sincronización'
                                     }
                                 else:
-                                    _logger.warning('Error creando carpeta en OneDrive: %s', create_resp.text)
+                                    _logger.error('❌ Error creando carpeta en OneDrive: %s', create_resp.text)
                                     return {
-                                        'success': True,
-                                        'message': 'Token obtenido correctamente, pero no se pudo crear la carpeta de sincronización.'
+                                        'success': False,
+                                        'error': f'Error creando carpeta: {create_resp.text[:100]}'
                                     }
                             else:
-                                _logger.info('Carpeta de sincronización encontrada: %s', folder_parts[0])
                                 return {
                                     'success': True,
-                                    'message': f'Conexión exitosa. La carpeta de sincronización existe: {folder_parts[0]}'
+                                    'message': f'Conexión exitosa. La carpeta "{folder_name}" ya existe.'
                                 }
                         else:
                             # Es un ID, verificar que exista
-                            headers = {'Authorization': f'Bearer {token}'}
-                            folder_url = f'https://graph.microsoft.com/v1.0/me/drive/items/{config["sync_folder"]}'
+                            item_url = f'https://graph.microsoft.com/v1.0/me/drive/items/{folder_path}'
+                            item_resp = requests.get(item_url, headers=headers, timeout=30)
 
-                            _logger.info('Verificando carpeta por ID: %s', config["sync_folder"])
-                            resp = requests.get(folder_url, headers=headers, timeout=30)
-
-                            if resp.status_code == 200:
-                                folder_info = resp.json()
-                                _logger.info('Carpeta encontrada por ID: %s (%s)', folder_info.get('name'), config["sync_folder"])
+                            if item_resp.status_code == 200:
+                                folder_info = item_resp.json()
+                                _logger.info('Carpeta con ID %s encontrada: %s', folder_path, folder_info.get('name'))
                                 return {
                                     'success': True,
-                                    'message': f'Conexión exitosa. Carpeta encontrada: {folder_info.get("name")}'
+                                    'message': f'Conexión exitosa. Carpeta "{folder_info.get("name")}" encontrada.'
                                 }
                             else:
-                                _logger.warning('Error: No se encontró la carpeta con ID %s: %s', config["sync_folder"], resp.text)
-                                return {
-                                    'success': True,
-                                    'message': 'Token obtenido correctamente, pero no se encontró la carpeta con el ID especificado.'
+                                # El ID no existe, crear una nueva carpeta
+                                _logger.warning('No se encontró la carpeta con ID %s. Creando nueva carpeta...', folder_path)
+
+                                # Crear una nueva carpeta con nombre "Odoo"
+                                create_url = 'https://graph.microsoft.com/v1.0/me/drive/root/children'
+                                create_data = {
+                                    "name": "Odoo",
+                                    "folder": {},
+                                    "@microsoft.graph.conflictBehavior": "rename"
                                 }
 
-                    # Si no hay carpeta configurada, devolver éxito normal
-                    return {'success': True, 'message': 'Token obtenido correctamente'}
+                                create_resp = requests.post(
+                                    create_url,
+                                    headers=headers,
+                                    json=create_data,
+                                    timeout=30
+                                )
+
+                                if create_resp.status_code in (200, 201):
+                                    created_folder = create_resp.json()
+                                    _logger.info('✅ Carpeta Odoo creada exitosamente (ID: %s)',
+                                              created_folder.get('id'))
+
+                                    # Actualizar la configuración con el nuevo ID
+                                    if settings:
+                                        settings.onedrive_sync_folder = created_folder.get('id')
+                                        self.env.cr.commit()
+
+                                    return {
+                                        'success': True,
+                                        'message': f'Se creó una nueva carpeta "Odoo" para sincronización.'
+                                    }
+                                else:
+                                    _logger.error('❌ Error creando carpeta en OneDrive: %s', create_resp.text)
+                                    return {
+                                        'success': False,
+                                        'error': f'Error creando carpeta: {create_resp.text[:100]}'
+                                    }
+
+                    # Si no hay carpeta configurada
+                    return {'success': True, 'message': 'Conexión exitosa con OneDrive.'}
                 else:
                     _logger.error('Error en respuesta JSON: %s', response_json)
 
