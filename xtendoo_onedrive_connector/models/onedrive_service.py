@@ -281,6 +281,19 @@ class OneDriveService(models.AbstractModel):
         current_depth es el nivel actual de profundidad.
         """
         try:
+            # Verificar la configuración explícitamente antes de obtener el token
+            config = self._get_config()
+            _logger.info('Configuración para sincronización: tenant_id=%s, client_id=%s',
+                        config['tenant_id'] or 'NO CONFIGURADO',
+                        config['client_id'] or 'NO CONFIGURADO')
+
+            if not config['tenant_id']:
+                return {
+                    'success': False,
+                    'error': 'El Tenant ID no está configurado correctamente',
+                    'message': _('El Tenant ID no está configurado correctamente. Por favor, verifica la configuración en Odoo.')
+                }
+
             token = self._get_token()
             _logger.info('Token obtenido correctamente para la sincronización: %s', token)
 
