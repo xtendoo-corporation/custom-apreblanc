@@ -33,24 +33,24 @@ class OneDriveService(models.AbstractModel):
 
     def _get_token(self):
         """Obtener el token de acceso para la API de OneDrive"""
-        tenant_id = self.env['ir.config_parameter'].sudo().get_param('xtendoo_onedrive_connector.onedrive_tenant_id')
-        if not tenant_id:
+        config = self._get_config()
+
+        if not config['tenant_id']:
             raise UserError(_('El Tenant ID no está configurado correctamente. Por favor, verifica la configuración en Odoo.'))
 
-        client_id = self.env['ir.config_parameter'].sudo().get_param('xtendoo_onedrive_connector.onedrive_client_id')
-        client_secret = self.env['ir.config_parameter'].sudo().get_param('xtendoo_onedrive_connector.onedrive_client_secret')
-        redirect_uri = self.env['ir.config_parameter'].sudo().get_param('xtendoo_onedrive_connector.onedrive_redirect_uri')
+        if not config['client_id'] or not config['client_secret']:
+            raise UserError(_('Cliente ID o Cliente Secret no configurados correctamente. Por favor, verifica la configuración en Odoo.'))
 
-        token_url = f"https://login.microsoftonline.com/{tenant_id}/oauth2/v2.0/token"
+        token_url = f"https://login.microsoftonline.com/{config['tenant_id']}/oauth2/v2.0/token"
 
         headers = {
             'Content-Type': 'application/x-www-form-urlencoded',
         }
 
         data = {
-            'client_id': client_id,
+            'client_id': config['client_id'],
             'scope': 'https://graph.microsoft.com/.default',
-            'client_secret': client_secret,
+            'client_secret': config['client_secret'],
             'grant_type': 'client_credentials',
         }
 
