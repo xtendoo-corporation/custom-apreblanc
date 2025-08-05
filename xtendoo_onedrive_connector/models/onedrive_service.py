@@ -32,68 +32,31 @@ class OneDriveService(models.AbstractModel):
         }
 
     def _get_token(self):
-        config = self._get_config()
+        """Obtener el token de acceso para la API de OneDrive"""
+        tenant_id = self.env['ir.config_parameter'].sudo().get_param('xtendoo_onedrive_connector.onedrive_tenant_id')
+        client_id = self.env['ir.config_parameter'].sudo().get_param('xtendoo_onedrive_connector.onedrive_client_id')
+        client_secret = self.env['ir.config_parameter'].sudo().get_param('xtendoo_onedrive_connector.onedrive_client_secret')
+        redirect_uri = self.env['ir.config_parameter'].sudo().get_param('xtendoo_onedrive_connector.onedrive_redirect_uri')
 
-        # Validar configuración más detalladamente
-        missing_params = []
-        for key, value in config.items():
-            if not value:
-                missing_params.append(key)
+        token_url = f"https://login.microsoftonline.com/{tenant_id}/oauth2/v2.0/token"
 
-        if missing_params:
-            _logger.error('Faltan parámetros de configuración de OneDrive: %s', ', '.join(missing_params))
-            raise UserError(_('Faltan credenciales de OneDrive: %s') % ', '.join(missing_params))
-
-        # Usar endpoint común para cuentas personales y empresariales
-        url = "https://login.microsoftonline.com/common/oauth2/v2.0/token"
-        data = {
-            'client_id': config['client_id'],
-            'client_secret': config['client_secret'],
-            'grant_type': 'refresh_token',
-            'refresh_token': config['refresh_token'],
-            'redirect_uri': config['redirect_uri'],
-            'scope': 'openid offline_access Files.ReadWrite.All',  # Agregar openid requerido
+        headers = {
+            'Content-Type': 'application/x-www-form-urlencoded',
         }
 
-        _logger.info('Intentando obtener token de OneDrive usando endpoint común')
+        data = {
+            'client_id': client_id,
+            'scope': 'https://graph.microsoft.com/.default',
+            'client_secret': client_secret,
+            'grant_type': 'client_credentials',
+        }
 
-        try:
-            resp = requests.post(url, data=data, timeout=30)
-            _logger.info('Respuesta de Microsoft: Status %s', resp.status_code)
+        response = requests.post(token_url, headers=headers, data=data)
 
-            if resp.status_code != 200:
-                response_data = {}
-                try:
-                    response_data = resp.json()
-                except:
-                    pass
-
-                error_description = response_data.get('error_description', resp.text)
-                error_code = response_data.get('error', 'unknown_error')
-
-                _logger.error('Error obteniendo token OneDrive: Status %s, Error: %s, Description: %s',
-                             resp.status_code, error_code, error_description)
-
-                if 'invalid_grant' in error_code or 'expired' in error_description.lower():
-                    raise UserError(_('El refresh token ha expirado o es inválido. Necesitas reautorizar la aplicación.'))
-                elif 'invalid_client' in error_code:
-                    raise UserError(_('Las credenciales del cliente (client_id/client_secret) son incorrectas.'))
-                elif 'unauthorized_client' in error_code:
-                    raise UserError(_('El cliente no está autorizado para usar este grant type.'))
-                else:
-                    raise UserError(_('Error obteniendo token de OneDrive: %s - %s') % (error_code, error_description))
-
-            token_data = resp.json()
-            if not token_data.get('access_token'):
-                _logger.error('Respuesta exitosa pero sin access_token: %s', token_data)
-                raise UserError(_('La respuesta no contiene un token de acceso válido.'))
-
-            _logger.info('Token de OneDrive obtenido exitosamente')
-            return token_data.get('access_token')
-
-        except requests.exceptions.RequestException as e:
-            _logger.error('Error de conexión obteniendo token OneDrive: %s', str(e))
-            raise UserError(_('Error de conexión con Microsoft: %s') % str(e))
+        if response.status_code == 200:
+            return response.json().get('access_token')
+        else:
+            raise Exception(f"Error obteniendo token de OneDrive: {response.status_code} - {response.text}")
 
     def _detect_account_type(self, token):
         """

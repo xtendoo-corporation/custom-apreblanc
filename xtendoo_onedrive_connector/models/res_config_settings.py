@@ -14,4 +14,3 @@ class ResConfigSettings(models.TransientModel):
         # Aquí se implementaría la lógica para obtener el token OAuth2
         pass
 
-
