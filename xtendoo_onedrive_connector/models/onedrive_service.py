@@ -543,7 +543,8 @@ class OneDriveService(models.AbstractModel):
             _logger.info('Conectividad a Microsoft: OK')
         except Exception as e:
             _logger.error('Error de conectividad a Microsoft: %s', str(e))
-            return {'success': False, 'error': 'Conexión fallida', 'title': 'Operación no válida'}
+            # Si la conexión falla, devolvemos un error
+            return {'success': False, 'error': 'Conexión fallida', 'title': 'Conexión fallida'}
 
         # 3. Intentar obtener token con más detalles
         try:
@@ -557,13 +558,13 @@ class OneDriveService(models.AbstractModel):
                             'success': False,
                             'error': f'Conexión fallida. Autoriza la aplicación en: {auth_url}',
                             'auth_url': auth_url,
-                            'title': 'Operación no válida'
+                            'title': 'Conexión fallida'
                         }
 
                 return {
                     'success': False,
                     'error': f'Conexión fallida. Faltan parámetros: {", ".join(missing_params)}',
-                    'title': 'Operación no válida'
+                    'title': 'Conexión fallida'
                 }
 
             url = f"https://login.microsoftonline.com/{config['tenant_id']}/oauth2/v2.0/token"
@@ -616,7 +617,11 @@ class OneDriveService(models.AbstractModel):
 
                             if list_resp.status_code != 200:
                                 _logger.error('Error listando carpetas de OneDrive: %s', list_resp.text)
-                                return {'success': False, 'error': f'Error al listar carpetas: {list_resp.text[:100]}', 'title': 'Operación no válida'}
+                                return {
+                                    'success': False,
+                                    'error': f'Error al listar carpetas: {list_resp.text[:100]}',
+                                    'title': 'Conexión fallida'
+                                }
 
                             root_folders = list_resp.json().get('value', [])
                             folder_exists = False
@@ -663,20 +668,20 @@ class OneDriveService(models.AbstractModel):
                                     return {
                                         'success': True,
                                         'message': 'Conexión exitosa',
-                                        'title': 'Operación válida'
+                                        'title': 'Conexión exitosa'
                                     }
                                 else:
                                     _logger.error('❌ Error creando carpeta en OneDrive: %s', create_resp.text)
                                     return {
                                         'success': False,
                                         'error': 'Conexión fallida',
-                                        'title': 'Operación no válida'
+                                        'title': 'Conexión fallida'
                                     }
                             else:
                                 return {
                                     'success': True,
                                     'message': 'Conexión exitosa',
-                                    'title': 'Operación válida'
+                                    'title': 'Conexión exitosa'
                                 }
                         else:
                             # Es un ID, verificar que exista
@@ -689,7 +694,7 @@ class OneDriveService(models.AbstractModel):
                                 return {
                                     'success': True,
                                     'message': 'Conexión exitosa',
-                                    'title': 'Operación válida'
+                                    'title': 'Conexión exitosa'
                                 }
                             else:
                                 # El ID no existe, crear una nueva carpeta
@@ -723,21 +728,21 @@ class OneDriveService(models.AbstractModel):
                                     return {
                                         'success': True,
                                         'message': 'Conexión exitosa',
-                                        'title': 'Operación válida'
+                                        'title': 'Conexión exitosa'
                                     }
                                 else:
                                     _logger.error('❌ Error creando carpeta en OneDrive: %s', create_resp.text)
                                     return {
                                         'success': False,
                                         'error': 'Conexión fallida',
-                                        'title': 'Operación no válida'
+                                        'title': 'Conexión fallida'
                                     }
 
                     # Si no hay carpeta configurada
                     return {
                         'success': True,
                         'message': 'Conexión exitosa',
-                        'title': 'Operación válida'
+                        'title': 'Conexión exitosa'
                     }
                 else:
                     _logger.error('Error en respuesta JSON: %s', response_json)
@@ -750,20 +755,20 @@ class OneDriveService(models.AbstractModel):
                                 'success': False,
                                 'error': f'Refresh token inválido o expirado. Reautoriza en: {auth_url}',
                                 'auth_url': auth_url,
-                                'title': 'Operación no válida'
+                                'title': 'Conexión fallida'
                             }
                         else:
                             return {
                                 'success': False,
                                 'error': 'Refresh token inválido o expirado. Necesitas reautorizar la aplicación.',
-                                'title': 'Operación no válida'
+                                'title': 'Conexión fallida'
                             }
 
                     return {
                         'success': False,
                         'error': f"Error {resp.status_code}: {response_json.get('error', 'unknown')}",
                         'details': response_json,
-                        'title': 'Operación no válida'
+                        'title': 'Conexión fallida'
                     }
             except Exception as json_error:
                 _logger.error('Error parseando respuesta JSON: %s', str(json_error))
@@ -771,14 +776,14 @@ class OneDriveService(models.AbstractModel):
                 return {
                     'success': False,
                     'error': f'Respuesta inválida: {resp.text[:200]}',
-                    'title': 'Operación no válida'
+                    'title': 'Conexión fallida'
                 }
 
         except requests.exceptions.RequestException as e:
             _logger.error('Error de requests: %s', str(e))
-            return {'success': False, 'error': f'Error de conexión: {str(e)}', 'title': 'Operación no válida'}
+            return {'success': False, 'error': f'Error de conexión: {str(e)}', 'title': 'Conexión fallida'}
         except Exception as e:
             _logger.error('Error inesperado: %s', str(e))
-            return {'success': False, 'error': f'Error inesperado: {str(e)}', 'title': 'Operación no válida'}
+            return {'success': False, 'error': f'Error inesperado: {str(e)}', 'title': 'Conexión fallida'}
         finally:
-            _logger.info('=== FIN DIAGNÓSTICO ONEDRIVE ==='
+            _logger.info('=== FIN DIAGNÓSTICO ONEDRIVE ===')
