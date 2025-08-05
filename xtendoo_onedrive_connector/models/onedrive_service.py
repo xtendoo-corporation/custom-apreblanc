@@ -58,7 +58,8 @@ class OneDriveService(models.AbstractModel):
                 'grant_type': 'refresh_token',
                 'refresh_token': config['refresh_token'],
                 'redirect_uri': config['redirect_uri'],
-                'scope': 'https://graph.microsoft.com/.default offline_access Files.ReadWrite.All',
+                # Para autenticación delegada, usar scopes específicos sin .default
+                'scope': 'offline_access Files.ReadWrite.All',
             }
 
             grant_type = 'delegated'
@@ -72,6 +73,7 @@ class OneDriveService(models.AbstractModel):
 
             data = {
                 'client_id': config['client_id'],
+                # Para autenticación de aplicación, usar solo .default
                 'scope': 'https://graph.microsoft.com/.default',
                 'client_secret': config['client_secret'],
                 'grant_type': 'client_credentials',
