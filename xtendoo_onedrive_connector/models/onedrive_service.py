@@ -663,20 +663,23 @@ class OneDriveService(models.AbstractModel):
                                     return {
                                         'success': True,
                                         'message': 'Conexión exitosa',
-                                        'title': 'Operación válida'
+                                        'title': 'Operación válida',
+                                        'notification_type': 'success'
                                     }
                                 else:
                                     _logger.error('❌ Error creando carpeta en OneDrive: %s', create_resp.text)
                                     return {
                                         'success': False,
                                         'error': 'Conexión fallida',
-                                        'title': 'Operación no válida'
+                                        'title': 'Operación no válida',
+                                        'notification_type': 'danger'
                                     }
                             else:
                                 return {
                                     'success': True,
                                     'message': 'Conexión exitosa',
-                                    'title': 'Operación válida'
+                                    'title': 'Operación válida',
+                                    'notification_type': 'success'
                                 }
                         else:
                             # Es un ID, verificar que exista
@@ -689,7 +692,8 @@ class OneDriveService(models.AbstractModel):
                                 return {
                                     'success': True,
                                     'message': 'Conexión exitosa',
-                                    'title': 'Operación válida'
+                                    'title': 'Operación válida',
+                                    'notification_type': 'success'
                                 }
                             else:
                                 # El ID no existe, crear una nueva carpeta
@@ -723,21 +727,24 @@ class OneDriveService(models.AbstractModel):
                                     return {
                                         'success': True,
                                         'message': 'Conexión exitosa',
-                                        'title': 'Operación válida'
+                                        'title': 'Operación válida',
+                                        'notification_type': 'success'
                                     }
                                 else:
                                     _logger.error('❌ Error creando carpeta en OneDrive: %s', create_resp.text)
                                     return {
                                         'success': False,
                                         'error': 'Conexión fallida',
-                                        'title': 'Operación no válida'
+                                        'title': 'Operación no válida',
+                                        'notification_type': 'danger'
                                     }
 
                     # Si no hay carpeta configurada
                     return {
                         'success': True,
                         'message': 'Conexión exitosa',
-                        'title': 'Operación válida'
+                        'title': 'Operación válida',
+                        'notification_type': 'success'
                     }
                 else:
                     _logger.error('Error en respuesta JSON: %s', response_json)
