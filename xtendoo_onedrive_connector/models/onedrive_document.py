@@ -110,8 +110,9 @@ class OneDriveDocument(models.Model):
 
     def action_upload_file(self):
         """Subir archivo a OneDrive con estructura de carpetas específica"""
-        # Variable configurable para el nombre de la carpeta raíz
-        ROOT_FOLDER_NAME = "odoo_pre"
+        # Obtener el nombre de la carpeta raíz desde la configuración de OneDrive
+        settings = self.env['onedrive.settings'].search([], limit=1)
+        ROOT_FOLDER_NAME = settings.onedrive_sync_folder_name or "odoo"
 
         if not self.upload_file or not self.upload_filename:
             return {
