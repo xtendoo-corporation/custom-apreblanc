@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Vista formulario para el wizard de resumen de sincronización -->
+    <record id="view_onedrive_sync_summary_form" model="ir.ui.view">
+        <field name="name">onedrive.sync.summary.form</field>
+        <field name="model">onedrive.sync.summary</field>
+        <field name="arch" type="xml">
+            <form string="Resumen de Sincronización OneDrive">
+                <sheet>
+                    <div class="text-center mb-3">
+                        <h1><field name="name" readonly="1" class="oe_inline"/></h1>
+                    </div>
+                    <div attrs="{'invisible': [('success', '=', False)]}" class="alert alert-success text-center" role="alert">
+                        <i class="fa fa-check-circle fa-2x me-2" />
+                        <span>Sincronización completada exitosamente</span>
+                    </div>
+                    <div attrs="{'invisible': [('success', '=', True)]}" class="alert alert-danger text-center" role="alert">
+                        <i class="fa fa-exclamation-circle fa-2x me-2" />
+                        <span>Error durante la sincronización</span>
+                    </div>
+
+                    <group attrs="{'invisible': [('success', '=', False)]}">
+                        <group>
+                            <field name="success" invisible="1"/>
+                            <field name="synced_count" string="Total elementos procesados"/>
+                            <field name="created_count" string="Nuevos elementos"/>
+                        </group>
+                        <group>
+                            <field name="updated_count" string="Elementos actualizados"/>
+                        </group>
+                    </group>
+
+                    <group attrs="{'invisible': [('success', '=', True)]}">
+                        <field name="error_message" readonly="1" nolabel="1"/>
+                    </group>
+                </sheet>
+                <footer>
+                    <button name="action_close" string="Cerrar" type="object" class="btn-primary"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <!-- Acción para abrir el wizard -->
+    <record id="action_onedrive_sync_summary" model="ir.actions.act_window">
+        <field name="name">Resumen de Sincronización</field>
+        <field name="res_model">onedrive.sync.summary</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+</odoo>

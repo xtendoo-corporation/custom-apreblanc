@@ -40,37 +40,35 @@ action = {
 service = env['onedrive.service']
 result = service.sync_onedrive_files()
 
-# Usar el mismo método _notify_user que funciona en diagnose_connection
+# En lugar de mostrar una notificación, abrimos una ventana modal con el resumen
 if result['success']:
-    # Crear un resumen detallado de la sincronización
-    synced_count = result.get('synced_count', 0)
-    created_count = result.get('created_count', 0)
-    updated_count = result.get('updated_count', 0)
-
-    message = f'Sincronización completada exitosamente.\n• Elementos procesados: {synced_count}\n• Nuevos elementos: {created_count}\n• Elementos actualizados: {updated_count}'
-    tipo = 'success'
-else:
-    message = result.get('error', 'Error desconocido')
-    tipo = 'danger'
-
-# Enviar notificación usando el método que sabemos que funciona
-service._notify_user(
-    message=message,
-    title='Sincronización OneDrive',
-    type=tipo
-)
-
-# Definir acción para mostrar la notificación y recargar la vista
-action = {
-    'type': 'ir.actions.client',
-    'tag': 'display_notification',
-    'params': {
-        'title': 'Sincronización OneDrive',
-        'message': message,
-        'sticky': True if not result['success'] else False,
-        'type': tipo,
-        'next': {'type': 'ir.actions.client', 'tag': 'reload'},
+    # Crear el wizard con el resumen de sincronización
+    wizard_vals = {
+        'name': 'Resumen de Sincronización OneDrive',
+        'success': True,
+        'synced_count': result.get('synced_count', 0),
+        'created_count': result.get('created_count', 0),
+        'updated_count': result.get('updated_count', 0),
     }
+else:
+    # Crear el wizard con información de error
+    wizard_vals = {
+        'name': 'Error de Sincronización OneDrive',
+        'success': False,
+        'error_message': result.get('error', 'Error desconocido'),
+    }
+
+# Crear el wizard y devolver la acción para abrirlo
+summary_id = env['onedrive.sync.summary'].create(wizard_vals)
+
+action = {
+    'type': 'ir.actions.act_window',
+    'name': 'Resumen de Sincronización',
+    'res_model': 'onedrive.sync.summary',
+    'res_id': summary_id.id,
+    'view_mode': 'form',
+    'target': 'new',
+    'flags': {'mode': 'readonly'},
 }
         </field>
     </record>
