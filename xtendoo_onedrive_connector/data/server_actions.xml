@@ -10,8 +10,8 @@ service = env['onedrive.service']
 # Llamar al método de diagnóstico que ya se encarga de enviar notificaciones
 result = service.diagnose_connection()
 
-# Mostrar mensaje de confirmación en la UI de que la acción se ha ejecutado
-return {
+# Definir una acción de notificación sin usar "return"
+action = {
     'type': 'ir.actions.client',
     'tag': 'display_notification',
     'params': {
@@ -19,7 +19,6 @@ return {
         'message': 'El diagnóstico de conexión ha finalizado',
         'sticky': False,
         'type': 'info',
-        'next': {'type': 'ir.actions.client', 'tag': 'reload'},
     }
 }
         </field>
@@ -49,8 +48,8 @@ service._notify_user(
     type=tipo
 )
 
-# Mostrar mensaje de confirmación en la UI
-return {
+# Definir acción sin usar "return"
+action = {
     'type': 'ir.actions.client',
     'tag': 'display_notification',
     'params': {
@@ -58,7 +57,6 @@ return {
         'message': 'Proceso de sincronización finalizado',
         'sticky': False,
         'type': 'info',
-        'next': {'type': 'ir.actions.client', 'tag': 'reload'},
     }
 }
         </field>
