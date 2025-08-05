@@ -707,9 +707,13 @@ class OneDriveService(models.AbstractModel):
 
                                     # Actualizar la configuración con el ID de la carpeta creada
                                     if settings:
-                                        settings.onedrive_sync_folder = created_folder.get('id')
+                                        settings.write({
+                                            'onedrive_sync_folder': created_folder.get('id'),
+                                            'onedrive_sync_folder_name': created_folder.get('name')
+                                        })
                                         self.env.cr.commit()
-                                        _logger.info('ID de carpeta actualizado en la configuración: %s', created_folder.get('id'))
+                                        _logger.info('ID de carpeta actualizado en la configuración: %s (%s)',
+                                                  created_folder.get('id'), created_folder.get('name'))
 
                                     success_msg = _('Conexión establecida. Carpeta de sincronización creada correctamente.')
                                     self._notify_user(

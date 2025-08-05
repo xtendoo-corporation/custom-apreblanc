@@ -11,7 +11,8 @@ class OneDriveSettings(models.Model):
     onedrive_tenant_id = fields.Char('Tenant ID', required=True)
     onedrive_redirect_uri = fields.Char('Redirect URI', required=True)
     onedrive_refresh_token = fields.Char('Refresh Token')
-    onedrive_sync_folder = fields.Char('Carpeta a Sincronizar', help='Ruta o ID de la carpeta de OneDrive que quieres sincronizar. Déjalo en blanco para sincronizar la carpeta raíz.')
+    onedrive_sync_folder = fields.Char('ID de Carpeta a Sincronizar', help='ID de la carpeta de OneDrive que quieres sincronizar. Déjalo en blanco para sincronizar la carpeta raíz.')
+    onedrive_sync_folder_name = fields.Char('Nombre de Carpeta', help='Nombre legible de la carpeta de OneDrive configurada para sincronización.', readonly=True)
 
     def get_auth_url(self):
         # Usar tenant específico en lugar del endpoint común
