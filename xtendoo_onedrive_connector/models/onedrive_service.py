@@ -543,8 +543,12 @@ class OneDriveService(models.AbstractModel):
             _logger.info('Conectividad a Microsoft: OK')
         except Exception as e:
             _logger.error('Error de conectividad a Microsoft: %s', str(e))
-            # Si la conexión falla, devolvemos un error
-            return {'success': False, 'error': 'Conexión fallida', 'title': 'Conexión fallida'}
+            self.env.user.notify_warning(
+                message=_('Error de conexión: No se puede conectar al servidor de Microsoft.'),
+                title=_('Diagnóstico OneDrive'),
+                sticky=False
+            )
+            return False
 
         # 3. Intentar obtener token con más detalles
         try:
@@ -554,18 +558,19 @@ class OneDriveService(models.AbstractModel):
                 if missing_params == ['refresh_token'] and settings:
                     auth_url = settings.get_auth_url()
                     if auth_url:
-                        return {
-                            'success': False,
-                            'error': f'Conexión fallida. Autoriza la aplicación en: {auth_url}',
-                            'auth_url': auth_url,
-                            'title': 'Conexión fallida'
-                        }
+                        self.env.user.notify_warning(
+                            message=_('Autoriza la aplicación en: %s') % auth_url,
+                            title=_('Autorización pendiente'),
+                            sticky=True
+                        )
+                        return {'auth_url': auth_url}
 
-                return {
-                    'success': False,
-                    'error': f'Conexión fallida. Faltan parámetros: {", ".join(missing_params)}',
-                    'title': 'Conexión fallida'
-                }
+                self.env.user.notify_warning(
+                    message=_('Faltan parámetros en la configuración: %s') % ", ".join(missing_params),
+                    title=_('Configuración incompleta'),
+                    sticky=True
+                )
+                return False
 
             url = f"https://login.microsoftonline.com/{config['tenant_id']}/oauth2/v2.0/token"
             data = {
@@ -617,11 +622,12 @@ class OneDriveService(models.AbstractModel):
 
                             if list_resp.status_code != 200:
                                 _logger.error('Error listando carpetas de OneDrive: %s', list_resp.text)
-                                return {
-                                    'success': False,
-                                    'error': f'Error al listar carpetas: {list_resp.text[:100]}',
-                                    'title': 'Conexión fallida'
-                                }
+                                self.env.user.notify_danger(
+                                    message=_('Error al listar carpetas en OneDrive'),
+                                    title=_('Diagnóstico OneDrive'),
+                                    sticky=False
+                                )
+                                return False
 
                             root_folders = list_resp.json().get('value', [])
                             folder_exists = False
@@ -665,24 +671,27 @@ class OneDriveService(models.AbstractModel):
                                         self.env.cr.commit()
                                         _logger.info('ID de carpeta actualizado en la configuración: %s', created_folder.get('id'))
 
-                                    return {
-                                        'success': True,
-                                        'message': 'Conexión exitosa',
-                                        'title': 'Conexión exitosa'
-                                    }
+                                    self.env.user.notify_success(
+                                        message=_('Conexión establecida. Carpeta de sincronización creada correctamente.'),
+                                        title=_('Diagnóstico OneDrive'),
+                                        sticky=False
+                                    )
+                                    return True
                                 else:
                                     _logger.error('❌ Error creando carpeta en OneDrive: %s', create_resp.text)
-                                    return {
-                                        'success': False,
-                                        'error': 'Conexión fallida',
-                                        'title': 'Conexión fallida'
-                                    }
+                                    self.env.user.notify_danger(
+                                        message=_('Error al crear la carpeta de sincronización'),
+                                        title=_('Diagnóstico OneDrive'),
+                                        sticky=False
+                                    )
+                                    return False
                             else:
-                                return {
-                                    'success': True,
-                                    'message': 'Conexión exitosa',
-                                    'title': 'Conexión exitosa'
-                                }
+                                self.env.user.notify_success(
+                                    message=_('Conexión establecida. Carpeta de sincronización verificada.'),
+                                    title=_('Diagnóstico OneDrive'),
+                                    sticky=False
+                                )
+                                return True
                         else:
                             # Es un ID, verificar que exista
                             item_url = f'https://graph.microsoft.com/v1.0/me/drive/items/{folder_path}'
@@ -691,11 +700,12 @@ class OneDriveService(models.AbstractModel):
                             if item_resp.status_code == 200:
                                 folder_info = item_resp.json()
                                 _logger.info('Carpeta con ID %s encontrada: %s', folder_path, folder_info.get('name'))
-                                return {
-                                    'success': True,
-                                    'message': 'Conexión exitosa',
-                                    'title': 'Conexión exitosa'
-                                }
+                                self.env.user.notify_success(
+                                    message=_('Conexión establecida. Carpeta de sincronización verificada.'),
+                                    title=_('Diagnóstico OneDrive'),
+                                    sticky=False
+                                )
+                                return True
                             else:
                                 # El ID no existe, crear una nueva carpeta
                                 _logger.warning('No se encontró la carpeta con ID %s. Creando nueva carpeta...', folder_path)
@@ -725,25 +735,28 @@ class OneDriveService(models.AbstractModel):
                                         settings.onedrive_sync_folder = created_folder.get('id')
                                         self.env.cr.commit()
 
-                                    return {
-                                        'success': True,
-                                        'message': 'Conexión exitosa',
-                                        'title': 'Conexión exitosa'
-                                    }
+                                    self.env.user.notify_success(
+                                        message=_('Conexión establecida. Se creó una nueva carpeta "Odoo".'),
+                                        title=_('Diagnóstico OneDrive'),
+                                        sticky=False
+                                    )
+                                    return True
                                 else:
                                     _logger.error('❌ Error creando carpeta en OneDrive: %s', create_resp.text)
-                                    return {
-                                        'success': False,
-                                        'error': 'Conexión fallida',
-                                        'title': 'Conexión fallida'
-                                    }
+                                    self.env.user.notify_danger(
+                                        message=_('Error al crear la carpeta de sincronización'),
+                                        title=_('Diagnóstico OneDrive'),
+                                        sticky=False
+                                    )
+                                    return False
 
                     # Si no hay carpeta configurada
-                    return {
-                        'success': True,
-                        'message': 'Conexión exitosa',
-                        'title': 'Conexión exitosa'
-                    }
+                    self.env.user.notify_success(
+                        message=_('Conexión establecida correctamente'),
+                        title=_('Diagnóstico OneDrive'),
+                        sticky=False
+                    )
+                    return True
                 else:
                     _logger.error('Error en respuesta JSON: %s', response_json)
 
@@ -751,39 +764,51 @@ class OneDriveService(models.AbstractModel):
                     if response_json.get('error') == 'invalid_grant':
                         auth_url = settings.get_auth_url() if settings else None
                         if auth_url:
-                            return {
-                                'success': False,
-                                'error': f'Refresh token inválido o expirado. Reautoriza en: {auth_url}',
-                                'auth_url': auth_url,
-                                'title': 'Conexión fallida'
-                            }
+                            self.env.user.notify_warning(
+                                message=_('Refresh token inválido o expirado. Necesitas reautorizar la aplicación.'),
+                                title=_('Autorización requerida'),
+                                sticky=True
+                            )
+                            return {'auth_url': auth_url}
                         else:
-                            return {
-                                'success': False,
-                                'error': 'Refresh token inválido o expirado. Necesitas reautorizar la aplicación.',
-                                'title': 'Conexión fallida'
-                            }
+                            self.env.user.notify_danger(
+                                message=_('Refresh token inválido o expirado. Necesitas reautorizar la aplicación.'),
+                                title=_('Error de autenticación'),
+                                sticky=True
+                            )
+                            return False
 
-                    return {
-                        'success': False,
-                        'error': f"Error {resp.status_code}: {response_json.get('error', 'unknown')}",
-                        'details': response_json,
-                        'title': 'Conexión fallida'
-                    }
+                    self.env.user.notify_danger(
+                        message=_('Error %s: %s') % (resp.status_code, response_json.get('error', 'unknown')),
+                        title=_('Diagnóstico OneDrive'),
+                        sticky=True
+                    )
+                    return False
             except Exception as json_error:
                 _logger.error('Error parseando respuesta JSON: %s', str(json_error))
                 _logger.error('Respuesta raw: %s', resp.text)
-                return {
-                    'success': False,
-                    'error': f'Respuesta inválida: {resp.text[:200]}',
-                    'title': 'Conexión fallida'
-                }
+                self.env.user.notify_danger(
+                    message=_('Respuesta inválida del servidor'),
+                    title=_('Diagnóstico OneDrive'),
+                    sticky=False
+                )
+                return False
 
         except requests.exceptions.RequestException as e:
             _logger.error('Error de requests: %s', str(e))
-            return {'success': False, 'error': f'Error de conexión: {str(e)}', 'title': 'Conexión fallida'}
+            self.env.user.notify_danger(
+                message=_('Error de conexión: %s') % str(e),
+                title=_('Diagnóstico OneDrive'),
+                sticky=False
+            )
+            return False
         except Exception as e:
             _logger.error('Error inesperado: %s', str(e))
-            return {'success': False, 'error': f'Error inesperado: {str(e)}', 'title': 'Conexión fallida'}
+            self.env.user.notify_danger(
+                message=_('Error inesperado: %s') % str(e),
+                title=_('Diagnóstico OneDrive'),
+                sticky=False
+            )
+            return False
         finally:
             _logger.info('=== FIN DIAGNÓSTICO ONEDRIVE ===')
