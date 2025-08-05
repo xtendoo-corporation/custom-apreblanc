@@ -28,7 +28,7 @@
                     <field name="onedrive_tenant_id"/>
                     <field name="onedrive_redirect_uri"/>
                     <field name="onedrive_refresh_token"/>
-                    <field name="onedrive_sync_folder" placeholder="Ej: 01ABCDEF1234567890ABCDEF1234567890 o Documentos/Facturas"/>
+                    <field name="onedrive_sync_folder" placeholder="odoo"/>
                 </group>
             </form>
         </field>
