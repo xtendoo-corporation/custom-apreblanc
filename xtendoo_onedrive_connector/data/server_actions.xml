@@ -7,10 +7,21 @@
         <field name="state">code</field>
         <field name="code">
 service = env['onedrive.service']
-# Llamar al método sin suprimir errores para usar solo notificaciones laterales
+# Llamar al método de diagnóstico que ya se encarga de enviar notificaciones
 result = service.diagnose_connection()
 
-# No levantar UserError, las notificaciones se manejan en el método diagnose_connection
+# Mostrar mensaje de confirmación en la UI de que la acción se ha ejecutado
+return {
+    'type': 'ir.actions.client',
+    'tag': 'display_notification',
+    'params': {
+        'title': 'Diagnóstico OneDrive',
+        'message': 'El diagnóstico de conexión ha finalizado',
+        'sticky': False,
+        'type': 'info',
+        'next': {'type': 'ir.actions.client', 'tag': 'reload'},
+    }
+}
         </field>
     </record>
 
@@ -23,10 +34,33 @@ result = service.diagnose_connection()
 service = env['onedrive.service']
 result = service.sync_onedrive_files()
 
+# Usar el mismo método _notify_user que funciona en diagnose_connection
 if result['success']:
-    env.user.notify_success(message=result['message'], title="Sincronización OneDrive", sticky=False)
+    message = result['message']
+    tipo = 'success'
 else:
-    env.user.notify_danger(message=result['message'], title="Error en sincronización", sticky=True)
+    message = result.get('error', 'Error desconocido')
+    tipo = 'danger'
+
+# Enviar notificación usando el método que sabemos que funciona
+service._notify_user(
+    message=message,
+    title='Sincronización OneDrive',
+    type=tipo
+)
+
+# Mostrar mensaje de confirmación en la UI
+return {
+    'type': 'ir.actions.client',
+    'tag': 'display_notification',
+    'params': {
+        'title': 'Sincronización OneDrive',
+        'message': 'Proceso de sincronización finalizado',
+        'sticky': False,
+        'type': 'info',
+        'next': {'type': 'ir.actions.client', 'tag': 'reload'},
+    }
+}
         </field>
     </record>
 
