@@ -516,41 +516,6 @@ class OneDriveService(models.AbstractModel):
                 'message': _('Error durante la sincronización: %s') % str(e)
             }
 
-    def sync(self):
-        """
-        Método simplificado para sincronizar archivos de OneDrive.
-        Utiliza la configuración predeterminada para la sincronización.
-
-        Returns:
-            dict: Resultado de la sincronización con información de éxito y estadísticas.
-        """
-        _logger.info('Iniciando sincronización simplificada de OneDrive')
-
-        try:
-            # Obtener la configuración con la carpeta configurada en los ajustes
-            config = self._get_config()
-            folder_id = config.get('sync_folder')
-
-            # Llamar al método completo de sincronización con la carpeta configurada
-            result = self.sync_onedrive_files(
-                folder_id=folder_id,
-                recursive=True,
-                parent_doc_id=None,
-                max_depth=3,
-                current_depth=0
-            )
-
-            _logger.info('Sincronización simplificada completada: %s', result.get('message'))
-            return result
-
-        except Exception as e:
-            _logger.error('Error durante la sincronización simplificada: %s', str(e))
-            return {
-                'success': False,
-                'error': str(e),
-                'message': _('Error durante la sincronización: %s') % str(e)
-            }
-
     def diagnose_connection(self):
         """
         Método para diagnosticar problemas de conexión con OneDrive
@@ -578,7 +543,7 @@ class OneDriveService(models.AbstractModel):
             _logger.info('Conectividad a Microsoft: OK')
         except Exception as e:
             _logger.error('Error de conectividad a Microsoft: %s', str(e))
-            return {'success': False, 'error': f'Sin conectividad: {str(e)}'}
+            return {'success': False, 'error': 'Conexión fallida', 'title': 'Operación no válida'}
 
         # 3. Intentar obtener token con más detalles
         try:
@@ -590,13 +555,15 @@ class OneDriveService(models.AbstractModel):
                     if auth_url:
                         return {
                             'success': False,
-                            'error': f'Falta refresh_token. Autoriza la aplicación en: {auth_url}',
-                            'auth_url': auth_url
+                            'error': f'Conexión fallida. Autoriza la aplicación en: {auth_url}',
+                            'auth_url': auth_url,
+                            'title': 'Operación no válida'
                         }
 
                 return {
                     'success': False,
-                    'error': f'Faltan parámetros: {", ".join(missing_params)}'
+                    'error': f'Conexión fallida. Faltan parámetros: {", ".join(missing_params)}',
+                    'title': 'Operación no válida'
                 }
 
             url = f"https://login.microsoftonline.com/{config['tenant_id']}/oauth2/v2.0/token"
@@ -695,18 +662,21 @@ class OneDriveService(models.AbstractModel):
 
                                     return {
                                         'success': True,
-                                        'message': f'Conexión exitosa.'
+                                        'message': 'Conexión exitosa',
+                                        'title': 'Operación válida'
                                     }
                                 else:
                                     _logger.error('❌ Error creando carpeta en OneDrive: %s', create_resp.text)
                                     return {
                                         'success': False,
-                                        'error': f'Error creando carpeta: {create_resp.text[:100]}'
+                                        'error': 'Conexión fallida',
+                                        'title': 'Operación no válida'
                                     }
                             else:
                                 return {
                                     'success': True,
-                                    'message': f'Conexión exitosa.'
+                                    'message': 'Conexión exitosa',
+                                    'title': 'Operación válida'
                                 }
                         else:
                             # Es un ID, verificar que exista
