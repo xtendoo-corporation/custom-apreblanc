@@ -688,7 +688,8 @@ class OneDriveService(models.AbstractModel):
                                 _logger.info('Carpeta con ID %s encontrada: %s', folder_path, folder_info.get('name'))
                                 return {
                                     'success': True,
-                                    'message': f'Conexión exitosa. Carpeta "{folder_info.get("name")}" encontrada.'
+                                    'message': 'Conexión exitosa',
+                                    'title': 'Operación válida'
                                 }
                             else:
                                 # El ID no existe, crear una nueva carpeta
@@ -721,13 +722,15 @@ class OneDriveService(models.AbstractModel):
 
                                     return {
                                         'success': True,
-                                        'message': f'Se creó una nueva carpeta "Odoo" para sincronización.'
+                                        'message': 'Conexión exitosa',
+                                        'title': 'Operación válida'
                                     }
                                 else:
                                     _logger.error('❌ Error creando carpeta en OneDrive: %s', create_resp.text)
                                     return {
                                         'success': False,
-                                        'error': f'Error creando carpeta: {create_resp.text[:100]}'
+                                        'error': 'Conexión fallida',
+                                        'title': 'Operación no válida'
                                     }
 
                     # Si no hay carpeta configurada
