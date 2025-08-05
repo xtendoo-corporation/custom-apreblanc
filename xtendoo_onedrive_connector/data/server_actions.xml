@@ -10,15 +10,22 @@ service = env['onedrive.service']
 # Llamar al método de diagnóstico que ya se encarga de enviar notificaciones
 result = service.diagnose_connection()
 
-# Definir una acción de notificación sin usar "return"
+# Definir una acción de notificación con mensaje y tipo según el resultado
+if result['success']:
+    message = 'Conexión establecida correctamente'
+    notification_type = 'success'
+else:
+    message = 'Error de conexión: ' + result.get('error', 'Falló el diagnóstico')
+    notification_type = 'danger'
+
 action = {
     'type': 'ir.actions.client',
     'tag': 'display_notification',
     'params': {
         'title': 'Diagnóstico OneDrive',
-        'message': 'El diagnóstico de conexión ha finalizado',
+        'message': message,
         'sticky': False,
-        'type': 'info',
+        'type': notification_type,
     }
 }
         </field>
