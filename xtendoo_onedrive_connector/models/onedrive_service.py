@@ -34,6 +34,9 @@ class OneDriveService(models.AbstractModel):
     def _get_token(self):
         """Obtener el token de acceso para la API de OneDrive"""
         tenant_id = self.env['ir.config_parameter'].sudo().get_param('xtendoo_onedrive_connector.onedrive_tenant_id')
+        if not tenant_id:
+            raise UserError(_('El Tenant ID no está configurado correctamente. Por favor, verifica la configuración en Odoo.'))
+
         client_id = self.env['ir.config_parameter'].sudo().get_param('xtendoo_onedrive_connector.onedrive_client_id')
         client_secret = self.env['ir.config_parameter'].sudo().get_param('xtendoo_onedrive_connector.onedrive_client_secret')
         redirect_uri = self.env['ir.config_parameter'].sudo().get_param('xtendoo_onedrive_connector.onedrive_redirect_uri')
@@ -56,7 +59,7 @@ class OneDriveService(models.AbstractModel):
         if response.status_code == 200:
             return response.json().get('access_token')
         else:
-            raise Exception(f"Error obteniendo token de OneDrive: {response.status_code} - {response.text}")
+            raise UserError(_('Error obteniendo token de OneDrive: %s - %s') % (response.status_code, response.text))
 
     def _detect_account_type(self, token):
         """
