@@ -42,7 +42,12 @@ result = service.sync_onedrive_files()
 
 # Usar el mismo método _notify_user que funciona en diagnose_connection
 if result['success']:
-    message = result['message']
+    # Crear un resumen detallado de la sincronización
+    synced_count = result.get('synced_count', 0)
+    created_count = result.get('created_count', 0)
+    updated_count = result.get('updated_count', 0)
+
+    message = f'Sincronización completada exitosamente.\n• Elementos procesados: {synced_count}\n• Nuevos elementos: {created_count}\n• Elementos actualizados: {updated_count}'
     tipo = 'success'
 else:
     message = result.get('error', 'Error desconocido')
@@ -55,15 +60,16 @@ service._notify_user(
     type=tipo
 )
 
-# Definir acción sin usar "return"
+# Definir acción para mostrar la notificación y recargar la vista
 action = {
     'type': 'ir.actions.client',
     'tag': 'display_notification',
     'params': {
         'title': 'Sincronización OneDrive',
-        'message': 'Proceso de sincronización finalizado',
-        'sticky': False,
-        'type': 'info',
+        'message': message,
+        'sticky': True if not result['success'] else False,
+        'type': tipo,
+        'next': {'type': 'ir.actions.client', 'tag': 'reload'},
     }
 }
         </field>
