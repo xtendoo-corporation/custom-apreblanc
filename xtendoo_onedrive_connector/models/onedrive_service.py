@@ -32,7 +32,7 @@ class OneDriveService(models.AbstractModel):
         }
 
     def _get_token(self):
-        """Obtener el token de acceso para la API de OneDrive"""
+        """Obtener el tokeen de acceso para la API de OneDrive"""
         config = self._get_config()
 
         if not config['tenant_id']:
