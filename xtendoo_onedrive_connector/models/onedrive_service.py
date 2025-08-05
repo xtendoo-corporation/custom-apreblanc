@@ -281,8 +281,12 @@ class OneDriveService(models.AbstractModel):
         current_depth es el nivel actual de profundidad.
         """
         try:
-            _logger.info('Iniciando sincronización de OneDrive. Folder ID: %s, Recursivo: %s, Parent Doc ID: %s, Profundidad: %d/%d',
-                        folder_id or 'root', recursive, parent_doc_id, current_depth, max_depth)
+            tenant_id = self.env['ir.config_parameter'].sudo().get_param('xtendoo_onedrive_connector.onedrive_tenant_id')
+            if not tenant_id:
+                raise UserError(_('El Tenant ID no está configurado correctamente. Por favor, verifica la configuración en Odoo.'))
+
+            _logger.info('Iniciando sincronización de OneDrive. Tenant ID: %s, Folder ID: %s, Recursivo: %s, Parent Doc ID: %s, Profundidad: %d/%d',
+                        tenant_id, folder_id or 'root', recursive, parent_doc_id, current_depth, max_depth)
 
             # Verificar si hemos alcanzado la profundidad máxima
             if current_depth >= max_depth:
