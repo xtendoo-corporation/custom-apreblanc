@@ -53,7 +53,7 @@ class OneDriveDocument(models.Model):
         Método llamado desde la interfaz para sincronizar con OneDrive
         """
         try:
-            # Usar el servicio mejorado de OneDrive
+            # Usar el servicio mejoradoo de OneDrive
             service = self.env['onedrive.service']
             result = service.sync()
 
