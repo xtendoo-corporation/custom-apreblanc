@@ -57,9 +57,26 @@ class OneDriveService(models.AbstractModel):
         response = requests.post(token_url, headers=headers, data=data)
 
         if response.status_code == 200:
-            return response.json().get('access_token')
+            token = response.json().get('access_token')
+            _logger.info('Token obtenido exitosamente: %s', token)
+            return token
         else:
+            _logger.error('Error obteniendo token de OneDrive: %s - %s', response.status_code, response.text)
             raise UserError(_('Error obteniendo token de OneDrive: %s - %s') % (response.status_code, response.text))
+
+    def verify_token(self, token):
+        """Verificar el token obtenido"""
+        headers = {'Authorization': f'Bearer {token}'}
+        verify_url = 'https://graph.microsoft.com/v1.0/me/'
+
+        response = requests.get(verify_url, headers=headers)
+
+        if response.status_code == 200:
+            _logger.info('Verificación de token exitosa. Usuario: %s', response.json().get('userPrincipalName'))
+            return True
+        else:
+            _logger.warning('Error en la verificación del token: %s - %s', response.status_code, response.text)
+            raise UserError(_('Error en la verificación del token: %s - %s') % (response.status_code, response.text))
 
     def _detect_account_type(self, token):
         """
