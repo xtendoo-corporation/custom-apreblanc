@@ -4,6 +4,7 @@ import requests
 class OneDriveDocument(models.Model):
     _name = 'onedrive.document'
     _description = 'OneDrive Document'
+    _inherit = ['mail.thread', 'mail.activity.mixin']
 
 
     name = fields.Char(string='Name', required=True)
@@ -88,18 +89,43 @@ class OneDriveDocument(models.Model):
                 }
             }
 
-        # Registrar en el chatter quién descargó el archivo
-        if len(self) == 1:
-            self.message_post(
-                body=f"El documento '{self.name}' fue descargado por {self.env.user.name}.",
-                subtype_xmlid='mail.mt_note'
-            )
-        else:
-            for record in self:
-                record.message_post(
-                    body=f"El documento '{record.name}' fue descargado por {record.env.user.name}.",
+        # Intentar detectar si la descarga es desde una venta
+        sale_order = None
+        try:
+            # Intentar obtener el ID de venta del contexto o de la URL
+            sale_id = None
+
+            # Verificar en el contexto
+            params = self.env.context.get('params', {})
+            if params.get('model') == 'sale.order' and params.get('id'):
+                sale_id = params.get('id')
+
+            # Si se encontró ID, buscar la venta
+            if sale_id:
+                sale_order = self.env['sale.order'].browse(sale_id).exists()
+        except Exception as e:
+            import logging
+            _logger = logging.getLogger(__name__)
+            _logger.error(f"Error al detectar venta asociada: {e}")
+
+        # Registrar la actividad en el chatter del documento OneDrive
+        message = f"El documento '{self.name}' fue descargado por {self.env.user.name}."
+        self.message_post(
+            body=message,
+            subtype_xmlid='mail.mt_note'
+        )
+
+        # Si se detectó una venta, también registrar en su chatter
+        if sale_order:
+            try:
+                sale_order.message_post(
+                    body=f"El documento de OneDrive '{self.name}' fue descargado por {self.env.user.name}.",
                     subtype_xmlid='mail.mt_note'
                 )
+            except Exception as e:
+                import logging
+                _logger = logging.getLogger(__name__)
+                _logger.error(f"Error al registrar en el chatter de la venta: {e}")
 
         # Usar directamente la URL de OneDrive que ya funciona en el navegador
         return {
