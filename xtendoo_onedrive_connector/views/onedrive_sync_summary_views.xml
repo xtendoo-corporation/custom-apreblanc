@@ -6,22 +6,27 @@
         <field name="model">onedrive.sync.summary</field>
         <field name="arch" type="xml">
             <form string="Resumen de Sincronización OneDrive">
+                <field name="success" invisible="1"/>
                 <sheet>
                     <div class="text-center mb-3">
                         <h1><field name="name" readonly="1" class="oe_inline"/></h1>
                     </div>
-                    <div class="alert alert-success text-center" invisible_if="not success" role="alert">
+
+                    <!-- Estado de éxito -->
+                    <div class="alert alert-success text-center" invisible="not success" role="alert">
                         <i class="fa fa-check-circle fa-2x me-2" />
                         <span>Sincronización completada exitosamente</span>
                     </div>
-                    <div class="alert alert-danger text-center" invisible_if="success" role="alert">
+
+                    <!-- Estado de error -->
+                    <div class="alert alert-danger text-center" invisible="success" role="alert">
                         <i class="fa fa-exclamation-circle fa-2x me-2" />
                         <span>Error durante la sincronización</span>
                     </div>
 
-                    <group invisible_if="not success">
+                    <!-- Detalles para sincronización exitosa -->
+                    <group invisible="not success">
                         <group>
-                            <field name="success" invisible="1"/>
                             <field name="synced_count" string="Total elementos procesados"/>
                             <field name="created_count" string="Nuevos elementos"/>
                         </group>
@@ -30,7 +35,8 @@
                         </group>
                     </group>
 
-                    <group invisible_if="success">
+                    <!-- Mensaje de error para sincronización fallida -->
+                    <group invisible="success">
                         <field name="error_message" readonly="1" nolabel="1"/>
                     </group>
                 </sheet>
