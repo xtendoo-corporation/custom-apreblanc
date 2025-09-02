@@ -30,9 +30,9 @@
     ],
     'data': [
         'security/ir.model.access.csv',
-        'views/sale_exporter_importer_views.xml',
         'wizard/sale_export_wizard_views.xml',
         'wizard/sale_import_wizard_views.xml',
+        'views/sale_exporter_importer_views.xml',
     ],
     'installable': True,
     'auto_install': False,

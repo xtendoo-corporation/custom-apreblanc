@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <data>
-        <!-- Menú principal en Configuración de Ventas -->
+        <!-- Menú principal en Ventas -->
         <menuitem
             id="menu_sale_exporter_importer_config"
             name="Exportar/Importar Ventas"
-            parent="sale.sale_menu_config"
+            parent="sale.sale_menu_root"
             sequence="100"/>
 
         <!-- Acción para Exportar Ventas -->

@@ -15,41 +15,25 @@
                             </h1>
                         </div>
                         <group>
-                            <group name="filters" string="Filtros de Exportación">
-                                <field name="date_from"/>
-                                <field name="date_to"/>
-                                <field name="state"/>
-                            </group>
                             <group name="options" string="Opciones de Exportación">
                                 <field name="include_order_lines"/>
                                 <field name="include_invoices"/>
-                                <field name="include_payments"/>
                             </group>
                         </group>
 
-                        <group name="download_group" invisible="context.get('default_state') != 'done'">
+                        <group name="download_group" invisible="not export_file">
                             <group string="Archivo Generado">
-                                <field name="export_file" filename="export_filename" widget="binary"/>
-                                <field name="export_filename" invisible="1"/>
+                                <field name="export_file" filename="export_filename" readonly="1"/>
+                                <field name="export_filename" readonly="1"/>
                             </group>
                         </group>
                     </sheet>
                     <footer>
-                        <button name="action_export"
-                                string="Exportar"
-                                type="object"
-                                class="btn-primary"
-                                invisible="context.get('default_state') == 'done'"/>
-                        <button name="action_download"
-                                string="Descargar Archivo"
-                                type="object"
-                                class="btn-primary"
-                                invisible="context.get('default_state') != 'done'"/>
-                        <button string="Cerrar" class="btn-secondary" special="cancel"/>
+                        <button name="action_export_sales" string="Exportar" type="object" class="btn-primary"/>
+                        <button string="Cancelar" class="btn-secondary" special="cancel"/>
                     </footer>
                 </form>
             </field>
         </record>
     </data>
 </odoo>
-
