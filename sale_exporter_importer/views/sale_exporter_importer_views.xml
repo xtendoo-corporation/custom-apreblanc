@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <!-- Menú principal en Configuración de Ventas -->
+        <menuitem
+            id="menu_sale_exporter_importer_config"
+            name="Exportar/Importar Ventas"
+            parent="sale.sale_menu_config"
+            sequence="100"/>
+
+        <!-- Acción para Exportar Ventas -->
+        <record id="action_sale_export_wizard" model="ir.actions.act_window">
+            <field name="name">Exportar Todas las Ventas</field>
+            <field name="res_model">sale.export.wizard</field>
+            <field name="view_mode">form</field>
+            <field name="target">new</field>
+            <field name="view_id" ref="view_sale_export_wizard_form"/>
+        </record>
+
+        <!-- Acción para Importar Ventas -->
+        <record id="action_sale_import_wizard" model="ir.actions.act_window">
+            <field name="name">Importar Todas las Ventas</field>
+            <field name="res_model">sale.import.wizard</field>
+            <field name="view_mode">form</field>
+            <field name="target">new</field>
+            <field name="view_id" ref="view_sale_import_wizard_form"/>
+        </record>
+
+        <!-- Menú para Exportar Ventas -->
+        <menuitem
+            id="menu_sale_export"
+            name="Exportar Todas las Ventas"
+            parent="menu_sale_exporter_importer_config"
+            action="action_sale_export_wizard"
+            sequence="10"/>
+
+        <!-- Menú para Importar Ventas -->
+        <menuitem
+            id="menu_sale_import"
+            name="Importar Todas las Ventas"
+            parent="menu_sale_exporter_importer_config"
+            action="action_sale_import_wizard"
+            sequence="20"/>
+
+    </data>
+</odoo>

@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <!-- Vista del Wizard de Importación -->
+        <record id="view_sale_import_wizard_form" model="ir.ui.view">
+            <field name="name">sale.import.wizard.form</field>
+            <field name="model">sale.import.wizard</field>
+            <field name="arch" type="xml">
+                <form string="Importar Todas las Ventas">
+                    <sheet>
+                        <div class="oe_title">
+                            <h1>Importar Ventas desde Excel</h1>
+                        </div>
+
+                        <div class="alert alert-info" role="alert" invisible="state != 'draft'">
+                            <strong>Instrucciones:</strong>
+                            <ul>
+                                <li>El archivo Excel debe contener las hojas: "Órdenes de Venta" y opcionalmente "Líneas de Pedido"</li>
+                                <li>Las columnas requeridas para Órdenes de Venta son: Número, Cliente, Fecha Pedido</li>
+                                <li>Las columnas requeridas para Líneas de Pedido son: Número Orden, Producto, Cantidad</li>
+                            </ul>
+                        </div>
+
+                        <group invisible="state not in ['draft', 'error']">
+                            <group name="file_group" string="Archivo a Importar">
+                                <field name="import_file" filename="import_filename"/>
+                                <field name="import_filename" invisible="1"/>
+                            </group>
+                            <group name="options_group" string="Opciones de Importación">
+                                <field name="import_mode"/>
+                                <field name="validate_data"/>
+                            </group>
+                        </group>
+
+                        <group invisible="state not in ['done', 'error']">
+                            <group name="summary_group" string="Resumen de Importación">
+                                <field name="summary" nolabel="1" readonly="1" widget="text"/>
+                            </group>
+                        </group>
+
+                        <notebook invisible="state != 'done'">
+                            <page string="Log de Importación">
+                                <field name="log_ids" readonly="1">
+                                    <tree>
+                                        <field name="level" widget="badge"
+                                               decoration-success="level == 'info'"
+                                               decoration-warning="level == 'warning'"
+                                               decoration-danger="level == 'error'"/>
+                                        <field name="message"/>
+                                    </tree>
+                                </field>
+                            </page>
+                        </notebook>
+
+                        <field name="state" invisible="1"/>
+                    </sheet>
+                    <footer>
+                        <button name="action_import"
+                                string="Importar"
+                                type="object"
+                                class="btn-primary"
+                                invisible="state not in ['draft', 'error']"/>
+                        <button string="Cerrar" class="btn-secondary" special="cancel"/>
+                    </footer>
+                </form>
+            </field>
+        </record>
+
+        <!-- Vista Tree para los logs -->
+        <record id="view_sale_import_log_tree" model="ir.ui.view">
+            <field name="name">sale.import.log.tree</field>
+            <field name="model">sale.import.log</field>
+            <field name="arch" type="xml">
+                <tree>
+                    <field name="level" widget="badge"
+                           decoration-success="level == 'info'"
+                           decoration-warning="level == 'warning'"
+                           decoration-danger="level == 'error'"/>
+                    <field name="message"/>
+                </tree>
+            </field>
+        </record>
+    </data>
+</odoo>

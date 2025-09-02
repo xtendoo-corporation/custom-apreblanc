@@ -1,0 +1,6 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_sale_exporter_importer,sale.exporter.importer,model_sale_exporter_importer,base.group_user,1,1,1,1
+access_sale_export_wizard,sale.export.wizard,model_sale_export_wizard,base.group_user,1,1,1,1
+access_sale_import_wizard,sale.import.wizard,model_sale_import_wizard,base.group_user,1,1,1,1
+access_sale_import_log,sale.import.log,model_sale_import_log,base.group_user,1,1,1,1
+
