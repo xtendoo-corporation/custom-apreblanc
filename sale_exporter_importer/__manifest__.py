@@ -20,7 +20,7 @@
     * Import sales orders from Excel files
     * Configuration menu in Sales settings
     ''',
-    'author': 'Xtendoo Software',
+    'author': 'Xtendoo Software ',
     'website': 'https://www.xtendoo.es',
     'license': 'GPL-3',
     'depends': [
