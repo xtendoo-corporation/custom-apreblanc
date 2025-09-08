@@ -76,5 +76,6 @@
               name="Expedientes Prepago"
               parent="sale.sale_order_menu"
               action="action_sale_order_prepaid"
-              sequence="25"/>
+              sequence="25"
+                groups="group_expedient_prepago,group_expedient_admin"/>
 </odoo>

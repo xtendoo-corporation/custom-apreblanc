@@ -48,5 +48,6 @@
               name="Expedientes Post-pagados"
               parent="sale.sale_order_menu"
               action="action_sale_order_expedient"
-              sequence="20"/>
+              sequence="20"
+              groups="group_expedient_postpago,group_expedient_admin"/>
 </odoo>

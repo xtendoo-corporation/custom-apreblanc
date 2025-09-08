@@ -331,7 +331,8 @@
               name="Expedientes Postpago"
               parent="sale.sale_order_menu"
               action="action_sale_order_expedient"
-              sequence="25"/>
+              sequence="25"
+              groups="group_expedient_postpago,group_expedient_admin"/>
 
         <!-- Vista Tree para Expedientes Pre-pagados (siempre son pedidos de venta) -->
         <record id="view_sale_order_prepaid_tree" model="ir.ui.view">
@@ -392,12 +393,7 @@
             </field>
         </record>
 
-        <!-- Menú para Expedientes Pre-pagados -->
-        <menuitem id="menu_sale_order_prepaid"
-                  name="Expedientes Pre-pagados"
-                  parent="sale.sale_order_menu"
-                  action="action_sale_order_prepaid"
-                  sequence="25"/>
+
 
 
 

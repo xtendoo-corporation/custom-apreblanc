@@ -8,6 +8,20 @@
             <field name="implied_ids" eval="[(4, ref('sales_team.group_sale_manager'))]"/>
         </record>
 
+        <!-- Grupo para expedientes prepago -->
+        <record id="group_expedient_prepago" model="res.groups">
+            <field name="name">Expedientes Prepago</field>
+            <field name="category_id" ref="base.module_category_sales_sales"/>
+            <field name="implied_ids" eval="[(4, ref('sales_team.group_sale_salesman'))]"/>
+        </record>
+
+        <!-- Grupo para expedientes postpago -->
+        <record id="group_expedient_postpago" model="res.groups">
+            <field name="name">Expedientes Postpago</field>
+            <field name="category_id" ref="base.module_category_sales_sales"/>
+            <field name="implied_ids" eval="[(4, ref('sales_team.group_sale_salesman'))]"/>
+        </record>
+
         <!-- Regla de acceso para expedientes aprobados/rechazados -->
         <record id="expedient_readonly_rule" model="ir.rule">
             <field name="name">Only admins can modify approved/rejected expedients</field>
