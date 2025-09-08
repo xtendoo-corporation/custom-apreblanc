@@ -81,7 +81,7 @@
                         <field name="partner_id"
                                readonly="expedient_state in ['aprobada', 'rechazada'] and not is_expedient_admin"
                                widget="res_partner_many2one" context="{'show_address': 1}"
-                               options="{'always_reload': True}"/>
+                               options="{'always_reload': True,'no_open': True}"/>
                         <field name="person_under_study"
                                readonly="expedient_state in ['aprobada', 'rechazada'] and not is_expedient_admin"/>
                         <field name="person_type"
