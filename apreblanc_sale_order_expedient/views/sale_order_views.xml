@@ -32,6 +32,9 @@
         <field name="model">sale.order</field>
         <field name="inherit_id" ref="sale.view_order_form"/>
         <field name="arch" type="xml">
+             <form position="attributes">
+            <attribute name="create">false</attribute>
+        </form>
             <!-- Add expedient_state and type fields -->
             <field name="partner_id" position="after">
                 <field name="expedient_type" invisible="1"/>
