@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Wizard para Post-incidencia -->
+    <record id="view_post_incidencia_wizard" model="ir.ui.view">
+        <field name="name">post.incidencia.wizard.form</field>
+        <field name="model">post.incidencia.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Post-incidencia">
+                <group>
+                    <field name="expedient_id" invisible="1"/>
+                    <field name="motivo" required="1" placeholder="Describe el motivo de la post-incidencia..."/>
+                    <field name="fecha_incidencia" required="1"/>
+                    <field name="responsable_id"/>
+                    <field name="prioridad" required="1"/>
+                </group>
+                <group string="Detalles adicionales">
+                    <field name="descripcion_detallada"
+                           placeholder="Proporciona detalles adicionales sobre la incidencia..."
+                           widget="text"/>
+                </group>
+                <footer>
+                    <button name="action_confirm_post_incidencia"
+                            string="Confirmar Post-incidencia"
+                            type="object"
+                            class="btn-primary"/>
+                    <button string="Cancelar" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <!-- Acción del wizard -->
+    <record id="action_post_incidencia_wizard" model="ir.actions.act_window">
+        <field name="name">Post-incidencia</field>
+        <field name="res_model">post.incidencia.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="view_id" ref="view_post_incidencia_wizard"/>
+        <field name="target">new</field>
+    </record>
+</odoo>

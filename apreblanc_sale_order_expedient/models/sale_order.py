@@ -89,6 +89,16 @@ class SaleOrder(models.Model):
         index=True,  # Añadir índice para mejorar el rendimiento
     )
 
+    def action_set_post_incidencia(self):
+        return {
+            'type': 'ir.actions.act_window',
+            'name': 'Post-incidencia',
+            'res_model': 'post.incidencia.wizard',
+            'view_mode': 'form',
+            'target': 'new',
+            'context': {'default_expedient_id': self.id}
+        }
+
     @api.model
     def _setup_complete(self):
         """Asegurar que el tracking esté habilitado"""
@@ -103,6 +113,7 @@ class SaleOrder(models.Model):
         ('aprobada', 'Approved'),
         ('rechazada', 'Rejected'),
         ('cancelada', 'Canceled'),
+        ('post_incidencia','Post Incidencia')
     ], string='Expedient State', default='creada', tracking=True)
 
     expedient_notes = fields.Text(

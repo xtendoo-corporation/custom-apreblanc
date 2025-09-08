@@ -25,6 +25,7 @@
         # Wizards
         'wizards/expedient_create_wizard_views.xml',
         'wizards/import_expedient_excel_view.xml',  # Nuevo asistente de importación Excel
+        'wizards/post_incidencia_wizard_views.xml',
 
         # Vistas de modelos base
         'views/sale_order_search_views.xml',

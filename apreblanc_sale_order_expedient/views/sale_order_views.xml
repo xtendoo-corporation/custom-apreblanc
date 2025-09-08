@@ -19,7 +19,7 @@
                        decoration-success="expedient_state == 'aprobada'"
                        decoration-danger="expedient_state == 'rechazada'"
                        decoration-muted="expedient_state == 'cancelada'"
-                       decoration-warning="expedient_state == 'pendiente_documentacion'"/>
+                       decoration-warning="expedient_state in ['pendiente_documentacion', 'post_incidencia']"/>
                 <field name="expedient_date_end" optional="show"/>
                 <field name="return_count" optional="show" sum="Total Returns"/>
             </field>
@@ -73,6 +73,14 @@
             </xpath>
             <xpath expr="//button[@name='action_quotation_send']" position="attributes">
                 <attribute name="invisible">1</attribute>
+            </xpath>
+            <!-- Añadir botón Post-incidencia junto a los otros botones -->
+            <xpath expr="//button[@name='action_quotation_send']" position="before">
+                <button name="action_set_post_incidencia"
+                        string="Post-incidencia"
+                        type="object"
+                        class="btn btn-warning"
+                        invisible="expedient_type == 'none' or not context.get('show_as_expedient', False) or expedient_state == 'post_incidencia'"/>
             </xpath>
 
             <!-- Only show expedient info when expedient_type is not 'none' AND show_as_expedient context is True -->
@@ -136,7 +144,7 @@
                      invisible="expedient_type == 'none' or not context.get('show_as_expedient', False)">
                     <field name="expedient_state"
                            widget="statusbar"
-                           statusbar_visible="creada,pendiente_documentacion,aprobada,rechazada,cancelada"
+                           statusbar_visible="creada,pendiente_documentacion,aprobada,rechazada,post_incidencia,cancelada"
                            clickable="expedient_state not in ['aprobada', 'rechazada'] or is_expedient_admin"
                            options="{'clickable': '1'}"
                            class="expedient_statusbar"
@@ -257,7 +265,7 @@
                        decoration-success="expedient_state == 'aprobada'"
                        decoration-danger="expedient_state == 'rechazada'"
                        decoration-muted="expedient_state == 'cancelada'"
-                       decoration-warning="expedient_state == 'pendiente_documentacion'"/>
+                       decoration-warning="expedient_state in ['pendiente_documentacion', 'post_incidencia']"/>
                 <field name="expedient_type" optional="show"/>
                 <field name="parts_involved" optional="show"/>
                 <field name="account_numbers" optional="show"/>
@@ -362,7 +370,7 @@
                        decoration-success="expedient_state == 'aprobada'"
                        decoration-danger="expedient_state == 'rechazada'"
                        decoration-muted="expedient_state == 'cancelada'"
-                       decoration-warning="expedient_state == 'pendiente_documentacion'"/>
+                       decoration-warning="expedient_state in ['pendiente_documentacion', 'post_incidencia']"/>
                 <field name="expedient_difficulty"
                        widget="badge"
                        decoration-info="expedient_difficulty == 'simple'"
