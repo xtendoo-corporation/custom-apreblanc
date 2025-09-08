@@ -32,9 +32,9 @@
         <field name="model">sale.order</field>
         <field name="inherit_id" ref="sale.view_order_form"/>
         <field name="arch" type="xml">
-             <form position="attributes">
-            <attribute name="create">false</attribute>
-        </form>
+            <form position="attributes">
+                <attribute name="create">false</attribute>
+            </form>
             <!-- Add expedient_state and type fields -->
             <field name="partner_id" position="after">
                 <field name="expedient_type" invisible="1"/>
@@ -70,6 +70,9 @@
             <xpath expr="//group[2]" position="attributes">
                 <attribute name="invisible">expedient_type != 'none' and context.get('show_as_expedient', False)
                 </attribute>
+            </xpath>
+            <xpath expr="//button[@name='action_quotation_send']" position="attributes">
+                <attribute name="invisible">1</attribute>
             </xpath>
 
             <!-- Only show expedient info when expedient_type is not 'none' AND show_as_expedient context is True -->
