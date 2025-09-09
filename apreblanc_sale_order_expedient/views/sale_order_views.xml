@@ -39,7 +39,7 @@
                         text="POST-INCIDENCIA"
                         bg_color="text-bg-warning"
                         class="ribbon-top-right"
-                         style="z-index: 1000;"
+                        style="z-index: 1000;"
                         invisible="not post_incidencia_activa"/>
             </xpath>
             <field name="partner_id" position="after">
@@ -78,8 +78,10 @@
                 <attribute name="invisible">expedient_type != 'none' and context.get('show_as_expedient', False)
                 </attribute>
             </xpath>
-            <xpath expr="//button[@name='action_quotation_send']" position="attributes">
-                <attribute name="invisible">1</attribute>
+            <!-- Ocultar header completo para expedientes -->
+            <xpath expr="//header" position="attributes">
+                <attribute name="invisible">expedient_type != 'none' and context.get('show_as_expedient', False)
+                </attribute>
             </xpath>
             <!-- Añadir botón Post-incidencia junto a los otros botones -->
             <xpath expr="//button[@name='action_quotation_send']" position="before">
@@ -87,7 +89,7 @@
                         string="Post-incidencia"
                         type="object"
                         class="btn btn-warning"
-                       invisible="expedient_type == 'none' or expedient_state not in ('aprobada', 'rechazada', 'cancelada')"/>
+                        invisible="expedient_type == 'none' or expedient_state not in ('aprobada', 'rechazada', 'cancelada')"/>
             </xpath>
 
             <!-- Only show expedient info when expedient_type is not 'none' AND show_as_expedient context is True -->
@@ -124,7 +126,7 @@
                     <group>
                         <field name="expedient_manager_id"
                                readonly="expedient_state in ['aprobada', 'rechazada'] and not is_expedient_admin"
-                        options="{'no_open': True}"/>
+                               options="{'no_open': True}"/>
                         <!-- Fecha de inicio moved to right column -->
                         <field name="date_reception"
                                readonly="expedient_state in ['aprobada', 'rechazada'] and not is_expedient_admin"
@@ -398,7 +400,7 @@
         <field name="res_model">sale.order</field>
         <field name="view_mode">tree,form</field>
         <field name="view_id" ref="view_sale_order_prepaid_tree"/>
-         <field name="domain">[('expedient_type', '=', 'pre_paid'), ('expedient_manager_id', '=', uid)]</field>
+        <field name="domain">[('expedient_type', '=', 'pre_paid'), ('expedient_manager_id', '=', uid)]</field>
         <field name="context">{
             'default_expedient_type': 'pre_paid',
             'search_default_expedient_state_active': 1,
