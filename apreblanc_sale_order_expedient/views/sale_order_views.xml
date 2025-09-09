@@ -86,7 +86,8 @@
                 <button name="action_set_post_incidencia"
                         string="Post-incidencia"
                         type="object"
-                        class="btn btn-warning"/>
+                        class="btn btn-warning"
+                       invisible="expedient_type == 'none' or expedient_state not in ('aprobada', 'rechazada', 'cancelada')"/>
             </xpath>
 
             <!-- Only show expedient info when expedient_type is not 'none' AND show_as_expedient context is True -->
@@ -122,7 +123,8 @@
                     </group>
                     <group>
                         <field name="expedient_manager_id"
-                               readonly="expedient_state in ['aprobada', 'rechazada'] and not is_expedient_admin"/>
+                               readonly="expedient_state in ['aprobada', 'rechazada'] and not is_expedient_admin"
+                        options="{'no_open': True}"/>
                         <!-- Fecha de inicio moved to right column -->
                         <field name="date_reception"
                                readonly="expedient_state in ['aprobada', 'rechazada'] and not is_expedient_admin"
@@ -396,7 +398,7 @@
         <field name="res_model">sale.order</field>
         <field name="view_mode">tree,form</field>
         <field name="view_id" ref="view_sale_order_prepaid_tree"/>
-        <field name="domain">[('expedient_type', '=', 'pre_paid')]</field>
+         <field name="domain">[('expedient_type', '=', 'pre_paid'), ('expedient_manager_id', '=', uid)]</field>
         <field name="context">{
             'default_expedient_type': 'pre_paid',
             'search_default_expedient_state_active': 1,

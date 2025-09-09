@@ -983,6 +983,8 @@ class SaleOrder(models.Model):
         """Cron job para forzar estado 'sale' en expedientes prepagados"""
         return self.force_prepaid_expedients_sale_state()
 
+
+
     @api.constrains('parts_involved', 'account_numbers')
     def _check_positive_values(self):
         """Asegurar que los valores numéricos sean siempre mayores que 0"""

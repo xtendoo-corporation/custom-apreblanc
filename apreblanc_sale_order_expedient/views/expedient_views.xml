@@ -29,24 +29,22 @@
         </field>
     </record>
 
-    <!-- Acción para Expedientes Post-pagados -->
-    <record id="action_sale_order_expedient" model="ir.actions.act_window">
+    <!-- Acción simple sin vista de búsqueda -->
+    <record id="action_sale_order_expedient_simple" model="ir.actions.act_window">
         <field name="name">Expedientes Post-pagados</field>
         <field name="res_model">sale.order</field>
         <field name="view_mode">tree,form</field>
         <field name="view_id" ref="view_expedient_tree_custom"/>
-        <field name="search_view_id" ref="view_sale_order_expedient_search"/>
-        <field name="domain">[('expedient_type', '=', 'post_paid')]</field>
-        <field name="context">{
-            'default_expedient_type': 'post_paid',
-            'search_default_client_id': 1,
-            'search_default_expedient_number': 1
-        }</field>
+        <field name="domain">[('expedient_type', '=', 'post_paid'), ('expedient_manager_id', '=', user.id)]</field>
+        <field name="context">{'default_expedient_type': 'post_paid'}</field>
     </record>
-    <!-- Elemento de menú para Expedientes Post-pagados -->
+
+
+    <!-- Elemento de menú -->
     <menuitem id="menu_sale_order_expedient"
               name="Expedientes Post-pagados"
               parent="sale.sale_order_menu"
-              action="action_sale_order_expedient"
-              sequence="20"/>
+              action="action_sale_order_expedient_simple"
+              sequence="20"
+              groups="group_expedient_postpago,group_expedient_admin"/>
 </odoo>
