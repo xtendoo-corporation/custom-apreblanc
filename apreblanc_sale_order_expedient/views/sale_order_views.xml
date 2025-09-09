@@ -79,17 +79,36 @@
                 </attribute>
             </xpath>
             <!-- Ocultar header completo para expedientes -->
-            <xpath expr="//header" position="attributes">
-                <attribute name="invisible">expedient_type != 'none' and context.get('show_as_expedient', False)
-                </attribute>
-            </xpath>
-            <!-- Añadir botón Post-incidencia junto a los otros botones -->
-            <xpath expr="//button[@name='action_quotation_send']" position="before">
-                <button name="action_set_post_incidencia"
-                        string="Post-incidencia"
-                        type="object"
-                        class="btn btn-warning"
-                        invisible="expedient_type == 'none' or expedient_state not in ('aprobada', 'rechazada', 'cancelada')"/>
+            <!-- Reemplazar header completo para expedientes -->
+            <xpath expr="//header" position="replace">
+                <!-- Header original para ventas normales -->
+                <header invisible="expedient_type != 'none' or context.get('show_as_expedient', False)">
+                    <field name="locked" invisible="1"/>
+                    <field name="authorized_transaction_ids" invisible="1"/>
+                    <button name="payment_action_capture" type="object" data-hotkey="shift+g"
+                            string="Capture Transaction" class="oe_highlight"
+                            invisible="not authorized_transaction_ids"/>
+                    <button name="payment_action_void" type="object" string="Void Transaction" data-hotkey="shift+v"
+                            confirm="Are you sure you want to void the authorized transaction? This action can't be undone."
+                            invisible="not authorized_transaction_ids"/>
+                    <button id="create_invoice" name="355" string="Create Invoice" type="action" class="btn-primary"
+                            data-hotkey="q" invisible="invoice_status != 'to invoice'"/>
+                    <button name="action_quotation_send" id="send_by_email_primary" string="Send by Email" type="object"
+                            data-hotkey="g" invisible="state != 'draft'" class="btn-primary"
+                            context="{'validate_analytic': True}"/>
+                    <button name="action_confirm" string="Confirm" class="btn-primary" type="object"
+                            context="{'validate_analytic': True}" invisible="state not in ('draft', 'sent')"/>
+                    <field name="state" widget="statusbar" statusbar_visible="draft,sent,sale"/>
+                </header>
+
+                <!-- Header simplificado para expedientes -->
+                <header invisible="expedient_type == 'none' or not context.get('show_as_expedient', False)">
+                    <button name="action_set_post_incidencia"
+                            string="Post-incidencia"
+                            type="object"
+                            class="btn btn-warning"
+                            invisible="expedient_state not in ('aprobada', 'rechazada', 'cancelada')"/>
+                </header>
             </xpath>
 
             <!-- Only show expedient info when expedient_type is not 'none' AND show_as_expedient context is True -->
