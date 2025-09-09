@@ -25,9 +25,12 @@ class PostIncidenciaWizard(models.TransientModel):
         return res
 
     def action_confirm_post_incidencia(self):
-        # Usar el metodo específico que no intercepta
-        self.expedient_id.sudo().write({'expedient_state': 'post_incidencia'})
-        return {'type': 'ir.actions.act_window_close'}
+        mensaje = f"""Post-incidencia Registrada
+    - Motivo: {self.motivo}
+    - Fecha: {self.fecha_incidencia.strftime('%d/%m/%Y %H:%M')}
+    - Responsable: {self.responsable_id.name}
+    - Prioridad: {dict(self._fields['prioridad'].selection)[self.prioridad].upper()}
+    {f'• Descripción: {self.descripcion_detallada}' if self.descripcion_detallada else ''}"""
 
-
+        self.expedient_id.message_post(body=mensaje)
         return {'type': 'ir.actions.act_window_close'}
