@@ -25,6 +25,9 @@ class PostIncidenciaWizard(models.TransientModel):
         return res
 
     def action_confirm_post_incidencia(self):
+        # Activar el flag de post-incidencia (sin cambiar el estado)
+        self.expedient_id.write({'post_incidencia_activa': True})
+
         mensaje = f"""Post-incidencia Registrada
     - Motivo: {self.motivo}
     - Fecha: {self.fecha_incidencia.strftime('%d/%m/%Y %H:%M')}

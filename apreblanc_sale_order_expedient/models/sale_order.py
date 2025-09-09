@@ -12,6 +12,11 @@ class SaleOrder(models.Model):
     # Asegurar que el tracking está habilitado
     _mail_post_access = 'read'
 
+    post_incidencia_activa = fields.Boolean(
+        string='Post-incidencia Activa',
+        default=False
+    )
+
     _sql_constraints = [
         # Remove any constraints that enforce uniqueness on expedient_number alone
         # Keep only the composite constraint for both fields
@@ -113,7 +118,7 @@ class SaleOrder(models.Model):
         ('aprobada', 'Approved'),
         ('rechazada', 'Rejected'),
         ('cancelada', 'Canceled'),
-        ('post_incidencia','Post Incidencia')
+        ('post_incidencia', 'Post Incidencia')
     ], string='Expedient State', default='creada', tracking=True)
 
     expedient_notes = fields.Text(
@@ -175,7 +180,8 @@ class SaleOrder(models.Model):
     def _compute_is_expedient_admin(self):
         """Determina si el usuario actual es administrador y puede modificar expedientes finalizados"""
         # Usar el nuevo grupo definido en security.xml
-        is_admin = self.env.user.has_group('sale_order_expedient.group_expedient_admin') or self.env.user.has_group('base.group_system')
+        is_admin = self.env.user.has_group('sale_order_expedient.group_expedient_admin') or self.env.user.has_group(
+            'base.group_system')
         for record in self:
             record.is_expedient_admin = is_admin
 
@@ -218,7 +224,6 @@ class SaleOrder(models.Model):
         help='Documentos de OneDrive relacionados con este pedido',
         domain=[('is_folder', '=', False)]
     )
-
 
     # Related fields for customer information display
     partner_vat = fields.Char(related='partner_id.vat', string='VAT', readonly=True)
@@ -371,7 +376,8 @@ class SaleOrder(models.Model):
             double_check_orders = self.browse(prepaid_ids)
             for order in double_check_orders:
                 if order.state != 'sale':
-                    _logger.error("¡URGENTE! Expediente prepagado %s sigue sin estado 'sale'. Último intento...", order.name)
+                    _logger.error("¡URGENTE! Expediente prepagado %s sigue sin estado 'sale'. Último intento...",
+                                  order.name)
                     # Usar super con un contexto especial para evitar validaciones
                     order.with_context(bypass_prepaid_checks=True).write({'state': 'sale'})
 
@@ -380,7 +386,7 @@ class SaleOrder(models.Model):
             if order.expedient_type in ['post_paid', 'pre_paid']:
                 order.message_post(
                     body=_("Expediente abierto el %s") %
-                    fields.Datetime.to_string(order.expedient_date_start),
+                         fields.Datetime.to_string(order.expedient_date_start),
                     message_type='notification'
                 )
 
@@ -393,9 +399,9 @@ class SaleOrder(models.Model):
                 if order.pre_paid_expedient_id and order.amount_total > order.pre_paid_expedient_id.current_balance:
                     order.message_post(
                         body=_("ADVERTENCIA: No hay saldo suficiente en el expediente pre-pagado. "
-                              "Saldo actual: %.2f, Importe del pedido: %.2f. "
-                              "El pedido se ha confirmado pero debe revisarse.") %
-                              (order.pre_paid_expedient_id.current_balance, order.amount_total),
+                               "Saldo actual: %.2f, Importe del pedido: %.2f. "
+                               "El pedido se ha confirmado pero debe revisarse.") %
+                             (order.pre_paid_expedient_id.current_balance, order.amount_total),
                         message_type='notification'
                     )
 
@@ -414,7 +420,8 @@ class SaleOrder(models.Model):
                         # 2. Método alternativo - SQL directo
                         self.env.cr.execute(
                             """UPDATE sale_order
-                               SET state = 'sale', expedient_state = 'aprobada'
+                               SET state           = 'sale',
+                                   expedient_state = 'aprobada'
                                WHERE id = %s""", (order.id,))
                         order.write({'expedient_date_end': fields.Datetime.now()})
                         order.message_post(body=_('Confirmado mediante SQL tras error en método estándar'))
@@ -433,7 +440,7 @@ class SaleOrder(models.Model):
         """Set expedient as pending documentation and track the change"""
         # Verificar si algún expediente está en estado final y el usuario no es administrador
         locked_expedients = self.filtered(lambda r: r.expedient_state in ['aprobada', 'rechazada'] and
-                                         not r.is_expedient_admin)
+                                                    not r.is_expedient_admin)
         if locked_expedients:
             raise exceptions.AccessError(_(
                 "No tiene permisos para cambiar el estado de expedientes aprobados o rechazados. "
@@ -447,7 +454,7 @@ class SaleOrder(models.Model):
         """Approve the expedient and convert quotation to sale order."""
         # Los expedientes rechazados no pueden cambiar a aprobados a menos que sea administrador
         locked_expedients = self.filtered(lambda r: r.expedient_state == 'rechazada' and
-                                         not r.is_expedient_admin)
+                                                    not r.is_expedient_admin)
         if locked_expedients:
             raise exceptions.AccessError(_(
                 "No tiene permisos para aprobar expedientes que ya fueron rechazados. "
@@ -460,7 +467,7 @@ class SaleOrder(models.Model):
         """Reject the expedient and convert quotation to sale order."""
         # Los expedientes aprobados no pueden cambiar a rechazados a menos que sea administrador
         locked_expedients = self.filtered(lambda r: r.expedient_state == 'aprobada' and
-                                         not r.is_expedient_admin)
+                                                    not r.is_expedient_admin)
         if locked_expedients:
             raise exceptions.AccessError(_(
                 "No tiene permisos para rechazar expedientes que ya fueron aprobados. "
@@ -473,7 +480,7 @@ class SaleOrder(models.Model):
         """Cancel the expedient and optionally the linked sale order."""
         # Los expedientes aprobados/rechazados no pueden cancelarse a menos que sea administrador
         locked_expedients = self.filtered(lambda r: r.expedient_state in ['aprobada', 'rechazada'] and
-                                         not r.is_expedient_admin)
+                                                    not r.is_expedient_admin)
         if locked_expedients:
             raise exceptions.AccessError(_(
                 "No tiene permisos para cancelar expedientes que ya fueron aprobados o rechazados. "
@@ -489,8 +496,8 @@ class SaleOrder(models.Model):
         for record in self:
             # Solo para estados finales que no sean expedientes prepagados
             if record.expedient_type != 'pre_paid' and \
-               record.expedient_state in ['aprobada', 'rechazada', 'cancelada'] and \
-               not record.expedient_date_end:
+                record.expedient_state in ['aprobada', 'rechazada', 'cancelada'] and \
+                not record.expedient_date_end:
                 # Si el estado es final pero no hay fecha de fin, establecerla
                 _logger.info("Estableciendo fecha de fin faltante para expediente %s en estado %s",
                              record.name, record.expedient_state)
@@ -501,8 +508,8 @@ class SaleOrder(models.Model):
         """Asegurar que expedientes en estado final estén confirmados como pedido"""
         for record in self:
             if record.expedient_type in ['post_paid', 'pre_paid'] and \
-               record.expedient_state in ['aprobada', 'rechazada'] and \
-               record.state != 'sale':
+                record.expedient_state in ['aprobada', 'rechazada'] and \
+                record.state != 'sale':
                 _logger.warning(
                     "Expediente %s en estado %s pero no confirmado como pedido. Forzando confirmación.",
                     record.name, record.expedient_state
@@ -510,7 +517,8 @@ class SaleOrder(models.Model):
                 # Forzar estado 'sale'
                 record.write({'state': 'sale'})
                 record.message_post(
-                    body=_("Estado 'sale' forzado automáticamente al detectar expediente en estado final no confirmado"),
+                    body=_(
+                        "Estado 'sale' forzado automáticamente al detectar expediente en estado final no confirmado"),
                     message_type='notification'
                 )
 
@@ -530,7 +538,7 @@ class SaleOrder(models.Model):
                 expedient.write({'expedient_date_end': fields.Datetime.now()})
                 expedient.message_post(
                     body=_("Fecha de fin establecida automáticamente por el sistema para estado %s") %
-                    dict(expedient._fields['expedient_state'].selection).get(expedient.expedient_state),
+                         dict(expedient._fields['expedient_state'].selection).get(expedient.expedient_state),
                     message_type='notification'
                 )
 
@@ -598,7 +606,7 @@ class SaleOrder(models.Model):
             resolution_time = record.expedient_resolution_time or 'No disponible'
             record.message_post(
                 body=_("Expediente marcado como %s el %s. Tiempo de resolución: %s") %
-                ('Approved', fields.Datetime.to_string(now), resolution_time),
+                     ('Approved', fields.Datetime.to_string(now), resolution_time),
                 message_type='notification'
             )
 
@@ -640,7 +648,7 @@ class SaleOrder(models.Model):
             # Log the action con la fecha de fin
             record.message_post(
                 body=_("Expediente rechazado el %s. Tiempo de resolución: %s") %
-                (fields.Datetime.to_string(now), record.expedient_resolution_time or ''),
+                     (fields.Datetime.to_string(now), record.expedient_resolution_time or ''),
                 message_type='notification'
             )
 
@@ -765,10 +773,10 @@ class SaleOrder(models.Model):
                     try:
                         self.env.cr.execute(
                             """UPDATE sale_order
-                               SET state = 'sale',
-                                   expedient_state = 'creada',
+                               SET state              = 'sale',
+                                   expedient_state    = 'creada',
                                    expedient_date_end = NULL,
-                                   write_date = NOW() AT TIME ZONE 'UTC'
+                                   write_date         = NOW() AT TIME ZONE 'UTC'
                                WHERE id = %s""", (order.id,))
                         order.message_post(
                             body=_("Expediente prepagado forzado a estado 'sale' mediante SQL directo"),
@@ -883,7 +891,8 @@ class SaleOrder(models.Model):
                 })
 
             order.message_post(
-                body=_("Expediente pre-pagado creado como pedido de venta confirmado con estado de expediente 'creada'"),
+                body=_(
+                    "Expediente pre-pagado creado como pedido de venta confirmado con estado de expediente 'creada'"),
                 message_type='notification'
             )
 
@@ -903,7 +912,7 @@ class SaleOrder(models.Model):
         if order.expedient_type in ['post_paid', 'pre_paid']:
             order.message_post(
                 body=_("Expediente abierto el %s") %
-                fields.Datetime.to_string(order.expedient_date_start),
+                     fields.Datetime.to_string(order.expedient_date_start),
                 message_type='notification'
             )
 
@@ -921,7 +930,8 @@ class SaleOrder(models.Model):
         ])
 
         if broken_expedients:
-            _logger.warning("Encontrados %s expedientes prepagados en estado incorrecto. Corrigiendo...", len(broken_expedients))
+            _logger.warning("Encontrados %s expedientes prepagados en estado incorrecto. Corrigiendo...",
+                            len(broken_expedients))
             for expedient in broken_expedients:
                 # Usar write con contexto especial en lugar de SQL directo
                 expedient.with_context(force_prepaid_state=True).write({
@@ -962,7 +972,7 @@ class SaleOrder(models.Model):
                 expedient.write({'state': 'sale'})
                 expedient.message_post(
                     body=_("Estado 'sale' forzado por tarea programada de consistencia para expediente en estado %s") %
-                    dict(expedient._fields['expedient_state'].selection).get(expedient.expedient_state),
+                         dict(expedient._fields['expedient_state'].selection).get(expedient.expedient_state),
                     message_type='notification'
                 )
             return len(expedients)
