@@ -95,14 +95,22 @@ class SaleOrder(models.Model):
     )
 
     def action_set_post_incidencia(self):
-        return {
-            'type': 'ir.actions.act_window',
-            'name': 'Post-incidencia',
-            'res_model': 'post.incidencia.wizard',
-            'view_mode': 'form',
-            'target': 'new',
-            'context': {'default_expedient_id': self.id}
-        }
+        """Toggle del estado de post-incidencia"""
+        if self.post_incidencia_activa:
+            # Si ya está activa, desactivarla
+            self.write({'post_incidencia_activa': False})
+            self.message_post(body="Post-incidencia desactivada")
+            return True
+        else:
+            # Si no está activa, abrir wizard para activarla
+            return {
+                'type': 'ir.actions.act_window',
+                'name': 'Post-incidencia',
+                'res_model': 'post.incidencia.wizard',
+                'view_mode': 'form',
+                'target': 'new',
+                'context': {'default_expedient_id': self.id}
+            }
 
     @api.model
     def _setup_complete(self):

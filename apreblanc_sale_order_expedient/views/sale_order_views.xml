@@ -104,10 +104,12 @@
                 <!-- Header simplificado para expedientes -->
                 <header invisible="expedient_type == 'none' or not context.get('show_as_expedient', False)">
                     <button name="action_set_post_incidencia"
-                            string="Post-incidencia"
                             type="object"
                             class="btn btn-warning"
-                            invisible="expedient_state not in ('aprobada', 'rechazada', 'cancelada')"/>
+                            invisible="expedient_state not in ('aprobada', 'rechazada', 'cancelada')">
+                        <span invisible="not post_incidencia_activa">Desactivar Post-incidencia</span>
+                        <span invisible="post_incidencia_activa">Post-incidencia</span>
+                    </button>
                 </header>
             </xpath>
 
@@ -279,11 +281,12 @@
         <field name="mode">primary</field>
         <field name="priority">99</field>
         <field name="arch" type="xml">
-            <tree string="Expedientes Postpago">
+            <tree string="Expedientes Postpago" decoration-warning="post_incidencia_activa">
                 <field name="partner_id"/>
                 <field name="client_id"/>
                 <field name="expedient_number"/>
                 <field name="name"/>
+                <field name="post_incidencia_activa" invisible="1"/>
                 <field name="person_under_study" optional="hide"/>
                 <field name="date_order" string="Fecha de Inicio"/>
                 <field name="expedient_date_end"/>
@@ -382,7 +385,7 @@
         <field name="name">sale.order.prepaid.tree</field>
         <field name="model">sale.order</field>
         <field name="arch" type="xml">
-            <tree string="Expedientes Pre-pagados">
+            <tree string="Expedientes Pre-pagados" decoration-warning="post_incidencia_activa">
                 <!-- Nota: Cambiado de "Expedientes Pre-pagados" a "Pedidos de Venta Pre-pagados" -->
                 <field name="partner_id"/>
                 <field name="client_id"/>
@@ -391,6 +394,7 @@
                 <field name="pre_paid_expedient_id"/>
                 <field name="date_order" string="Fecha de Inicio"/>
                 <field name="expedient_date_end"/>
+                <field name="post_incidencia_activa" invisible="1"/>
                 <field name="expedient_resolution_time" string="Tiempo de Resolución"/>
                 <field name="expedient_manager_id" widget="many2one_avatar"/>
                 <field name="expedient_state"

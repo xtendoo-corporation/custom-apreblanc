@@ -166,6 +166,7 @@ class ExpedientCreateWizard(models.TransientModel):
             'sale_order_template_id': self.sale_order_template_id.id,
             'state': 'sale',  # Forzar estado sale desde la creación
             'person_under_study': self.person_under_study,  # Transferir el campo studied_person
+            'type_id':3,
         }
 
         # Si se ha seleccionado un expediente pre-pagado, usarlo
@@ -229,6 +230,7 @@ class ExpedientCreateWizard(models.TransientModel):
             'expedient_date_start': fields.Datetime.now(),
             'sale_order_template_id': self.sale_order_template_id.id,
             'person_under_study': self.person_under_study,  # Transferir el campo studied_person
+            'type_id':2,
         }
 
         sale_order = self.env['sale.order'].create(sale_order_vals)
