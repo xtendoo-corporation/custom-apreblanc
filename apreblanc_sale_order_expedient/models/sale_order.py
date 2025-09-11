@@ -991,6 +991,52 @@ class SaleOrder(models.Model):
         """Cron job para forzar estado 'sale' en expedientes prepagados"""
         return self.force_prepaid_expedients_sale_state()
 
+    def write(self, vals):
+        """Track all field changes when post_incidencia is active"""
+        if self.post_incidencia_activa and vals:
+            # Obtener valores anteriores antes de la actualización
+            old_values = {}
+            for field_name in vals.keys():
+                if field_name in self._fields:
+                    old_values[field_name] = getattr(self, field_name, False)
+            # Ejecutar la actualización
+            result = super().write(vals)
+            # Crear mensaje con todos los cambios (excepto post_incidencia_activa)
+            changes = []
+            for field_name, new_value in vals.items():
+                # Saltar el campo post_incidencia_activa
+                if field_name == 'post_incidencia_activa':
+                    continue
+                if field_name in self._fields:
+                    field_obj = self._fields[field_name]
+                    field_label = field_obj.string or field_name
+                    old_value = old_values.get(field_name)
+                    # Formatear valores según el tipo de campo
+                    if field_obj.type == 'many2one' and old_value:
+                        old_display = old_value.display_name if hasattr(old_value, 'display_name') else str(old_value)
+                        new_display = self.env[field_obj.comodel_name].browse(
+                            new_value).display_name if new_value else 'Vacío'
+                        changes.append(f"• {field_label}: {old_display} → {new_display}")
+                    elif field_obj.type == 'selection':
+                        old_display = dict(field_obj.selection).get(old_value, old_value) if old_value else 'Vacío'
+                        new_display = dict(field_obj.selection).get(new_value, new_value) if new_value else 'Vacío'
+                        changes.append(f"• {field_label}: {old_display} → {new_display}")
+                    elif field_obj.type == 'boolean':
+                        old_display = 'Sí' if old_value else 'No'
+                        new_display = 'Sí' if new_value else 'No'
+                        changes.append(f"• {field_label}: {old_display} → {new_display}")
+                    else:
+                        changes.append(f"• {field_label}: {old_value or 'Vacío'} → {new_value or 'Vacío'}")
+            # Crear mensaje en el chatter si hay cambios (excluyendo post_incidencia_activa)
+            if changes:
+                self.message_post(
+                    body=f"Cambios registrados durante post-incidencia activa:\n\n" + "\n".join(changes),
+                    message_type='notification',
+                    subtype_xmlid='mail.mt_note'
+                )
+            return result
+        return super().write(vals)
+
 
 
     @api.constrains('parts_involved', 'account_numbers')

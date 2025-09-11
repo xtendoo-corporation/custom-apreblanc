@@ -281,7 +281,7 @@
         <field name="mode">primary</field>
         <field name="priority">99</field>
         <field name="arch" type="xml">
-            <tree string="Expedientes Postpago" decoration-warning="post_incidencia_activa">
+            <tree string="Expedientes Postpago" decoration-danger="post_incidencia_activa" decoration-bf="post_incidencia_activa">
                 <field name="partner_id"/>
                 <field name="client_id"/>
                 <field name="expedient_number"/>
@@ -385,7 +385,7 @@
         <field name="name">sale.order.prepaid.tree</field>
         <field name="model">sale.order</field>
         <field name="arch" type="xml">
-            <tree string="Expedientes Pre-pagados" decoration-warning="post_incidencia_activa">
+            <tree string="Expedientes Pre-pagados" decoration-danger="post_incidencia_activa" decoration-bf="post_incidencia_activa">
                 <!-- Nota: Cambiado de "Expedientes Pre-pagados" a "Pedidos de Venta Pre-pagados" -->
                 <field name="partner_id"/>
                 <field name="client_id"/>
