@@ -99,6 +99,14 @@ class ImportExpedientExcel(models.TransientModel):
                 'progress_text': f'Analizando {total_rows} registros...'
             })
             self.env.cr.commit()  # Forzar actualización de la UI
+            # Tipo de venta
+            if self.expedient_type == 'pre_paid':
+                type_id = self.env['sale.order.type'].search([('name', '=', 'pre-pagado')], limit=1)
+                # Para pre-pagados, podemos establecer un valor por defecto o extraer de otra columna
+                type_id_vals = type_id.id if type_id else 1
+            else:
+                type_id = self.env['sale.order.type'].search([('name', '=', 'post-pagado')], limit=1)
+                type_id_vals = type_id.id if type_id else 1
 
             # Leer datos desde la segunda fila (índice 1), asumiendo que la primera fila es encabezado
             for row_index in range(1, sheet.nrows):
@@ -161,6 +169,7 @@ class ImportExpedientExcel(models.TransientModel):
                         'expedient_state': 'creada',
                         'person_under_study': person_under_study,  # Nuevo campo de persona a estudiar
                         'person_type': person_type,  # Tipo de persona (física/jurídica)
+                        'type_id': type_id_vals,  # Tipo de venta basado en el tipo de expediente
                     }
 
                     # Procesar la dificultad del expediente (columna E)
