@@ -240,10 +240,15 @@ class ImportExpedientExcel(models.TransientModel):
                                 'pendiente documentacion': 'pendiente_documentacion',
                                 'pendiente_documentacion': 'pendiente_documentacion',
                                 'pte doc adicional': 'pendiente_documentacion',
+                                'pte. doc. adicional': 'pendiente_documentacion',
+                                'Pte doc adicional': 'pendiente_documentacion',
+                                'Pte. Doc. Adicional': 'pendiente_documentacion',
                                 'aprobada': 'aprobada',
                                 'autorizada': 'aprobada',
+                                'Autorizada': 'aprobada',
                                 'rechazada': 'rechazada',
                                 'cancelada': 'cancelada',
+                                'CANCELADA': 'cancelada',
                                 'cn': 'cancelada'
                             }
 
@@ -312,10 +317,10 @@ class ImportExpedientExcel(models.TransientModel):
                     # Otras columnas que se pueden mapear
                     try:
                         # Ejemplo de mapeo de campos adicionales
-                        if sheet.ncols > 7:  # Si hay columna H
-                            parts_involved = sheet.cell_value(row_index, 7)
-                            if isinstance(parts_involved, (int, float)) and parts_involved > 0:
-                                vals['parts_involved'] = int(parts_involved)
+                        # if sheet.ncols > 7:  # Si hay columna H
+                        #     parts_involved = sheet.cell_value(row_index, 7)
+                        #     if isinstance(parts_involved, (int, float)) and parts_involved > 0:
+                        #         vals['parts_involved'] = int(parts_involved)
 
                         if sheet.ncols > 8:  # Si hay columna I - Dificultad
                             difficulty = sheet.cell_value(row_index, 8)
