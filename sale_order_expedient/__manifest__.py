@@ -12,15 +12,15 @@
     },
     'data': [
         # Seguridad primero
-        'security/security.xml',  # Archivo de seguridad
-        'security/sale_order_template_security.xml',  # Nueva regla de seguridad para plantillas
-        'security/ir.model.access.csv',  # Archivo principal de reglas de acceso
+       # 'security/security.xml',  # Archivo de seguridad
+        #'security/sale_order_template_security.xml',  # Nueva regla de seguridad para plantillas
+        '#security/ir.model.access.csv',  # Archivo principal de reglas de acceso
 
         # Datos
-        'data/ir_sequence_data.xml',
-        'data/ir_cron.xml',
-        'data/cron_data.xml',
-        'data/expedient_return_reason_data.xml',  # Datos iniciales para motivos de devolución
+        #'data/ir_sequence_data.xml',
+         #'data/ir_cron.xml',
+        #'data/cron_data.xml',
+        #'data/expedient_return_reason_data.xml',  # Datos iniciales para motivos de devolución
 
         # Wizards
         'wizards/expedient_create_wizard_views.xml',
@@ -37,9 +37,9 @@
     ],
     'assets': {
         'web.assets_backend': [
-            'apreblanc_sale_order_expedient/static/src/js/sale_order_create_hook.js',
-            'apreblanc_sale_order_expedient/static/src/js/expedient_statusbar_fix.js',
-            'apreblanc_sale_order_expedient/static/src/css/expedient_styles.css',
+         #   'apreblanc_sale_order_expedient/static/src/js/sale_order_create_hook.js',
+         #   'apreblanc_sale_order_expedient/static/src/js/expedient_statusbar_fix.js',
+         #   'apreblanc_sale_order_expedient/static/src/css/expedient_styles.css',
         ],
     },
     'installable': True,

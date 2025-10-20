@@ -93,7 +93,6 @@
         <field name="inherit_id" ref="sale.view_order_tree"/>
         <field name="arch" type="xml">
             <xpath expr="//tree" position="attributes">
-                <attribute name="banner_route">/import_expedient/excel</attribute>
                 <attribute name="js_class">import_expedient_excel_button</attribute>
             </xpath>
         </field>
