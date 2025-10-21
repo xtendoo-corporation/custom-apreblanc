@@ -407,6 +407,8 @@ msgid ""
 "No hay saldo suficiente en el expediente prepagado. Saldo actual: %.2f, "
 "Importe del pedido: %.2f"
 msgstr ""
+"No hay saldo suficiente en el expediente prepagado. Saldo actual: %.2f, "
+"Importe del pedido: %.2f"
 
 #. module: apreblanc_sale_order_expedient
 #: model:ir.model.fields.selection,name:apreblanc_sale_order_expedient.selection__sale_order__expedient_type__none
