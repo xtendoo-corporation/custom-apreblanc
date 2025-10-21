@@ -849,6 +849,11 @@ msgid "Return Reasons"
 msgstr "Razones de Devolución"
 
 #. module: apreblanc_sale_order_expedient
+#: model:ir.model.fields,field_description:apreblanc_sale_order_expedient.field_sale_order__return_count
+msgid "Return Count"
+msgstr "Retornos"
+
+#. module: apreblanc_sale_order_expedient
 #: model_terms:ir.ui.view,arch_db:apreblanc_sale_order_expedient.view_order_form_expedient
 msgid "Returns"
 msgstr "Devoluciones"
