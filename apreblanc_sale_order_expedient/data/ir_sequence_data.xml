@@ -9,5 +9,25 @@
             <field name="padding">4</field>
             <field name="company_id" eval="False"/>
         </record>
+
+        <!-- Secuencia PRE con año y 5 dígitos -->
+        <record id="seq_sale_order_pre" model="ir.sequence">
+            <field name="name">PRE Sale Order Sequence</field>
+            <field name="code">sale.order.pre</field>
+            <field name="prefix">PRE/%(year)s/</field>
+            <field name="padding">5</field>
+            <field name="company_id" eval="False"/>
+            <field name="implementation">standard</field>
+        </record>
+
+        <!-- Secuencia POST con año y 5 dígitos -->
+        <record id="seq_sale_order_post" model="ir.sequence">
+            <field name="name">POST Sale Order Sequence</field>
+            <field name="code">sale.order.post</field>
+            <field name="prefix">POST/%(year)s/</field>
+            <field name="padding">5</field>
+            <field name="company_id" eval="False"/>
+            <field name="implementation">standard</field>
+        </record>
     </data>
 </odoo>

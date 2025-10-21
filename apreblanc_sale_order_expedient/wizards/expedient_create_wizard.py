@@ -152,6 +152,12 @@ class ExpedientCreateWizard(models.TransientModel):
 
     def _create_pre_paid_expedient(self):
         """Create pre-paid expedient and automatically convert to sale order"""
+        # Obtener la secuencia PRE directamente según el tipo de expediente
+        sequence = self.env['ir.sequence'].search([('code', '=', 'sale.order.pre')], limit=1)
+        sequence_number = False
+        if sequence:
+            sequence_number = sequence.next_by_id()
+
         # Crear el pedido de venta
         sale_order_vals = {
             'partner_id': self.partner_id.id,
@@ -168,6 +174,10 @@ class ExpedientCreateWizard(models.TransientModel):
             'person_under_study': self.person_under_study,  # Transferir el campo studied_person
             'type_id':3,
         }
+
+        # Si hay una secuencia configurada, agregar el nombre
+        if sequence_number:
+            sale_order_vals['name'] = sequence_number
 
         # Si se ha seleccionado un expediente pre-pagado, usarlo
         if hasattr(self, 'pre_paid_expedient_id') and self.pre_paid_expedient_id:
@@ -219,6 +229,12 @@ class ExpedientCreateWizard(models.TransientModel):
 
     def _create_post_paid_expedient(self):
         """Create post-paid expedient"""
+        # Obtener la secuencia POST directamente según el tipo de expediente
+        sequence = self.env['ir.sequence'].search([('code', '=', 'sale.order.post')], limit=1)
+        sequence_number = False
+        if sequence:
+            sequence_number = sequence.next_by_id()
+
         # Crear el pedido de venta para expediente post-pagado
         sale_order_vals = {
             'partner_id': self.partner_id.id,
@@ -232,6 +248,10 @@ class ExpedientCreateWizard(models.TransientModel):
             'person_under_study': self.person_under_study,  # Transferir el campo studied_person
             'type_id':2,
         }
+
+        # Si hay una secuencia configurada, agregar el nombre
+        if sequence_number:
+            sale_order_vals['name'] = sequence_number
 
         sale_order = self.env['sale.order'].create(sale_order_vals)
 

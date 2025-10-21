@@ -340,6 +340,16 @@ class ImportExpedientExcel(models.TransientModel):
                         updated += 1
                         log_messages.append(f"Fila {row_index + 1}: Actualizado - {client_id}/{expedient_number}")
                     else:
+                        # Obtener la secuencia correcta según el tipo de expediente
+                        sequence_code = 'sale.order.post' if self.expedient_type == 'post_paid' else 'sale.order.pre'
+                        sequence = self.env['ir.sequence'].search([('code', '=', sequence_code)], limit=1)
+
+                        if sequence:
+                            # Generar el número de la secuencia
+                            sequence_number = sequence.next_by_id()
+                            vals['name'] = sequence_number
+                            log_messages.append(f"Fila {row_index + 1}: Número de secuencia generado: {sequence_number}")
+
                         # Creamos un pedido de venta
                         vals.update({
                             'state': 'draft',
