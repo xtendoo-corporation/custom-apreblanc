@@ -1,43 +1,40 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <!-- Vista de búsqueda para expedientes post-pagados -->
+    <!-- Vista de búsqueda para expedientes - Heredando la vista de búsqueda de sale.order -->
     <record id="view_sale_order_expedient_search" model="ir.ui.view">
         <field name="name">sale.order.expedient.search</field>
         <field name="model">sale.order</field>
+        <field name="inherit_id" ref="sale.view_sales_order_filter"/>
         <field name="arch" type="xml">
-            <search string="Buscar Expedientes Post-pagados">
-                <!-- Campos estándar de Sale Order -->
-                <field name="name" string="Pedido" filter_domain="[('name','ilike',self)]"/>
-                <field name="partner_id" operator="child_of"/>
-                <field name="user_id"/>
-                <field name="order_line" string="Producto" filter_domain="[('order_line.product_id', 'ilike', self)]"/>
+            <!-- Agregar campos específicos de expediente en la búsqueda -->
+            <search position="inside">
+                <!-- Campos de búsqueda de expedientes -->
+                <field name="expedient_number" string="Número de Expediente" filter_domain="[('expedient_number','ilike',self)]"/>
+                <field name="client_id" string="ID Cliente" filter_domain="[('client_id','ilike',self)]"/>
+                <field name="person_under_study" string="Persona Estudiada" filter_domain="[('person_under_study','ilike',self)]"/>
+                <field name="expedient_manager_id" string="Gestor de Expediente"/>
 
-                <!-- Campos específicos de expediente -->
-                <field name="client_id"/>
-                <field name="expedient_number"/>
-                <field name="person_under_study"/>
-
-                <!-- Filtros de estado -->
+                <!-- Separador y filtros de estado de expediente -->
                 <separator/>
-                <filter string="Creados o Pendientes" name="expedient_state_active"
+                <filter string="Expedientes Activos" name="expedient_state_active"
                        domain="[('expedient_state', 'in', ['creada', 'pendiente_documentacion'])]"/>
-                <separator/>
                 <filter string="Creados" name="expedient_state_creada" domain="[('expedient_state', '=', 'creada')]"/>
                 <filter string="Pendiente Documentación" name="expedient_state_pendiente" domain="[('expedient_state', '=', 'pendiente_documentacion')]"/>
                 <filter string="Aprobados" name="expedient_state_aprobada" domain="[('expedient_state', '=', 'aprobada')]"/>
                 <filter string="Rechazados" name="expedient_state_rechazada" domain="[('expedient_state', '=', 'rechazada')]"/>
                 <filter string="Cancelados" name="expedient_state_cancelada" domain="[('expedient_state', '=', 'cancelada')]"/>
-
-                <!-- Agrupar Por -->
-                <group expand="0" string="Agrupar Por">
-                    <filter string="Vendedor" name="salesperson" domain="[]" context="{'group_by': 'user_id'}"/>
-                    <filter string="Cliente" name="customer" domain="[]" context="{'group_by': 'partner_id'}"/>
-                    <filter string="ID de Cliente" name="client" domain="[]" context="{'group_by': 'client_id'}"/>
-                    <filter string="Estado del Expediente" name="expedient_state_group" domain="[]" context="{'group_by': 'expedient_state'}"/>
-                    <filter string="Fecha de Pedido" name="order_month" domain="[]" context="{'group_by': 'date_order'}"/>
-                    <filter string="Estado" name="status" domain="[]" context="{'group_by': 'state'}"/>
-                </group>
+                <separator/>
+                <filter string="Post-pagados" name="expedient_type_post" domain="[('expedient_type', '=', 'post_paid')]"/>
+                <filter string="Pre-pagados" name="expedient_type_pre" domain="[('expedient_type', '=', 'pre_paid')]"/>
             </search>
+
+            <!-- Agregar opciones de agrupación al grupo existente -->
+            <group position="inside">
+                <filter string="ID de Cliente" name="client" domain="[]" context="{'group_by': 'client_id'}"/>
+                <filter string="Estado del Expediente" name="expedient_state_group" domain="[]" context="{'group_by': 'expedient_state'}"/>
+                <filter string="Gestor de Expediente" name="expedient_manager" domain="[]" context="{'group_by': 'expedient_manager_id'}"/>
+                <filter string="Tipo de Expediente" name="expedient_type_group" domain="[]" context="{'group_by': 'expedient_type'}"/>
+            </group>
         </field>
     </record>
 </odoo>
