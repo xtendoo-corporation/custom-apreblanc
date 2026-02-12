@@ -6,35 +6,44 @@
         <field name="model">expedient.create.wizard</field>
         <field name="arch" type="xml">
             <form string="Crear Expediente">
-                <field name="expedient_type" invisible="1"/>
-                <field name="partner_readonly" invisible="1"/>
-                <field name="show_warning_message" invisible="1"/>
-                <field name="show_warning_text_person" invisible="1"/>
-                <field name="show_warning_text_numberexp" invisible="1"/>
-                <field name="show_warning_text_client" invisible="1"/>
+                <field name="expedient_type" invisible="1" />
+                <field name="partner_readonly" invisible="1" />
+                <field name="show_warning_message" invisible="1" />
+                <field name="show_warning_text_person" invisible="1" />
+                <field name="show_warning_text_numberexp" invisible="1" />
+                <field name="show_warning_text_client" invisible="1" />
                 <!-- Mensaje de advertencia condicional -->
                 <div invisible="not show_warning_message" class="alert alert-warning" role="alert">
-                    <p invisible="not show_warning_text_person"><strong>Nota:</strong> La persona a estudiar ya pertenece a otro expediente</p>
-                    <p invisible="not show_warning_text_numberexp"><strong>Nota:</strong> El número de expediente ya pertenece a otro expediente</p>
-                    <p invisible="not show_warning_text_client"><strong>Nota:</strong> El ID de cliente ya pertenece a otro expediente</p>
+                    <p invisible="not show_warning_text_person"><strong>Nota:</strong> La persona a
+                        estudiar ya pertenece a otro expediente</p>
+                    <p invisible="not show_warning_text_numberexp"><strong>Nota:</strong> El número
+                        de expediente ya pertenece a otro expediente</p>
+                    <p invisible="not show_warning_text_client"><strong>Nota:</strong> El ID de
+                        cliente ya pertenece a otro expediente</p>
                 </div>
                 <group>
-                    <field name="sale_order_template_id" options="{'no_create': True}" required="1"/>
-                    <field name="partner_id" options="{'no_create': True, 'no_open': True}" readonly="1" force_save="1"/>
-                    <field name="client_id"/>
-                    <field name="expedient_number"/>
-                    <field name="person_under_study"/>
+                    <field name="sale_order_template_id" options="{'no_create': True}" required="1" />
+                    <field name="partner_id" options="{'no_create': True, 'no_open': True}"
+                        readonly="1" force_save="1" />
+                    <field name="client_id" />
+                    <field name="expedient_number" />
+                    <field name="person_under_study" />
+                    <field name="person_type" />
+                    <field name="expedient_difficulty" />
+                    <field name="deadline" />
                 </group>
 
                 <!-- Mensaje informativo -->
                 <div class="alert alert-info" role="alert">
-                    <p><strong>Nota:</strong> El cliente se determina automáticamente según la plantilla seleccionada.</p>
+                    <p><strong>Nota:</strong> El cliente se determina automáticamente según la
+                        plantilla seleccionada.</p>
                 </div>
 
 
                 <footer>
-                    <button string="Crear" name="action_create_expedient" type="object" class="btn-primary"/>
-                    <button string="Cancelar" class="btn-secondary" special="cancel"/>
+                    <button string="Crear" name="action_create_expedient" type="object"
+                        class="btn-primary" />
+                    <button string="Cancelar" class="btn-secondary" special="cancel" />
                 </footer>
             </form>
         </field>

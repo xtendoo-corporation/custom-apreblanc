@@ -27,7 +27,6 @@ class SaleOrder(models.Model):
     ]
 
     date_reception = fields.Datetime(string="Fecha de Recepción")
-
     parts_involved = fields.Integer(
         string="Partes Implicadas",
         default=1,
@@ -167,8 +166,38 @@ class SaleOrder(models.Model):
     person_type = fields.Selection(
         [("fisica", "Física"), ("juridica", "Jurídica")],
         string="Tipo de Persona",
+        default="fisica",
         help="Indica si la persona a estudiar es física o jurídica",
     )
+
+    @api.constrains(
+        "expedient_type",
+        "person_under_study",
+        "person_type",
+        "expedient_difficulty",
+        "deadline",
+    )
+    def _check_expedient_required_fields(self):
+        for record in self:
+            if record.expedient_type != "none":
+                if not record.person_under_study:
+                    raise ValidationError(
+                        _(
+                            "El campo 'Persona a Estudiar' es obligatorio para expedientes."
+                        )
+                    )
+                if not record.person_type:
+                    raise ValidationError(
+                        _("El campo 'Tipo de Persona' es obligatorio para expedientes.")
+                    )
+                if not record.expedient_difficulty:
+                    raise ValidationError(
+                        _("El campo 'Dificultad' es obligatorio para expedientes.")
+                    )
+                if not record.deadline:
+                    raise ValidationError(
+                        _("El campo 'Plazo' es obligatorio para expedientes.")
+                    )
 
     # Campos HTML para información detallada
     request = fields.Html(

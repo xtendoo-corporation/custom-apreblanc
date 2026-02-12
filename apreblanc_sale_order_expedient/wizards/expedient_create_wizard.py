@@ -57,9 +57,28 @@ class ExpedientCreateWizard(models.TransientModel):
     expedient_number = fields.Char(string="Expedient Number", required=True)
     partner_readonly = fields.Boolean(string="Partner Readonly", default=False)
 
+    # Campos obligatorios del expediente
+    expedient_difficulty = fields.Selection(
+        [("simple", "Simple"), ("complex", "Complejo")],
+        string="Dificultad",
+        default="simple",
+        required=True,
+    )
+    deadline = fields.Selection(
+        [("24", "24"), ("48", "48"), ("more", "Más")],
+        string="Plazo",
+        default="48",
+        required=True,
+    )
+    person_type = fields.Selection(
+        [("fisica", "Física"), ("juridica", "Jurídica")],
+        string="Tipo de Persona",
+        required=True,
+        default="fisica",
+    )
+
     # Campos faltantes que aparecen en la vista
     expedient_date = fields.Date(string="Fecha de Expediente")
-    expedient_deadline = fields.Date(string="Fecha límite")
     expedient_manager_id = fields.Many2one("res.users", string="Responsable")
 
     # Campos para plantillas
@@ -195,6 +214,9 @@ class ExpedientCreateWizard(models.TransientModel):
             "sale_order_template_id": self.sale_order_template_id.id,
             "state": "sale",  # Forzar estado sale desde la creación
             "person_under_study": self.person_under_study,  # Transferir el campo studied_person
+            "person_type": self.person_type,
+            "expedient_difficulty": self.expedient_difficulty,
+            "deadline": self.deadline,
             "type_id": 3,
         }
 
@@ -282,6 +304,9 @@ class ExpedientCreateWizard(models.TransientModel):
             "expedient_date_start": fields.Datetime.now(),
             "sale_order_template_id": self.sale_order_template_id.id,
             "person_under_study": self.person_under_study,  # Transferir el campo studied_person
+            "person_type": self.person_type,
+            "expedient_difficulty": self.expedient_difficulty,
+            "deadline": self.deadline,
             "type_id": 2,
         }
 
