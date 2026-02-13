@@ -21,23 +21,23 @@ class ExpedientCreateWizard(models.TransientModel):
         help="Indica si se debe mostrar un mensaje de advertencia al crear el expediente",
     )
     show_warning_text_person = fields.Boolean(
-        string="Mostrar Mensaje de Advertencia",
+        string="Advertencia Persona",
         compute="_compute_show_warning_message",
         default=False,
-        help="Indica si se debe mostrar un mensaje de advertencia al crear el expediente",
+        help="Indica si ya existe un expediente con la misma persona a estudiar",
     )
 
     show_warning_text_client = fields.Boolean(
-        string="Mostrar Mensaje de Advertencia",
+        string="Advertencia Cliente",
         compute="_compute_show_warning_message",
         default=False,
-        help="Indica si se debe mostrar un mensaje de advertencia al crear el expediente",
+        help="Indica si ya existe un expediente con el mismo ID de cliente",
     )
     show_warning_text_numberexp = fields.Boolean(
-        string="Mostrar Mensaje de Advertencia",
+        string="Advertencia Número Expediente",
         compute="_compute_show_warning_message",
         default=False,
-        help="Indica si se debe mostrar un mensaje de advertencia al crear el expediente",
+        help="Indica si ya existe un expediente con el mismo número de expediente",
     )
 
     # El tipo de expediente se define por defecto desde el contexto
@@ -56,26 +56,6 @@ class ExpedientCreateWizard(models.TransientModel):
     client_id = fields.Char(string="Client ID", required=True)
     expedient_number = fields.Char(string="Expedient Number", required=True)
     partner_readonly = fields.Boolean(string="Partner Readonly", default=False)
-
-    # Campos obligatorios del expediente
-    expedient_difficulty = fields.Selection(
-        [("simple", "Simple"), ("complex", "Complejo")],
-        string="Dificultad",
-        default="simple",
-        required=True,
-    )
-    deadline = fields.Selection(
-        [("24", "24"), ("48", "48"), ("more", "Más")],
-        string="Plazo",
-        default="48",
-        required=True,
-    )
-    person_type = fields.Selection(
-        [("fisica", "Física"), ("juridica", "Jurídica")],
-        string="Tipo de Persona",
-        required=True,
-        default="fisica",
-    )
 
     # Campos faltantes que aparecen en la vista
     expedient_date = fields.Date(string="Fecha de Expediente")
@@ -214,9 +194,9 @@ class ExpedientCreateWizard(models.TransientModel):
             "sale_order_template_id": self.sale_order_template_id.id,
             "state": "sale",  # Forzar estado sale desde la creación
             "person_under_study": self.person_under_study,  # Transferir el campo studied_person
-            "person_type": self.person_type,
-            "expedient_difficulty": self.expedient_difficulty,
-            "deadline": self.deadline,
+            "person_type": False,
+            "expedient_difficulty": False,
+            "deadline": False,
             "type_id": 3,
         }
 
@@ -304,9 +284,9 @@ class ExpedientCreateWizard(models.TransientModel):
             "expedient_date_start": fields.Datetime.now(),
             "sale_order_template_id": self.sale_order_template_id.id,
             "person_under_study": self.person_under_study,  # Transferir el campo studied_person
-            "person_type": self.person_type,
-            "expedient_difficulty": self.expedient_difficulty,
-            "deadline": self.deadline,
+            "person_type": False,
+            "expedient_difficulty": False,
+            "deadline": False,
             "type_id": 2,
         }
 

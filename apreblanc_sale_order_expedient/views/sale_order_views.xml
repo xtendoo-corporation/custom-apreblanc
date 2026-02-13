@@ -71,16 +71,19 @@
 
             <!-- Hide standard sales fields when expedient_type is not 'none' -->
             <xpath expr="//group[1]" position="attributes">
-                <attribute name="invisible">expedient_type != 'none' and context.get('show_as_expedient', False)</attribute>
+                <attribute name="invisible">expedient_type != 'none' and
+                    context.get('show_as_expedient', False)</attribute>
             </xpath>
 
             <xpath expr="//group[2]" position="attributes">
-                <attribute name="invisible">expedient_type != 'none' and context.get('show_as_expedient', False)</attribute>
+                <attribute name="invisible">expedient_type != 'none' and
+                    context.get('show_as_expedient', False)</attribute>
             </xpath>
             <!-- Ocultar header completo para expedientes -->
             <!-- Reemplazar header completo para expedientes -->
             <xpath expr="//header" position="attributes">
-                <attribute name="invisible">expedient_type != 'none' and context.get('show_as_expedient', False)</attribute>
+                <attribute name="invisible">expedient_type != 'none' and
+                    context.get('show_as_expedient', False)</attribute>
             </xpath>
 
             <xpath expr="//header" position="after">
@@ -108,10 +111,10 @@
                             widget="res_partner_many2one" context="{'show_address': 1}"
                             options="{'always_reload': True,'no_open': True}" />
                         <field name="person_under_study"
-                            required="expedient_type != 'none'"
+                            required="1"
                             readonly="expedient_state in ['aprobada', 'rechazada'] and not is_expedient_admin" />
                         <field name="person_type"
-                            required="expedient_type != 'none'"
+                            required="1"
                             readonly="expedient_state in ['aprobada', 'rechazada'] and not is_expedient_admin" />
                         <field name="client_id"
                             readonly="expedient_state in ['aprobada', 'rechazada'] and not is_expedient_admin" />
@@ -241,13 +244,15 @@
             <!-- Hide the Order Lines tab when expedient_type is not 'none' AND show_as_expedient is
             True -->
             <xpath expr="//notebook/page[@name='order_lines']" position="attributes">
-                <attribute name="invisible">expedient_type != 'none' and context.get('show_as_expedient', False)</attribute>
+                <attribute name="invisible">expedient_type != 'none' and
+                    context.get('show_as_expedient', False)</attribute>
             </xpath>
 
             <!-- Hide the Optional Products tab when expedient_type is not 'none' AND
             show_as_expedient is True -->
             <xpath expr="//notebook/page[@name='optional_products']" position="attributes">
-                <attribute name="invisible">expedient_type != 'none' and context.get('show_as_expedient', False)</attribute>
+                <attribute name="invisible">expedient_type != 'none' and
+                    context.get('show_as_expedient', False)</attribute>
             </xpath>
 
             <!--            &lt;!&ndash; Añadir nuevos campos en la sección de información del expediente
@@ -261,10 +266,10 @@
 
             <xpath expr="//group[@name='expedient_info']/group[2]" position="inside">
                 <field name="expedient_difficulty"
-                    required="expedient_type != 'none'"
+                    required="1"
                     readonly="expedient_state in ['aprobada', 'rechazada'] and not is_expedient_admin" />
                 <field name="deadline"
-                    required="expedient_type != 'none'"
+                    required="1"
                     readonly="expedient_state in ['aprobada', 'rechazada'] and not is_expedient_admin" />
             </xpath>
         </field>

@@ -24,21 +24,12 @@
                 </div>
 
                 <group>
-                    <group string="Datos del Cliente">
-                        <field name="sale_order_template_id" options="{'no_create': True}"
-                            required="1" />
-                        <field name="partner_id" options="{'no_create': True, 'no_open': True}"
-                            readonly="1" force_save="1" />
-                        <field name="client_id" />
-                    </group>
-                    <group string="Información del Expediente">
-                        <field name="expedient_number" />
-                        <field name="person_under_study" />
-                        <field name="person_type" widget="radio" options="{'horizontal': true}" />
-                        <field name="expedient_difficulty" widget="radio"
-                            options="{'horizontal': true}" />
-                        <field name="deadline" />
-                    </group>
+                    <field name="sale_order_template_id" options="{'no_create': True}" required="1" />
+                    <field name="partner_id" options="{'no_create': True, 'no_open': True}"
+                        readonly="1" force_save="1" />
+                    <field name="client_id" />
+                    <field name="expedient_number" />
+                    <field name="person_under_study" />
                 </group>
 
                 <div class="alert alert-info" role="alert">

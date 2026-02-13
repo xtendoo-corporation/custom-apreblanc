@@ -26,7 +26,6 @@ class SaleOrder(models.Model):
         )
     ]
 
-    date_reception = fields.Datetime(string="Fecha de Recepción")
     parts_involved = fields.Integer(
         string="Partes Implicadas",
         default=1,
@@ -35,14 +34,17 @@ class SaleOrder(models.Model):
     expedient_difficulty = fields.Selection(
         [("simple", "Simple"), ("complex", "Complejo")],
         string="Dificultad",
-        default="simple",
         help="Nivel de dificultad del expediente",
     )
     deadline = fields.Selection(
         [("24", "24"), ("48", "48"), ("more", "Más")],
         string="Plazo",
-        default="48",
         help="Plazo del expediente en horas",
+    )
+    person_type = fields.Selection(
+        [("fisica", "Física"), ("juridica", "Jurídica")],
+        string="Tipo de Persona",
+        help="Indica si la persona a estudiar es física o jurídica",
     )
     account_numbers = fields.Integer(
         string="Números de Cuentas",
@@ -162,42 +164,6 @@ class SaleOrder(models.Model):
         string="Persona a Estudiar",
         help="Persona que está siendo estudiada en el expediente",
     )
-
-    person_type = fields.Selection(
-        [("fisica", "Física"), ("juridica", "Jurídica")],
-        string="Tipo de Persona",
-        default="fisica",
-        help="Indica si la persona a estudiar es física o jurídica",
-    )
-
-    @api.constrains(
-        "expedient_type",
-        "person_under_study",
-        "person_type",
-        "expedient_difficulty",
-        "deadline",
-    )
-    def _check_expedient_required_fields(self):
-        for record in self:
-            if record.expedient_type != "none":
-                if not record.person_under_study:
-                    raise ValidationError(
-                        _(
-                            "El campo 'Persona a Estudiar' es obligatorio para expedientes."
-                        )
-                    )
-                if not record.person_type:
-                    raise ValidationError(
-                        _("El campo 'Tipo de Persona' es obligatorio para expedientes.")
-                    )
-                if not record.expedient_difficulty:
-                    raise ValidationError(
-                        _("El campo 'Dificultad' es obligatorio para expedientes.")
-                    )
-                if not record.deadline:
-                    raise ValidationError(
-                        _("El campo 'Plazo' es obligatorio para expedientes.")
-                    )
 
     # Campos HTML para información detallada
     request = fields.Html(
@@ -358,6 +324,10 @@ class SaleOrder(models.Model):
             self.expedient_manager_id = False
             self.expedient_state = "creada"  # Cambiado de 'aprobada' a 'creada'
             self.expedient_notes = False
+            self.pre_paid_expedient_id = False
+            self.person_type = False
+            self.expedient_difficulty = False
+            self.deadline = False
             # Forzar estado sale y fecha fin
             self.state = "sale"
             # No establecer fecha de fin ya que el expediente está en estado 'creada'
@@ -371,6 +341,9 @@ class SaleOrder(models.Model):
             self.expedient_state = "creada"
             self.expedient_notes = False
             self.pre_paid_expedient_id = False
+            self.person_type = False
+            self.expedient_difficulty = False
+            self.deadline = False
 
     @api.onchange("pre_paid_expedient_id")
     def _onchange_pre_paid_expedient(self):
@@ -556,22 +529,6 @@ class SaleOrder(models.Model):
         # Continuar con la acción original
         return super().action_expedient_pendiente_documentacion()
 
-    def action_expedient_aprobada(self):
-        """Approve the expedient and convert quotation to sale order."""
-        # Los expedientes rechazados no pueden cambiar a aprobados a menos que sea administrador
-        locked_expedients = self.filtered(
-            lambda r: r.expedient_state == "rechazada" and not r.is_expedient_admin
-        )
-        if locked_expedients:
-            raise exceptions.AccessError(
-                _(
-                    "No tiene permisos para aprobar expedientes que ya fueron rechazados. "
-                    "Solo un administrador puede realizar esta acción."
-                )
-            )
-
-        return super().action_expedient_aprobada()
-
     def action_expedient_rechazada(self):
         """Reject the expedient and convert quotation to sale order."""
         # Los expedientes aprobados no pueden cambiar a rechazados a menos que sea administrador
@@ -700,24 +657,33 @@ class SaleOrder(models.Model):
 
     # Methods for changing expedient state
     def action_expedient_aprobada(self):
-        """
-        Approve the expedient and convert quotation to sale order.
-        """
-        for record in self:
-            # Registrar fecha y hora de aprobación
-            now = fields.Datetime.now()
-            record.write({"expedient_date_end": now})
+        """Approve the expedient and convert quotation to sale order."""
+        # Verificar permisos: expedientes rechazados solo pueden ser aprobados por admin
+        locked_expedients = self.filtered(
+            lambda r: r.expedient_state == "rechazada" and not r.is_expedient_admin
+        )
+        if locked_expedients:
+            raise exceptions.AccessError(
+                _(
+                    "No tiene permisos para aprobar expedientes que ya fueron rechazados. "
+                    "Solo un administrador puede realizar esta acción."
+                )
+            )
 
-            # First confirm the sale order if it's a quotation
+        # Procesar la aprobación
+        for record in self:
+            now = fields.Datetime.now()
+
+            # Confirmar el pedido de venta si es presupuesto
             if record.state in ["draft", "sent"]:
-                # Intentar confirmar de manera normal
                 try:
                     record.action_confirm()
+                except ValidationError:
+                    raise
                 except Exception as e:
                     _logger.error(
                         "Error al confirmar expediente %s: %s", record.name, str(e)
                     )
-                    # Forzar estado 'sale' directamente si falla la confirmación normal
                     record.write({"state": "sale"})
                     record.message_post(
                         body=_(
@@ -727,35 +693,26 @@ class SaleOrder(models.Model):
                         message_type="notification",
                     )
 
-            # Asegurar que cualquier expediente (postpagado o prepagado) esté en estado 'sale'
+            # Asegurar estado 'sale' para expedientes postpagados y prepagados
             if (
                 record.expedient_type in ["post_paid", "pre_paid"]
                 and record.state != "sale"
             ):
-                _logger.info(
-                    "Forzando estado 'sale' para expediente %s al ser aprobado",
-                    record.name,
-                )
                 record.write({"state": "sale"})
-                record.message_post(
-                    body=_(
-                        "Expediente convertido automáticamente a pedido de venta al ser aprobado"
-                    ),
-                    message_type="notification",
-                )
 
-            # Then update the expedient state
-            record.expedient_state = "aprobada"
+            # Actualizar estado del expediente y fecha de fin
+            record.write(
+                {
+                    "expedient_state": "aprobada",
+                    "expedient_date_end": now,
+                }
+            )
 
-            # Forzar recálculo del tiempo de resolución
-            record.invalidate_cache(["expedient_resolution_time"])
-            record._compute_expedient_resolution_time()
-
-            # Log the action con la fecha de fin
+            # Registrar en el chatter
             resolution_time = record.expedient_resolution_time or "No disponible"
             record.message_post(
-                body=_("Expediente marcado como %s el %s. Tiempo de resolución: %s")
-                % ("Approved", fields.Datetime.to_string(now), resolution_time),
+                body=_("Expediente aprobado el %s. Tiempo de resolución: %s")
+                % (fields.Datetime.to_string(now), resolution_time),
                 message_type="notification",
             )
 
@@ -912,6 +869,27 @@ class SaleOrder(models.Model):
         Como sale.order.line no tiene un campo directo a sale.order.template.line en Odoo 17,
         emparejamos las líneas del pedido con las de la plantilla por product_id.
         """
+        # Validar campos obligatorios para expedientes al confirmar
+        for order in self:
+            if order.expedient_type != "none":
+                errors = []
+                if not order.person_under_study:
+                    errors.append(_("El campo 'Persona a Estudiar' es obligatorio."))
+                if not order.person_type:
+                    errors.append(_("El campo 'Tipo de Persona' es obligatorio."))
+                if not order.expedient_difficulty:
+                    errors.append(_("El campo 'Dificultad' es obligatorio."))
+                if not order.deadline:
+                    errors.append(_("El campo 'Plazo' es obligatorio."))
+
+                if errors:
+                    raise ValidationError(
+                        _(
+                            "No se puede confirmar el expediente porque faltan campos obligatorios:\n\n%s"
+                        )
+                        % "\n".join(errors)
+                    )
+
         # Filtrar líneas que no cumplan la regla antes de confirmar
         for order in self:
             if not order.sale_order_template_id:
@@ -1177,6 +1155,7 @@ class SaleOrder(models.Model):
 
     def write(self, vals):
         """Track all field changes when post_incidencia is active"""
+
         if self.post_incidencia_activa and vals:
             # Obtener valores anteriores antes de la actualización
             old_values = {}
