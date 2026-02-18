@@ -67,23 +67,32 @@
                     <field name="pricelist_id"
                         readonly="expedient_type != 'none' and expedient_state in ('aprobada', 'rechazada', 'cancelada') and not is_expedient_admin" />
                 </group>
+
+                <group name="expedient_valuation" string="Valoración del Expediente">
+                    <field name="person_type"
+                        required="1"
+                        readonly="expedient_state in ['aprobada', 'rechazada'] and not is_expedient_admin" />
+                    <field name="expedient_difficulty"
+                        required="1"
+                        readonly="expedient_state in ['aprobada', 'rechazada'] and not is_expedient_admin" />
+                    <field name="deadline"
+                        required="1"
+                        readonly="expedient_state in ['aprobada', 'rechazada'] and not is_expedient_admin" />
+                </group>
             </xpath>
 
             <!-- Hide standard sales fields when expedient_type is not 'none' -->
             <xpath expr="//group[1]" position="attributes">
-                <attribute name="invisible">expedient_type != 'none' and
-                    context.get('show_as_expedient', False)</attribute>
+                <attribute name="invisible">expedient_type != 'none' and context.get('show_as_expedient', False)</attribute>
             </xpath>
 
             <xpath expr="//group[2]" position="attributes">
-                <attribute name="invisible">expedient_type != 'none' and
-                    context.get('show_as_expedient', False)</attribute>
+                <attribute name="invisible">expedient_type != 'none' and context.get('show_as_expedient', False)</attribute>
             </xpath>
             <!-- Ocultar header completo para expedientes -->
             <!-- Reemplazar header completo para expedientes -->
             <xpath expr="//header" position="attributes">
-                <attribute name="invisible">expedient_type != 'none' and
-                    context.get('show_as_expedient', False)</attribute>
+                <attribute name="invisible">expedient_type != 'none' and context.get('show_as_expedient', False)</attribute>
             </xpath>
 
             <xpath expr="//header" position="after">
@@ -113,9 +122,7 @@
                         <field name="person_under_study"
                             required="1"
                             readonly="expedient_state in ['aprobada', 'rechazada'] and not is_expedient_admin" />
-                        <field name="person_type"
-                            required="1"
-                            readonly="expedient_state in ['aprobada', 'rechazada'] and not is_expedient_admin" />
+
                         <field name="client_id"
                             readonly="expedient_state in ['aprobada', 'rechazada'] and not is_expedient_admin" />
                         <field name="expedient_number"
@@ -244,15 +251,13 @@
             <!-- Hide the Order Lines tab when expedient_type is not 'none' AND show_as_expedient is
             True -->
             <xpath expr="//notebook/page[@name='order_lines']" position="attributes">
-                <attribute name="invisible">expedient_type != 'none' and
-                    context.get('show_as_expedient', False)</attribute>
+                <attribute name="invisible">expedient_type != 'none' and context.get('show_as_expedient', False)</attribute>
             </xpath>
 
             <!-- Hide the Optional Products tab when expedient_type is not 'none' AND
             show_as_expedient is True -->
             <xpath expr="//notebook/page[@name='optional_products']" position="attributes">
-                <attribute name="invisible">expedient_type != 'none' and
-                    context.get('show_as_expedient', False)</attribute>
+                <attribute name="invisible">expedient_type != 'none' and context.get('show_as_expedient', False)</attribute>
             </xpath>
 
             <!--            &lt;!&ndash; Añadir nuevos campos en la sección de información del expediente
@@ -264,14 +269,7 @@
             <!--                </group>-->
             <!--            </xpath>-->
 
-            <xpath expr="//group[@name='expedient_info']/group[2]" position="inside">
-                <field name="expedient_difficulty"
-                    required="1"
-                    readonly="expedient_state in ['aprobada', 'rechazada'] and not is_expedient_admin" />
-                <field name="deadline"
-                    required="1"
-                    readonly="expedient_state in ['aprobada', 'rechazada'] and not is_expedient_admin" />
-            </xpath>
+
         </field>
     </record>
 
@@ -428,8 +426,7 @@
         <field name="res_model">sale.order</field>
         <field name="view_mode">tree,form</field>
         <field name="view_id" ref="view_sale_order_prepaid_tree" />
-        <field name="domain">[('expedient_type', '=', 'pre_paid'), ('expedient_manager_id', '=',
-            uid)]</field>
+        <field name="domain">[('expedient_type', '=', 'pre_paid'), ('expedient_manager_id', '=', uid)]</field>
         <field name="context">{
             'default_expedient_type': 'pre_paid',
             'search_default_expedient_state_active': 1,
