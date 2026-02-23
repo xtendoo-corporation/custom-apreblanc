@@ -871,6 +871,12 @@ class SaleOrder(models.Model):
         """
         # Validar campos obligatorios para expedientes al confirmar
         for order in self:
+            print("Validando campos obligatorios para el expediente al confirmar...")
+            print(order.expedient_type,
+                    order.person_under_study,
+                    order.person_type,
+                    order.expedient_difficulty,
+                    order.deadline)
             if order.expedient_type != "none":
                 errors = []
                 if not order.person_under_study:
