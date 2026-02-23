@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<odoo>
+    <!-- Botón stat en la cabecera del partner -->
+    <record id="partner_view_buttons_apreblanc" model="ir.ui.view">
+        <field name="name">res.partner.credit.reminder.button.apreblanc</field>
+        <field name="model">res.partner</field>
+        <field name="inherit_id" ref="account.partner_view_buttons" />
+        <field name="arch" type="xml">
+            <button name="action_view_partner_invoices" position="after">
+                <button
+                    class="oe_stat_button"
+                    type="object"
+                    name="action_view_credit_reminders"
+                    invisible="credit_reminder_count == 0"
+                    icon="fa-bell"
+                    groups="apreblanc_credit_control.group_credit_control_user"
+                >
+                    <field
+                        string="Recordatorios"
+                        name="credit_reminder_count"
+                        widget="statinfo"
+                    />
+                </button>
+            </button>
+        </field>
+    </record>
+
+    <!-- Pestaña "Recordatorios de crédito" en la ficha del partner -->
+    <record id="partner_followup_form_view_apreblanc" model="ir.ui.view">
+        <field name="name">res.partner.credit.reminder.apreblanc</field>
+        <field name="model">res.partner</field>
+        <field name="inherit_id" ref="account.view_partner_property_form" />
+        <field name="arch" type="xml">
+            <page name="accounting" position="after">
+                <page
+                    string="Recordatorios de crédito"
+                    name="credit_reminders_apreblanc"
+                    invisible="not is_company and parent_id"
+                    groups="apreblanc_credit_control.group_credit_control_user"
+                >
+                    <field name="credit_reminder_ids" nolabel="1">
+                        <tree create="false" delete="false">
+                            <field name="date_sent" />
+                            <field name="overdue_amount" />
+                            <field name="pending_amount" />
+                            <field name="currency_id" column_invisible="True" />
+                            <field name="user_id" />
+                            <field name="notes" />
+                        </tree>
+                    </field>
+                </page>
+            </page>
+        </field>
+    </record>
+</odoo>
+

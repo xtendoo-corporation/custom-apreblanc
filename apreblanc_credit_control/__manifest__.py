@@ -1,0 +1,22 @@
+{
+    "name": "Apreblanc Credit Control",
+    "version": "17.0.2.0.0",
+    "category": "Accounting/Accounting",
+    "summary": "Control de crédito simplificado: análisis de deuda al vuelo y recordatorios",
+    "author": "Xtendoo",
+    "website": "http://www.xtendoo.es",
+    "license": "AGPL-3",
+    "depends": ["account"],
+    "data": [
+        "security/security.xml",
+        "security/ir.model.access.csv",
+        "wizard/credit_control_wizard_view.xml",
+        "views/res_config_settings_views.xml",
+        "views/res_partner_views.xml",
+        "views/menu_views.xml",
+    ],
+    "installable": True,
+    "application": False,
+    "auto_install": False,
+}
+

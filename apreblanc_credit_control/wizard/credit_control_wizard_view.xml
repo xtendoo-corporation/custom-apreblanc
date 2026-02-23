@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<odoo>
+    <record id="view_credit_control_wizard_form" model="ir.ui.view">
+        <field name="name">apreblanc.credit.wizard.form</field>
+        <field name="model">apreblanc.credit.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Control de Crédito">
+                <group>
+                    <group>
+                        <field name="debt_limit" />
+                        <field name="currency_id" invisible="1" />
+                        <field name="company_id" invisible="1" />
+                        <field name="computed" invisible="1" />
+                    </group>
+                </group>
+                <footer>
+                    <button
+                        name="action_compute"
+                        string="Calcular deuda"
+                        type="object"
+                        class="btn-primary"
+                        icon="fa-search"
+                    />
+                    <button string="Cerrar" class="btn-secondary" special="cancel" />
+                </footer>
+                <field name="line_ids" invisible="not computed" nolabel="1">
+                    <tree editable="bottom" create="false" delete="false"
+                          decoration-danger="overdue_amount &gt; 0">
+                        <field name="partner_id" readonly="1" />
+                        <field name="overdue_amount" readonly="1" />
+                        <field name="pending_amount" readonly="1" />
+                        <field name="currency_id" column_invisible="True" />
+                        <field name="selected" />
+                        <button
+                            name="action_send_single_email"
+                            string="Enviar email"
+                            type="object"
+                            icon="fa-envelope"
+                            class="btn-sm btn-primary"
+                        />
+                    </tree>
+                </field>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_credit_control_wizard" model="ir.actions.act_window">
+        <field name="name">Análisis de deuda</field>
+        <field name="res_model">apreblanc.credit.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+</odoo>
+
