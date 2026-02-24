@@ -11,8 +11,7 @@
                         <setting
                             id="apreblanc_credit_debt_limit"
                             string="Límite de deuda vencida"
-                            help="Importe mínimo de deuda vencida (en moneda de la empresa) para que un cliente aparezca en el análisis."
-                        >
+                            help="Importe mínimo de deuda vencida (en moneda de la empresa) para que un cliente aparezca en el análisis.">
                             <div class="content-group">
                                 <div class="row mt8">
                                     <label
@@ -30,4 +29,3 @@
         </field>
     </record>
 </odoo>
-

@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8" ?>
+<?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <record id="view_credit_control_wizard_form" model="ir.ui.view">
         <field name="name">apreblanc.credit.wizard.form</field>
@@ -25,12 +25,11 @@
                 </footer>
                 <field name="line_ids" invisible="not computed" nolabel="1">
                     <tree editable="bottom" create="false" delete="false"
-                          decoration-danger="overdue_amount &gt; 0">
+                        decoration-danger="overdue_amount &gt; 0">
                         <field name="partner_id" readonly="1" />
                         <field name="overdue_amount" readonly="1" />
                         <field name="pending_amount" readonly="1" />
                         <field name="currency_id" column_invisible="True" />
-                        <field name="selected" />
                         <button
                             name="action_send_single_email"
                             string="Enviar email"
@@ -50,5 +49,30 @@
         <field name="view_mode">form</field>
         <field name="target">new</field>
     </record>
-</odoo>
 
+    <record id="view_apreblanc_credit_email_compose_form" model="ir.ui.view">
+        <field name="name">apreblanc.credit.email.compose.form</field>
+        <field name="model">apreblanc.credit.email.compose</field>
+        <field name="arch" type="xml">
+            <form string="Redactar Email">
+                <sheet>
+                    <group>
+                        <field name="partner_id" readonly="1" />
+                        <field name="subject" />
+                    </group>
+                    <field name="body" widget="html" nolabel="1" />
+                </sheet>
+                <footer>
+                    <button
+                        name="action_send_email"
+                        string="Enviar"
+                        type="object"
+                        class="btn-primary"
+                        icon="fa-paper-plane"
+                    />
+                    <button string="Cancelar" class="btn-secondary" special="cancel" />
+                </footer>
+            </form>
+        </field>
+    </record>
+</odoo>

@@ -49,14 +49,16 @@ class CreditControlWizard(models.TransientModel):
 
         self.line_ids.unlink()
 
-        move_lines = self.env["account.move.line"].search([
-            ("account_id.account_type", "=", "asset_receivable"),
-            ("reconciled", "=", False),
-            ("move_id.state", "=", "posted"),
-            ("move_id.move_type", "in", ["out_invoice", "out_refund"]),
-            ("company_id", "=", company.id),
-            ("partner_id", "!=", False),
-        ])
+        move_lines = self.env["account.move.line"].search(
+            [
+                ("account_id.account_type", "=", "asset_receivable"),
+                ("reconciled", "=", False),
+                ("move_id.state", "=", "posted"),
+                ("move_id.move_type", "in", ["out_invoice", "out_refund"]),
+                ("company_id", "=", company.id),
+                ("partner_id", "!=", False),
+            ]
+        )
 
         partner_data = {}
         for line in move_lines:
@@ -67,7 +69,9 @@ class CreditControlWizard(models.TransientModel):
             if line.currency_id and line.currency_id != company_currency:
                 amount = line.currency_id._convert(
                     line.amount_residual_currency,
-                    company_currency, company, today,
+                    company_currency,
+                    company,
+                    today,
                 )
             else:
                 amount = line.amount_residual
@@ -81,13 +85,15 @@ class CreditControlWizard(models.TransientModel):
         for partner_id, data in partner_data.items():
             if data["overdue"] <= self.debt_limit:
                 continue
-            WizardLine.create({
-                "wizard_id": self.id,
-                "partner_id": partner_id,
-                "overdue_amount": data["overdue"],
-                "pending_amount": data["pending"],
-                "currency_id": company_currency.id,
-            })
+            WizardLine.create(
+                {
+                    "wizard_id": self.id,
+                    "partner_id": partner_id,
+                    "overdue_amount": data["overdue"],
+                    "pending_amount": data["pending"],
+                    "currency_id": company_currency.id,
+                }
+            )
 
         self.computed = True
         return {
@@ -128,40 +134,47 @@ class CreditControlWizardLine(models.TransientModel):
         comodel_name="res.currency",
         string="Moneda",
     )
-    selected = fields.Boolean(
-        string="Enviar",
-        default=False,
-    )
 
     def action_send_single_email(self):
-        """Envía email a este cliente y registra el recordatorio."""
+        """Abre el asistente para previsualizar y editar el email antes de enviarlo."""
         self.ensure_one()
-        self._send_email_and_log()
+        subject, body = self._prepare_email_content()
+
+        compose_wiz = self.env["apreblanc.credit.email.compose"].create(
+            {
+                "line_id": self.id,
+                "subject": subject,
+                "body": body,
+            }
+        )
+
         return {
+            "name": _("Previsualizar y Enviar Email"),
             "type": "ir.actions.act_window",
-            "res_model": "apreblanc.credit.wizard",
-            "res_id": self.wizard_id.id,
+            "res_model": "apreblanc.credit.email.compose",
+            "res_id": compose_wiz.id,
             "view_mode": "form",
             "target": "new",
         }
 
-    def _send_email_and_log(self):
-        """Construye el cuerpo del email con las facturas reales del momento,
-        lo envía al partner y registra el recordatorio."""
+    def _prepare_email_content(self):
+        """Construye el cuerpo del email con las facturas reales del momento."""
         self.ensure_one()
         partner = self.partner_id.commercial_partner_id
         company = self.wizard_id.company_id
         company_currency = self.wizard_id.currency_id
         today = fields.Date.today()
 
-        move_lines = self.env["account.move.line"].search([
-            ("account_id.account_type", "=", "asset_receivable"),
-            ("reconciled", "=", False),
-            ("move_id.state", "=", "posted"),
-            ("move_id.move_type", "in", ["out_invoice", "out_refund"]),
-            ("company_id", "=", company.id),
-            ("partner_id.commercial_partner_id", "=", partner.id),
-        ])
+        move_lines = self.env["account.move.line"].search(
+            [
+                ("account_id.account_type", "=", "asset_receivable"),
+                ("reconciled", "=", False),
+                ("move_id.state", "=", "posted"),
+                ("move_id.move_type", "in", ["out_invoice", "out_refund"]),
+                ("company_id", "=", company.id),
+                ("partner_id.commercial_partner_id", "=", partner.id),
+            ]
+        )
 
         overdue_lines = []
         pending_lines = []
@@ -172,7 +185,9 @@ class CreditControlWizardLine(models.TransientModel):
             if ml.currency_id and ml.currency_id != company_currency:
                 amount = ml.currency_id._convert(
                     ml.amount_residual_currency,
-                    company_currency, company, today,
+                    company_currency,
+                    company,
+                    today,
                 )
             else:
                 amount = ml.amount_residual
@@ -194,30 +209,26 @@ class CreditControlWizardLine(models.TransientModel):
         pending_lines.sort(key=lambda x: x["date_maturity"] or today)
 
         body = self._build_email_body(
-            partner, overdue_lines, pending_lines,
-            overdue_total, pending_total, company_currency,
+            partner,
+            overdue_lines,
+            pending_lines,
+            overdue_total,
+            pending_total,
+            company_currency,
         )
 
-        partner.message_post(
-            body=body,
-            subject=_("Recordatorio de facturas pendientes - %s") % partner.name,
-            message_type="comment",
-            subtype_xmlid="mail.mt_comment",
-            partner_ids=partner.ids,
-            email_layout_xmlid="mail.mail_notification_light",
-        )
+        subject = _("Recordatorio de facturas pendientes - %s") % partner.name
+        return subject, body
 
-        self.env["apreblanc.credit.reminder"].create({
-            "partner_id": partner.id,
-            "date_sent": today,
-            "overdue_amount": overdue_total,
-            "pending_amount": pending_total,
-            "currency_id": company_currency.id,
-            "user_id": self.env.uid,
-        })
-
-    def _build_email_body(self, partner, overdue_lines, pending_lines,
-                          overdue_total, pending_total, currency):
+    def _build_email_body(
+        self,
+        partner,
+        overdue_lines,
+        pending_lines,
+        overdue_total,
+        pending_total,
+        currency,
+    ):
         """Genera el HTML del email con las tablas de facturas."""
         env = self.env
 
@@ -228,9 +239,9 @@ class CreditControlWizardLine(models.TransientModel):
             return format_date(env, date) if date else ""
 
         html = '<div style="font-family:Arial,sans-serif;font-size:14px;color:#333;">'
-        html += '<p>Estimado/a <strong>%s</strong>,</p>' % partner.name
-        html += '<p>Nos ponemos en contacto con usted para recordarle que tiene '
-        html += 'las siguientes facturas pendientes con nuestra empresa.</p>'
+        html += "<p>Estimado/a <strong>%s</strong>,</p>" % partner.name
+        html += "<p>Nos ponemos en contacto con usted para recordarle que tiene "
+        html += "las siguientes facturas pendientes con nuestra empresa.</p>"
 
         if overdue_lines:
             html += '<h3 style="color:#C0392B;border-bottom:2px solid #C0392B;'
@@ -238,33 +249,35 @@ class CreditControlWizardLine(models.TransientModel):
             html += '<table style="width:100%;border-collapse:collapse;margin-bottom:16px;">'
             html += '<thead><tr style="background-color:#F8D7DA;color:#721C24;">'
             html += '<th style="border:1px solid #ddd;padding:8px;text-align:left;">'
-            html += 'Nº Factura</th>'
+            html += "Nº Factura</th>"
             html += '<th style="border:1px solid #ddd;padding:8px;text-align:left;">'
-            html += 'Fecha factura</th>'
+            html += "Fecha factura</th>"
             html += '<th style="border:1px solid #ddd;padding:8px;text-align:left;">'
-            html += 'Fecha vencimiento</th>'
+            html += "Fecha vencimiento</th>"
             html += '<th style="border:1px solid #ddd;padding:8px;text-align:right;">'
-            html += 'Importe</th>'
-            html += '</tr></thead><tbody>'
+            html += "Importe</th>"
+            html += "</tr></thead><tbody>"
             for line in overdue_lines:
-                html += '<tr>'
+                html += "<tr>"
                 html += '<td style="border:1px solid #ddd;padding:8px;">'
-                html += '%s</td>' % line["name"]
+                html += "%s</td>" % line["name"]
                 html += '<td style="border:1px solid #ddd;padding:8px;">'
-                html += '%s</td>' % fmt_date(line["invoice_date"])
+                html += "%s</td>" % fmt_date(line["invoice_date"])
                 html += '<td style="border:1px solid #ddd;padding:8px;'
                 html += 'color:#C0392B;font-weight:bold;">'
-                html += '%s</td>' % fmt_date(line["date_maturity"])
-                html += '<td style="border:1px solid #ddd;padding:8px;text-align:right;">'
-                html += '%s</td>' % fmt_amount(line["amount"])
-                html += '</tr>'
-            html += '</tbody><tfoot>'
+                html += "%s</td>" % fmt_date(line["date_maturity"])
+                html += (
+                    '<td style="border:1px solid #ddd;padding:8px;text-align:right;">'
+                )
+                html += "%s</td>" % fmt_amount(line["amount"])
+                html += "</tr>"
+            html += "</tbody><tfoot>"
             html += '<tr style="background-color:#F8D7DA;font-weight:bold;">'
             html += '<td colspan="3" style="border:1px solid #ddd;padding:8px;'
             html += 'text-align:right;">TOTAL VENCIDO:</td>'
             html += '<td style="border:1px solid #ddd;padding:8px;text-align:right;">'
-            html += '%s</td>' % fmt_amount(overdue_total)
-            html += '</tr></tfoot></table>'
+            html += "%s</td>" % fmt_amount(overdue_total)
+            html += "</tr></tfoot></table>"
 
         if pending_lines:
             html += '<h3 style="color:#856404;border-bottom:2px solid #856404;'
@@ -272,37 +285,101 @@ class CreditControlWizardLine(models.TransientModel):
             html += '<table style="width:100%;border-collapse:collapse;margin-bottom:16px;">'
             html += '<thead><tr style="background-color:#FFF3CD;color:#856404;">'
             html += '<th style="border:1px solid #ddd;padding:8px;text-align:left;">'
-            html += 'Nº Factura</th>'
+            html += "Nº Factura</th>"
             html += '<th style="border:1px solid #ddd;padding:8px;text-align:left;">'
-            html += 'Fecha factura</th>'
+            html += "Fecha factura</th>"
             html += '<th style="border:1px solid #ddd;padding:8px;text-align:left;">'
-            html += 'Fecha vencimiento</th>'
+            html += "Fecha vencimiento</th>"
             html += '<th style="border:1px solid #ddd;padding:8px;text-align:right;">'
-            html += 'Importe</th>'
-            html += '</tr></thead><tbody>'
+            html += "Importe</th>"
+            html += "</tr></thead><tbody>"
             for line in pending_lines:
-                html += '<tr>'
+                html += "<tr>"
                 html += '<td style="border:1px solid #ddd;padding:8px;">'
-                html += '%s</td>' % line["name"]
+                html += "%s</td>" % line["name"]
                 html += '<td style="border:1px solid #ddd;padding:8px;">'
-                html += '%s</td>' % fmt_date(line["invoice_date"])
+                html += "%s</td>" % fmt_date(line["invoice_date"])
                 html += '<td style="border:1px solid #ddd;padding:8px;">'
-                html += '%s</td>' % fmt_date(line["date_maturity"])
-                html += '<td style="border:1px solid #ddd;padding:8px;text-align:right;">'
-                html += '%s</td>' % fmt_amount(line["amount"])
-                html += '</tr>'
-            html += '</tbody><tfoot>'
+                html += "%s</td>" % fmt_date(line["date_maturity"])
+                html += (
+                    '<td style="border:1px solid #ddd;padding:8px;text-align:right;">'
+                )
+                html += "%s</td>" % fmt_amount(line["amount"])
+                html += "</tr>"
+            html += "</tbody><tfoot>"
             html += '<tr style="background-color:#FFF3CD;font-weight:bold;">'
             html += '<td colspan="3" style="border:1px solid #ddd;padding:8px;'
             html += 'text-align:right;">TOTAL PENDIENTE:</td>'
             html += '<td style="border:1px solid #ddd;padding:8px;text-align:right;">'
-            html += '%s</td>' % fmt_amount(pending_total)
-            html += '</tr></tfoot></table>'
+            html += "%s</td>" % fmt_amount(pending_total)
+            html += "</tr></tfoot></table>"
 
-        html += '<p>Le rogamos que proceda al pago de las facturas vencidas '
-        html += 'a la mayor brevedad posible. Para cualquier consulta o '
-        html += 'aclaración, no dude en ponerse en contacto con nosotros.</p>'
-        html += '<p>Atentamente,<br/><strong>%s</strong></p>' % self.env.user.name
-        html += '</div>'
+        html += "<p>Le rogamos que proceda al pago de las facturas vencidas "
+        html += "a la mayor brevedad posible. Para cualquier consulta o "
+        html += "aclaración, no dude en ponerse en contacto con nosotros.</p>"
+        html += "<p>Atentamente,<br/><strong>%s</strong></p>" % self.env.user.name
+        html += "</div>"
         return html
 
+
+class ApreblancCreditEmailCompose(models.TransientModel):
+    """Asistente para previsualizar y editar el email de control de crédito."""
+
+    _name = "apreblanc.credit.email.compose"
+    _description = "Redactor de Email de Control de Crédito"
+
+    line_id = fields.Many2one(
+        comodel_name="apreblanc.credit.wizard.line",
+        string="Línea",
+        required=True,
+        ondelete="cascade",
+    )
+    partner_id = fields.Many2one(
+        comodel_name="res.partner",
+        string="Cliente",
+        related="line_id.partner_id",
+    )
+    subject = fields.Char(
+        string="Asunto",
+        required=True,
+    )
+    body = fields.Html(
+        string="Mensaje",
+        sanitize=True,
+    )
+
+    def action_send_email(self):
+        """Envía el email y registra el recordatorio."""
+        self.ensure_one()
+        partner = self.partner_id.commercial_partner_id
+        today = fields.Date.today()
+        wizard_id = self.line_id.wizard_id
+        company_currency = wizard_id.currency_id
+
+        partner.message_post(
+            body=self.body,
+            subject=self.subject,
+            message_type="comment",
+            subtype_xmlid="mail.mt_comment",
+            partner_ids=partner.ids,
+            email_layout_xmlid="mail.mail_notification_light",
+        )
+
+        self.env["apreblanc.credit.reminder"].create(
+            {
+                "partner_id": partner.id,
+                "date_sent": today,
+                "overdue_amount": self.line_id.overdue_amount,
+                "pending_amount": self.line_id.pending_amount,
+                "currency_id": company_currency.id,
+                "user_id": self.env.uid,
+            }
+        )
+
+        return {
+            "type": "ir.actions.act_window",
+            "res_model": "apreblanc.credit.wizard",
+            "res_id": wizard_id.id,
+            "view_mode": "form",
+            "target": "new",
+        }
