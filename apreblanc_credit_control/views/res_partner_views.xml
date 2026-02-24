@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8" ?>
+<?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <!-- Botón stat en la cabecera del partner -->
     <record id="partner_view_buttons_apreblanc" model="ir.ui.view">
@@ -33,7 +33,7 @@
         <field name="arch" type="xml">
             <page name="accounting" position="after">
                 <page
-                    string="Recordatorios de crédito"
+                    string="Análisis de deuda"
                     name="credit_reminders_apreblanc"
                     invisible="not is_company and parent_id"
                     groups="apreblanc_credit_control.group_credit_control_user"
@@ -41,16 +41,48 @@
                     <field name="credit_reminder_ids" nolabel="1">
                         <tree create="false" delete="false">
                             <field name="date_sent" />
+                            <field name="email_to" />
+                            <field name="subject" />
                             <field name="overdue_amount" />
                             <field name="pending_amount" />
                             <field name="currency_id" column_invisible="True" />
-                            <field name="user_id" />
-                            <field name="notes" />
+                            <field name="user_id" widget="many2one_avatar_user" />
+                            <field name="state" widget="badge" decoration-success="state == 'sent'"
+                                decoration-danger="state == 'failed'" />
+                            <field name="email_sent" />
                         </tree>
+                        <form create="false" delete="false" edit="false">
+                            <sheet>
+                                <group>
+                                    <group>
+                                        <field name="date_sent" />
+                                        <field name="email_to" />
+                                        <field name="subject" />
+                                        <field name="user_id" widget="many2one_avatar_user" />
+                                    </group>
+                                    <group>
+                                        <field name="overdue_amount" widget="monetary" />
+                                        <field name="pending_amount" widget="monetary" />
+                                        <field name="currency_id" invisible="1" />
+                                        <field name="state" widget="badge"
+                                            decoration-success="state == 'sent'"
+                                            decoration-danger="state == 'failed'" />
+                                        <field name="email_sent" />
+                                    </group>
+                                </group>
+                                <notebook>
+                                    <page string="Cuerpo del Mensaje">
+                                        <field name="body" widget="html" />
+                                    </page>
+                                    <page string="Notas">
+                                        <field name="notes" />
+                                    </page>
+                                </notebook>
+                            </sheet>
+                        </form>
                     </field>
                 </page>
             </page>
         </field>
     </record>
 </odoo>
-

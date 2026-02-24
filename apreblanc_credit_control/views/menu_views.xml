@@ -1,19 +1,11 @@
-<?xml version="1.0" encoding="utf-8" ?>
+<?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <menuitem
-        id="menu_apreblanc_credit_control_root"
-        name="Control de Crédito"
-        parent="account.menu_finance"
-        sequence="99"
-        groups="apreblanc_credit_control.group_credit_control_user"
-    />
     <menuitem
         id="menu_apreblanc_credit_run"
         name="Análisis de deuda"
-        parent="menu_apreblanc_credit_control_root"
+        parent="account.menu_finance_receivables"
         action="action_credit_control_wizard"
-        sequence="10"
-        groups="apreblanc_credit_control.group_credit_control_manager"
+        sequence="100"
+        groups="apreblanc_credit_control.group_credit_control_user"
     />
 </odoo>
-

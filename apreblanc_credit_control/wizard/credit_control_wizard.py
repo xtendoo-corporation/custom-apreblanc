@@ -138,23 +138,15 @@ class CreditControlWizardLine(models.TransientModel):
     def action_send_single_email(self):
         """Abre el asistente para previsualizar y editar el email antes de enviarlo."""
         self.ensure_one()
-        subject, body = self._prepare_email_content()
-
-        compose_wiz = self.env["apreblanc.credit.email.compose"].create(
-            {
-                "line_id": self.id,
-                "subject": subject,
-                "body": body,
-            }
-        )
-
         return {
             "name": _("Previsualizar y Enviar Email"),
             "type": "ir.actions.act_window",
             "res_model": "apreblanc.credit.email.compose",
-            "res_id": compose_wiz.id,
             "view_mode": "form",
             "target": "new",
+            "context": {
+                "default_line_id": self.id,
+            },
         }
 
     def _prepare_email_content(self):
@@ -339,6 +331,10 @@ class ApreblancCreditEmailCompose(models.TransientModel):
         string="Cliente",
         related="line_id.partner_id",
     )
+    email_to = fields.Char(
+        string="Destinatario",
+        required=True,
+    )
     subject = fields.Char(
         string="Asunto",
         required=True,
@@ -348,31 +344,60 @@ class ApreblancCreditEmailCompose(models.TransientModel):
         sanitize=True,
     )
 
+    @api.model
+    def default_get(self, fields_list):
+        res = super().default_get(fields_list)
+        line_id = res.get("line_id") or self.env.context.get("default_line_id")
+        if line_id:
+            line = self.env["apreblanc.credit.wizard.line"].browse(line_id)
+            if line:
+                if "line_id" in fields_list:
+                    res["line_id"] = line.id
+                if "email_to" in fields_list:
+                    res["email_to"] = line.partner_id.email or ""
+                if "subject" in fields_list or "body" in fields_list:
+                    subject, body = line._prepare_email_content()
+                    if "subject" in fields_list:
+                        res["subject"] = subject
+                    if "body" in fields_list:
+                        res["body"] = body
+        return res
+
     def action_send_email(self):
-        """Envía el email y registra el recordatorio."""
+        """Envía el email vía mail.mail y registra el recordatorio en el historial."""
         self.ensure_one()
         partner = self.partner_id.commercial_partner_id
         today = fields.Date.today()
         wizard_id = self.line_id.wizard_id
         company_currency = wizard_id.currency_id
 
-        partner.message_post(
-            body=self.body,
-            subject=self.subject,
-            message_type="comment",
-            subtype_xmlid="mail.mt_comment",
-            partner_ids=partner.ids,
-            email_layout_xmlid="mail.mail_notification_light",
-        )
+        # Crear y enviar el correo usando mail.mail nativamente
+        mail_values = {
+            "subject": self.subject,
+            "body_html": self.body,
+            "email_to": self.email_to,
+            "email_from": self.env.user.company_id.catchall_formatted
+            or self.env.user.email_formatted,
+            "recipient_ids": [(4, partner.id)] if partner else False,
+            "auto_delete": False,
+        }
+        mail = self.env["mail.mail"].create(mail_values)
+        mail.send()
 
-        self.env["apreblanc.credit.reminder"].create(
+        # Registrar historial explícitamente en credit.reminder.history
+        self.env["credit.reminder.history"].create(
             {
                 "partner_id": partner.id,
-                "date_sent": today,
+                "date_sent": fields.Datetime.now(),
                 "overdue_amount": self.line_id.overdue_amount,
                 "pending_amount": self.line_id.pending_amount,
                 "currency_id": company_currency.id,
                 "user_id": self.env.uid,
+                "subject": self.subject,
+                "body": self.body,
+                "email_to": self.email_to,
+                "state": "sent",
+                "email_sent": True,
             }
         )
 

@@ -1,4 +1,3 @@
 from . import res_company
-from . import res_partner
 from . import credit_reminder
-
+from . import res_partner

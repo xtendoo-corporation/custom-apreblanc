@@ -8,7 +8,7 @@ class ResPartner(models.Model):
     _inherit = "res.partner"
 
     credit_reminder_ids = fields.One2many(
-        comodel_name="apreblanc.credit.reminder",
+        comodel_name="credit.reminder.history",
         inverse_name="partner_id",
         string="Recordatorios de crédito",
     )
@@ -26,9 +26,8 @@ class ResPartner(models.Model):
         return {
             "type": "ir.actions.act_window",
             "name": _("Recordatorios de crédito"),
-            "res_model": "apreblanc.credit.reminder",
+            "res_model": "credit.reminder.history",
             "view_mode": "tree,form",
             "domain": [("partner_id", "=", self.id)],
             "context": {"default_partner_id": self.id},
         }
-

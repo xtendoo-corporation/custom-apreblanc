@@ -58,6 +58,7 @@
                 <sheet>
                     <group>
                         <field name="partner_id" readonly="1" />
+                        <field name="email_to" />
                         <field name="subject" />
                     </group>
                     <field name="body" widget="html" nolabel="1" />
