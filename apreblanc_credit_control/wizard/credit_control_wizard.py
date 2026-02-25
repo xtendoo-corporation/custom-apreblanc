@@ -134,6 +134,10 @@ class CreditControlWizardLine(models.TransientModel):
         comodel_name="res.currency",
         string="Moneda",
     )
+    email_sent = fields.Boolean(
+        string="Email Enviado",
+        default=False,
+    )
 
     def action_send_single_email(self):
         """Abre el asistente para previsualizar y editar el email antes de enviarlo."""
@@ -407,6 +411,7 @@ class ApreblancCreditEmailCompose(models.TransientModel):
         )
 
         self.is_send = True
+        self.line_id.email_sent = True
 
         return {
             "type": "ir.actions.act_window",

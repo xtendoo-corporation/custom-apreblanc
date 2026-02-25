@@ -29,6 +29,7 @@
                         <field name="partner_id" readonly="1" />
                         <field name="overdue_amount" readonly="1" />
                         <field name="pending_amount" readonly="1" />
+                        <field name="email_sent" readonly="1" />
                         <field name="currency_id" column_invisible="True" />
                         <button
                             name="action_send_single_email"
@@ -64,7 +65,7 @@
                     <field name="body" widget="html" nolabel="1" />
                 </sheet>
                 <group>
-                    <field name="is_send" readonly="1"/>
+                    <field name="is_send" readonly="1" />
                 </group>
                 <footer>
                     <button
