@@ -63,6 +63,9 @@
                     </group>
                     <field name="body" widget="html" nolabel="1" />
                 </sheet>
+                <group>
+                    <field name="is_send" readonly="1"/>
+                </group>
                 <footer>
                     <button
                         name="action_send_email"

@@ -343,6 +343,7 @@ class ApreblancCreditEmailCompose(models.TransientModel):
         string="Mensaje",
         sanitize=True,
     )
+    is_send = fields.Boolean(string="Email Enviado", default=False)
 
     @api.model
     def default_get(self, fields_list):
@@ -375,11 +376,15 @@ class ApreblancCreditEmailCompose(models.TransientModel):
         mail_values = {
             "subject": self.subject,
             "body_html": self.body,
+            "body": self.body,
             "email_to": self.email_to,
             "email_from": self.env.user.company_id.catchall_formatted
             or self.env.user.email_formatted,
             "recipient_ids": [(4, partner.id)] if partner else False,
             "auto_delete": False,
+            "model": "res.partner",
+            "res_id": partner.id,
+            "message_type": "email",
         }
         mail = self.env["mail.mail"].create(mail_values)
         mail.send()
@@ -400,6 +405,8 @@ class ApreblancCreditEmailCompose(models.TransientModel):
                 "email_sent": True,
             }
         )
+
+        self.is_send = True
 
         return {
             "type": "ir.actions.act_window",
