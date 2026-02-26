@@ -55,16 +55,17 @@
         <field name="name">apreblanc.credit.email.compose.form</field>
         <field name="model">apreblanc.credit.email.compose</field>
         <field name="arch" type="xml">
-            <form string="Redactar Email">
+            <form string="Previsualizar y Enviar Email">
                 <sheet>
                     <group>
                         <field name="partner_id" readonly="1" />
                         <field name="email_to" />
                         <field name="subject" />
                     </group>
-                    <field name="body" widget="html" nolabel="1" />
+                    <separator string="Vista previa del mensaje" />
+                    <field name="body_html" widget="html" readonly="1" nolabel="1" />
                 </sheet>
-                <group>
+                <group invisible="not is_send">
                     <field name="is_send" readonly="1" />
                 </group>
                 <footer>
@@ -74,8 +75,9 @@
                         type="object"
                         class="btn-primary"
                         icon="fa-paper-plane"
+                        invisible="is_send"
                     />
-                    <button string="Cancelar" class="btn-secondary" special="cancel" />
+                    <button string="Cerrar" class="btn-secondary" special="cancel" />
                 </footer>
             </form>
         </field>

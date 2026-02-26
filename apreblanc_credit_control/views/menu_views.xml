@@ -5,7 +5,7 @@
         name="Análisis de deuda"
         parent="account.menu_finance_receivables"
         action="action_credit_control_wizard"
-        sequence="100"
+        sequence="1000"
         groups="apreblanc_credit_control.group_credit_control_user"
     />
 </odoo>
