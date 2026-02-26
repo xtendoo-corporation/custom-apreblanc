@@ -68,15 +68,16 @@
                         readonly="expedient_type != 'none' and expedient_state in ('aprobada', 'rechazada', 'cancelada') and not is_expedient_admin" />
                 </group>
 
-                <group name="expedient_valuation" string="Valoración del Expediente">
+                <group name="expedient_valuation" string="Valoración del Expediente"
+                    invisible="expedient_type != 'none' and context.get('show_as_expedient', False)">
                     <field name="person_type"
-                        required="1"
+                        required="expedient_type != 'none' and context.get('show_as_expedient', False)"
                         readonly="expedient_state in ['aprobada', 'rechazada'] and not is_expedient_admin" />
                     <field name="expedient_difficulty"
-                        required="1"
+                        required="expedient_type != 'none' and context.get('show_as_expedient', False)"
                         readonly="expedient_state in ['aprobada', 'rechazada'] and not is_expedient_admin" />
                     <field name="deadline"
-                        required="1"
+                        required="expedient_type != 'none' and context.get('show_as_expedient', False)"
                         readonly="expedient_state in ['aprobada', 'rechazada'] and not is_expedient_admin" />
                 </group>
             </xpath>
@@ -120,7 +121,7 @@
                             widget="res_partner_many2one" context="{'show_address': 1}"
                             options="{'always_reload': True,'no_open': True}" />
                         <field name="person_under_study"
-                            required="1"
+                            required="expedient_type != 'none' and context.get('show_as_expedient', False)"
                             readonly="expedient_state in ['aprobada', 'rechazada'] and not is_expedient_admin" />
 
                         <field name="client_id"
@@ -155,6 +156,16 @@
                             readonly="expedient_state in ['aprobada', 'rechazada'] and not is_expedient_admin" />
                         <field name="expedient_resolution_time" readonly="1"
                             string="Tiempo de Resolución" />
+                        <separator string="Valoración del Expediente" />
+                        <field name="person_type"
+                            required="expedient_type != 'none' and context.get('show_as_expedient', False)"
+                            readonly="expedient_state in ['aprobada', 'rechazada'] and not is_expedient_admin" />
+                        <field name="expedient_difficulty"
+                            required="expedient_type != 'none' and context.get('show_as_expedient', False)"
+                            readonly="expedient_state in ['aprobada', 'rechazada'] and not is_expedient_admin" />
+                        <field name="deadline"
+                            required="expedient_type != 'none' and context.get('show_as_expedient', False)"
+                            readonly="expedient_state in ['aprobada', 'rechazada'] and not is_expedient_admin" />
                     </group>
                     <!-- Adjust notes field to be more flexible -->
                     <separator string="Notas del expediente" />
@@ -426,7 +437,8 @@
         <field name="res_model">sale.order</field>
         <field name="view_mode">tree,form</field>
         <field name="view_id" ref="view_sale_order_prepaid_tree" />
-        <field name="domain">[('expedient_type', '=', 'pre_paid'), ('expedient_manager_id', '=', uid)]</field>
+        <field name="domain">[('expedient_type', '=', 'pre_paid'), ('expedient_manager_id', '=',
+            uid)]</field>
         <field name="context">{
             'default_expedient_type': 'pre_paid',
             'search_default_expedient_state_active': 1,
