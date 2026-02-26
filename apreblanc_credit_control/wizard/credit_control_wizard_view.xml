@@ -61,6 +61,7 @@
                         <field name="partner_id" readonly="1" />
                         <field name="email_to" />
                         <field name="subject" />
+                        <field name="template_id" />
                     </group>
                     <separator string="Vista previa del mensaje" />
                     <field name="body_html" widget="html" readonly="1" nolabel="1" />

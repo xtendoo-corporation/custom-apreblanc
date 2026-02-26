@@ -153,7 +153,7 @@ class CreditControlWizardLine(models.TransientModel):
             },
         }
 
-    def _prepare_email_content(self):
+    def _prepare_email_content(self, template=None):
         """Construye subject y body HTML completo (plantilla + tablas) sin sanitizar."""
         self.ensure_one()
         partner = self.partner_id.commercial_partner_id
@@ -209,17 +209,22 @@ class CreditControlWizardLine(models.TransientModel):
         )
 
         # Renderizar la plantilla de email
-        template = self.env.ref(
-            "apreblanc_credit_control.email_template_apreblanc_credit_control",
-            raise_if_not_found=False,
-        )
+        if not template:
+            template = self.env.ref(
+                "apreblanc_credit_control.email_template_apreblanc_credit_control",
+                raise_if_not_found=False,
+            )
         if template:
-            subject = template._render_template(
-                template.subject, template.model, partner.ids
-            ).get(partner.id, "")
-            body_rendered = template._render_template(
-                template.body_html, template.model, partner.ids
-            ).get(partner.id, "")
+            try:
+                subject = template._render_template(
+                    template.subject, template.model, partner.ids
+                ).get(partner.id, "")
+                body_rendered = template._render_template(
+                    template.body_html, template.model, partner.ids
+                ).get(partner.id, "")
+            except Exception as e:
+                subject = _("Error de plantilla")
+                body_rendered = _("<p>Error al renderizar la plantilla: %s</p>") % str(e)
         else:
             subject = _("Recordatorio de facturas pendientes - %s") % partner.name
             body_rendered = (
@@ -320,9 +325,25 @@ class ApreblancCreditEmailCompose(models.TransientModel):
     )
     email_to = fields.Char(string="Destinatario", required=True)
     subject = fields.Char(string="Asunto", required=True)
+    template_id = fields.Many2one(
+        comodel_name="mail.template",
+        string="Plantilla utilizada",
+        domain=[("model", "=", "res.partner")],
+        default=lambda self: self.env.ref(
+            "apreblanc_credit_control.email_template_apreblanc_credit_control", raise_if_not_found=False
+        ),
+    )
     # body_html construido en Python y almacenado sin sanitizar (readonly en vista)
     body_html = fields.Html(string="Cuerpo HTML", sanitize=False)
     is_send = fields.Boolean(string="Email Enviado", default=False)
+
+    @api.onchange("template_id")
+    def _onchange_template_id(self):
+        for record in self:
+            if record.template_id and record.line_id:
+                subject, body = record.line_id._prepare_email_content(template=record.template_id)
+                record.subject = subject
+                record.body_html = body
 
     @api.model
     def default_get(self, fields_list):
@@ -334,7 +355,12 @@ class ApreblancCreditEmailCompose(models.TransientModel):
                 res["line_id"] = line.id
                 res["partner_id"] = line.partner_id.id
                 res["email_to"] = line.partner_id.email or ""
-                subject, body = line._prepare_email_content()
+                
+                template = False
+                if res.get("template_id"):
+                    template = self.env["mail.template"].browse(res["template_id"])
+                    
+                subject, body = line._prepare_email_content(template=template)
                 res["subject"] = subject
                 res["body_html"] = body
         return res
@@ -348,7 +374,7 @@ class ApreblancCreditEmailCompose(models.TransientModel):
         body = self.body_html or ""
 
         # email_from desde la plantilla
-        template = self.env.ref(
+        template = self.template_id or self.env.ref(
             "apreblanc_credit_control.email_template_apreblanc_credit_control",
             raise_if_not_found=False,
         )
