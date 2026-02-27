@@ -63,8 +63,8 @@
                         <field name="subject" />
                         <field name="template_id" />
                     </group>
-                    <separator string="Vista previa del mensaje" />
-                    <field name="body_html" widget="html" readonly="1" nolabel="1" />
+                    <separator string="Cuerpo del mensaje" />
+                    <field name="body_html" widget="html" nolabel="1" />
                 </sheet>
                 <group invisible="not is_send">
                     <field name="is_send" readonly="1" />
