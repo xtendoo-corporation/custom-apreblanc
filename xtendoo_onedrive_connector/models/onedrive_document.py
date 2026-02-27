@@ -271,41 +271,31 @@ class OneDriveDocument(models.Model):
             raise Exception(f"Error en _rename_folder_if_needed: {str(e)}")
 
     def _get_sale_name(self):
-        """Obtener el nombre de la venta actual - CON JAVASCRIPT BROWSER CAPTURE"""
+        """Obtener el nombre de la carpeta para OneDrive: person_under_study-client_id-expedient_number"""
         import logging
         _logger = logging.getLogger(__name__)
 
-        _logger.info("=== INICIANDO _get_sale_name - JAVASCRIPT CAPTURE ===")
+        def log_folder_debug(sale_order, folder_name, context_label):
+            _logger.info(f"[OneDrive][DEBUG] Contexto: {context_label} | SaleOrder ID: {getattr(sale_order, 'id', None)} | person_under_study: '{getattr(sale_order, 'person_under_study', None)}' | client_id: '{getattr(sale_order, 'client_id', None)}' | expedient_number: '{getattr(sale_order, 'expedient_number', None)}' | folder_name: '{folder_name}'")
 
         # PRIORIDAD 0: CAAPTURAR DESDE JAVASCRIPT DEL NAVEGADOR
         try:
-            # Intentar obtener el ID que el JavaScript capturó desde el navegador
             request_obj = None
-
-            # Obtener request
             import odoo.http
             if hasattr(odoo.http, 'request') and odoo.http.request:
                 request_obj = odoo.http.request
             elif self.env.context.get('request'):
                 request_obj = self.env.context.get('request')
-
             if request_obj and hasattr(request_obj, 'httprequest'):
-                # Buscar en headers o cookies si el JavaScript almacenó el ID
                 headers = getattr(request_obj.httprequest, 'headers', {})
                 cookies = getattr(request_obj.httprequest, 'cookies', {})
-
-                # El JavaScript puede haber almacenado el ID en una cookie o header
                 js_sale_id = None
-
-                # Buscar en cookies primero
                 if 'odoo_current_sale_id' in cookies:
                     try:
                         js_sale_id = int(cookies['odoo_current_sale_id'])
                         _logger.info(f"🍪 ID capturado desde cookie JavaScript: {js_sale_id}")
                     except (ValueError, TypeError):
                         pass
-
-                # Si no está en cookies, buscar en headers personalizados
                 if not js_sale_id:
                     for header_name, header_value in headers.items():
                         if 'sale' in header_name.lower() and 'id' in header_name.lower():
@@ -315,79 +305,96 @@ class OneDriveDocument(models.Model):
                                 break
                             except (ValueError, TypeError):
                                 continue
-
-                # Verificar el ID capturado
                 if js_sale_id:
                     with self.env.registry.cursor() as new_cr:
                         new_env = self.env(cr=new_cr)
                         sale_order = new_env['sale.order'].browse(js_sale_id)
                         if sale_order.exists():
-                            _logger.info(f"✅ PRIORIDAD 0 - Sale order desde JAVASCRIPT: {sale_order.name}")
-                            return sale_order.name
+                            folder_parts = [
+                                sale_order.person_under_study or '',
+                                sale_order.client_id or '',
+                                sale_order.expedient_number or ''
+                            ]
+                            folder_name = '-'.join([str(x).strip() for x in folder_parts if x]).strip('-')
+                            log_folder_debug(sale_order, folder_name, 'JS')
+                            if folder_name:
+                                _logger.info(f"✅ Carpeta personalizada: {folder_name}")
+                                return folder_name
+                            else:
+                                return sale_order.name
                         else:
                             _logger.warning(f"⚠️ ID {js_sale_id} desde JavaScript no existe en BD")
-
         except Exception as e:
             _logger.error(f"❌ Error capturando desde JavaScript: {e}")
-
-        # PRIORIDAD 1: ANÁLISIS ULTRA-AGRESIVO DEL REQUEST (método anterior mejorado)
+        # PRIORIDAD 1: CONTEXTO
         try:
             params = self.env.context.get('params', {})
             _logger.info(f"Params del contexto: {params}")
-
             if params.get('model') == 'sale.order' and params.get('id'):
                 context_sale_id = params.get('id')
-
-                # Verificar si este ID es realmente actual buscando ventas modificadas recientemente
                 from datetime import datetime, timedelta
                 recent_threshold = datetime.now() - timedelta(minutes=10)
-
-                # Buscar ventas modificadas en los últimos 10 minutos
                 recent_sales = self.env['sale.order'].search([
                     ('write_date', '>=', recent_threshold.strftime('%Y-%m-%d %H:%M:%S'))
                 ], order='write_date desc', limit=20)
-
                 recent_ids = [s.id for s in recent_sales]
-                _logger.info(f"IDs de ventas recientes (últimos 10 min): {recent_ids}")
-
-                # Si el ID del contexto NO está en las ventas recientes, es probablemente obsoleto
                 if context_sale_id not in recent_ids and recent_sales:
-                    _logger.warning(f"🚨 CONTEXTO OBSOLETO DETECTADO: ID {context_sale_id} no está en ventas recientes")
-
-                    # Usar la venta más reciente en su lugar
                     most_recent_sale = recent_sales[0]
-                    _logger.warning(f"🔄 CORRECCIÓN AUTOMÁTICA: Usando venta más reciente {most_recent_sale.name} (ID: {most_recent_sale.id})")
-                    return most_recent_sale.name
-
-                # Si el ID está en las ventas recientes, verificar que realmente existe
+                    folder_parts = [
+                        most_recent_sale.person_under_study or '',
+                        most_recent_sale.client_id or '',
+                        most_recent_sale.expedient_number or ''
+                    ]
+                    folder_name = '-'.join([str(x).strip() for x in folder_parts if x]).strip('-')
+                    log_folder_debug(most_recent_sale, folder_name, 'RECENT')
+                    if folder_name:
+                        _logger.info(f"🔄 Carpeta personalizada (reciente): {folder_name}")
+                        return folder_name
+                    else:
+                        return most_recent_sale.name
                 with self.env.registry.cursor() as new_cr:
                     new_env = self.env(cr=new_cr)
                     sale_order = new_env['sale.order'].browse(context_sale_id)
                     if sale_order.exists():
-                        _logger.info(f"✅ PRIORIDAD 1 - Sale order válido desde contexto: {sale_order.name}")
-                        return sale_order.name
+                        folder_parts = [
+                            sale_order.person_under_study or '',
+                            sale_order.client_id or '',
+                            sale_order.expedient_number or ''
+                        ]
+                        folder_name = '-'.join([str(x).strip() for x in folder_parts if x]).strip('-')
+                        log_folder_debug(sale_order, folder_name, 'CONTEXT')
+                        if folder_name:
+                            _logger.info(f"✅ Carpeta personalizada (contexto): {folder_name}")
+                            return folder_name
+                        else:
+                            return sale_order.name
                     else:
                         _logger.warning(f"⚠️ ID {context_sale_id} del contexto no existe")
-
         except Exception as e:
             _logger.error(f"❌ Error en análisis temporal: {e}")
-
-        # PRIORIDAD 2: FALLBACK a venta más reciente del usuario
+        # PRIORIDAD 2: FALLBACK usuario actual
         try:
             _logger.warning("🆘 FALLBACK: Usando venta más reciente del usuario actual")
-
             user_id = self.env.uid
             recent_sales = self.env['sale.order'].search([
                 '|',
                 ('create_uid', '=', user_id),
                 ('write_uid', '=', user_id)
             ], order='write_date desc', limit=5)
-
             if recent_sales:
                 fallback_sale = recent_sales[0]
-                _logger.warning(f"⚠️ FALLBACK - Usando: {fallback_sale.name}")
-                return fallback_sale.name
-
+                folder_parts = [
+                    fallback_sale.person_under_study or '',
+                    fallback_sale.client_id or '',
+                    fallback_sale.expedient_number or ''
+                ]
+                folder_name = '-'.join([str(x).strip() for x in folder_parts if x]).strip('-')
+                log_folder_debug(fallback_sale, folder_name, 'FALLBACK')
+                if folder_name:
+                    _logger.info(f"⚠️ FALLBACK - Carpeta personalizada: {folder_name}")
+                    return folder_name
+                else:
+                    return fallback_sale.name
         except Exception as e:
             _logger.error(f"❌ Error en fallback: {e}")
 
