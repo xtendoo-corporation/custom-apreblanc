@@ -25,7 +25,10 @@ class OneDriveAuthController(http.Controller):
         if not code:
             _logger.error(f"[OneDrive] No se recibió código. Todos los parámetros: {kwargs}")
             return request.render('xtendoo_onedrive_connector.onedrive_callback_template', {
-                'code': False,  # Usar el parámetro que espera la plantilla
+                'code': False,
+                'success': False,
+                'verify_error': False,
+                'user_email': '',
             })
 
         # Obtener configuración de OneDrive
@@ -35,7 +38,6 @@ class OneDriveAuthController(http.Controller):
 
         # Intercambiar código por refresh_token
         try:
-            # Usar tenant específico en lugar del endpoint común
             token_url = f"https://login.microsoftonline.com/{settings.onedrive_tenant_id}/oauth2/v2.0/token"
             token_data = {
                 'client_id': settings.onedrive_client_id,
@@ -43,7 +45,7 @@ class OneDriveAuthController(http.Controller):
                 'code': code,
                 'grant_type': 'authorization_code',
                 'redirect_uri': settings.onedrive_redirect_uri,
-                'scope': 'openid offline_access Files.ReadWrite.All',  # Corregir scopes con mayúsculas
+                'scope': 'openid offline_access Files.ReadWrite.All',
             }
 
             _logger.info(f"[OneDrive] Intercambiando código por token. URL: {token_url}")
@@ -61,8 +63,9 @@ class OneDriveAuthController(http.Controller):
 
                 _logger.info(f"[OneDrive] Token response keys: {list(token_response.keys())}")
 
+                verify_error = False
+                user_email = ''
                 if refresh_token:
-                    # Guardar refresh_token en la configuración
                     settings.sudo().write({'onedrive_refresh_token': refresh_token})
                     _logger.info(f"[OneDrive] Refresh token guardado exitosamente")
 
@@ -76,62 +79,31 @@ class OneDriveAuthController(http.Controller):
                             _logger.info(f"[OneDrive] Verificación exitosa para usuario: {user_email}")
                         else:
                             _logger.warning(f"[OneDrive] Verificación falló: {test_response.status_code}")
+                            verify_error = True
                     except Exception as test_error:
                         _logger.warning(f"[OneDrive] No se pudo verificar el token: {test_error}")
+                        verify_error = True
 
+                    # Mostrar mensaje de éxito o advertencia según la verificación
                     return request.render('xtendoo_onedrive_connector.onedrive_callback_template', {
+                        'code': code,
                         'success': True,
-                        'message': '¡Autorización exitosa! OneDrive está ahora configurado correctamente.',
-                        'refresh_token_preview': refresh_token[:20] + '...' if refresh_token else None
+                        'verify_error': verify_error,
+                        'user_email': user_email,
                     })
                 else:
-                    _logger.error(f"[OneDrive] No se recibió refresh_token: {token_response}")
-                    return f"Error: No se recibió refresh_token. Respuesta completa: {token_response}"
+                    return request.render('xtendoo_onedrive_connector.onedrive_callback_template', {
+                        'code': code,
+                        'success': False,
+                        'verify_error': True,
+                        'user_email': '',
+                    })
             else:
-                try:
-                    error_response = response.json()
-                except:
-                    error_response = {'error': 'unknown', 'error_description': response.text}
-
-                _logger.error(f"[OneDrive] Error intercambiando código: {response.status_code} - {error_response}")
-
-                # Manejar errores específicos
-                if error_response.get('error') == 'invalid_grant':
-                    return """
-                    <h2>Error: Código de autorización inválido o expirado</h2>
-                    <p>El código de autorización puede haber expirado. Los códigos de autorización tienen una validez muy corta (normalmente 10 minutos).</p>
-                    <p><strong>Solución:</strong> Vuelve a la configuración de OneDrive y genera un nuevo código de autorización.</p>
-                    <p><a href="javascript:window.close()">Cerrar esta ventana</a></p>
-                    """
-                elif error_response.get('error') == 'invalid_client':
-                    return """
-                    <h2>Error: Credenciales de cliente inválidas</h2>
-                    <p>El Client ID o Client Secret no son correctos.</p>
-                    <p><strong>Verifica en Azure Portal:</strong></p>
-                    <ul>
-                        <li>Client ID debe coincidir exactamente</li>
-                        <li>Client Secret debe estar activo y no expirado</li>
-                        <li>La aplicación debe estar configurada para cuentas multitenant</li>
-                    </ul>
-                    <p><a href="javascript:window.close()">Cerrar esta ventana</a></p>
-                    """
-                else:
-                    return f"""
-                    <h2>Error intercambiando código de autorización</h2>
-                    <p><strong>Status:</strong> {response.status_code}</p>
-                    <p><strong>Error:</strong> {error_response.get('error', 'desconocido')}</p>
-                    <p><strong>Descripción:</strong> {error_response.get('error_description', 'No disponible')}</p>
-                    <p><a href="javascript:window.close()">Cerrar esta ventana</a></p>
-                    """
-
+                _logger.error(f"[OneDrive] Error al intercambiar código por token: {response.text}")
+                return f"Error al intercambiar código por token: {response.text}"
         except Exception as e:
-            _logger.error(f"[OneDrive] Excepción durante intercambio: {str(e)}")
-            return f"""
-            <h2>Error procesando autorización</h2>
-            <p><strong>Error:</strong> {str(e)}</p>
-            <p>Revisa los logs del servidor para más detalles.</p>
-            <p><a href="javascript:window.close()">Cerrar esta ventana</a></p>
-            """
+            _logger.error(f"[OneDrive] Excepción durante el intercambio de código: {e}")
+            return f"Excepción durante el intercambio de código: {e}"
 
     @http.route('/onedrive/debug', type='http', auth='user')
     def onedrive_debug(self):

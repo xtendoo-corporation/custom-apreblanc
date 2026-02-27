@@ -1,20 +1,38 @@
 <odoo>
     <template id="onedrive_callback_template">
-        <t t-if="code">
-            <div style="margin: 40px auto; max-width: 600px; padding: 30px; border: 1px solid #ddd; border-radius: 8px; background: #fafbfc;">
-                <h2>¡Código de autorización recibido!</h2>
-                <p>Copia este código y úsalo para obtener el <b>refresh_token</b> en el siguiente paso del proceso OAuth2.</p>
-                <div style="background: #f5f5f5; padding: 10px; border-radius: 4px; word-break: break-all;">
-                    <b>code:</b>
-                    <span t-esc="code"/>
-                </div>
+        <t t-if="success">
+            <div style="margin: 40px auto; max-width: 600px; padding: 30px; border: 1px solid #ddd; border-radius: 8px; background: #e8f5e9;">
+                <h2 style="color: #388e3c;">¡Conexión exitosa con OneDrive!</h2>
+                <p>El proceso de autorización se ha completado correctamente.</p>
+                <t t-if="user_email">
+                    <p>Usuario autenticado: <b><span t-esc="user_email"/></b></p>
+                </t>
+                <t t-if="verify_error">
+                    <div style="margin-top: 20px; padding: 15px; background: #fff3cd; border: 1px solid #ffeeba; border-radius: 4px; color: #856404;">
+                        <b>Advertencia:</b> El token se guardó, pero la verificación de permisos falló.<br/>
+                        Es posible que el usuario autenticado no tenga permisos suficientes en OneDrive.<br/>
+                        Revisa los permisos de la aplicación en Azure y asegúrate de que el usuario tenga acceso a OneDrive y a los permisos <b>Files.ReadWrite.All</b> y <b>offline_access</b>.
+                    </div>
+                </t>
                 <p style="margin-top: 20px; color: #888;">Puedes cerrar esta ventana.</p>
             </div>
         </t>
-        <t t-if="not code">
+        <t t-elif="not code">
             <div style="margin: 40px auto; max-width: 600px; padding: 30px; border: 1px solid #ddd; border-radius: 8px; background: #fafbfc;">
                 <h2>No se recibió ningún código de autorización</h2>
                 <p>Vuelve a intentarlo o revisa la configuración de la aplicación en Azure.</p>
+            </div>
+        </t>
+        <t t-else="">
+            <div style="margin: 40px auto; max-width: 600px; padding: 30px; border: 1px solid #ddd; border-radius: 8px; background: #ffebee;">
+                <h2 style="color: #c62828;">Error en la autorización</h2>
+                <p>Ocurrió un error inesperado durante el proceso de autorización.</p>
+                <t t-if="verify_error">
+                    <div style="margin-top: 20px; padding: 15px; background: #fff3cd; border: 1px solid #ffeeba; border-radius: 4px; color: #856404;">
+                        <b>Advertencia:</b> El token no pudo ser verificado. Revisa los permisos de la aplicación en Azure y asegúrate de que el usuario tenga acceso a OneDrive y a los permisos <b>Files.ReadWrite.All</b> y <b>offline_access</b>.
+                    </div>
+                </t>
+                <p style="margin-top: 20px; color: #888;">Puedes cerrar esta ventana e intentarlo de nuevo.</p>
             </div>
         </t>
     </template>
