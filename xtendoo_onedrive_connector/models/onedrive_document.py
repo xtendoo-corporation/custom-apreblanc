@@ -315,7 +315,7 @@ class OneDriveDocument(models.Model):
                                 sale_order.client_id or '',
                                 sale_order.expedient_number or ''
                             ]
-                            folder_name = '-'.join([str(x).strip() for x in folder_parts if x]).strip('-')
+                            folder_name = ''.join([str(x).strip() for x in folder_parts if x]).strip('-')
                             log_folder_debug(sale_order, folder_name, 'JS')
                             if folder_name:
                                 _logger.info(f"✅ Carpeta personalizada: {folder_name}")

@@ -235,6 +235,7 @@ class SaleOrder(models.Model):
         string="Documentos OneDrive",
         help="Documentos de OneDrive relacionados con este pedido",
         domain=[("is_folder", "=", False)],
+        tracking=True,
     )
 
     # Related fields for customer information display
