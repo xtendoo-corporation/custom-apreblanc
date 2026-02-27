@@ -15,6 +15,10 @@ class SaleOrderTemplate(models.Model):
         required=True,
         help="Default customer for this quotation template",
     )
+    sub_cartera_id = fields.Many2one(
+        "res.partner",
+        string="Sub cartera",
+    )
     allowed_group_ids = fields.Many2many(
         "res.groups",
         "sale_template_groups_rel",

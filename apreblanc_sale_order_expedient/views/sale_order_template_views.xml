@@ -13,6 +13,9 @@
                         <field name="partner_id"
                             options="{'no_create': True}"
                             string="Cliente del Expediente" />
+                        <field name="sub_cartera_id"
+                            options="{'no_create': True}"
+                            string="Sub cartera" />
                         <field name="allowed_group_ids"
                             widget="many2many_tags"
                             options="{'no_create': True}"

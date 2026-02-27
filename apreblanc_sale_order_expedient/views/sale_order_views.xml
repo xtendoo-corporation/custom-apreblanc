@@ -69,36 +69,36 @@
                 </group>
 
                 <group name="expedient_valuation" string="Valoración del Expediente"
-                    invisible="expedient_type != 'none' and context.get('show_as_expedient', False)">
+                    invisible="expedient_type != 'none' and context.get('show_as_expedient')">
                     <field name="person_type"
-                        required="expedient_type != 'none' and context.get('show_as_expedient', False)"
+                        required="expedient_type != 'none' and context.get('show_as_expedient')"
                         readonly="expedient_state in ['aprobada', 'rechazada'] and not is_expedient_admin" />
                     <field name="expedient_difficulty"
-                        required="expedient_type != 'none' and context.get('show_as_expedient', False)"
+                        required="expedient_type != 'none' and context.get('show_as_expedient')"
                         readonly="expedient_state in ['aprobada', 'rechazada'] and not is_expedient_admin" />
                     <field name="deadline"
-                        required="expedient_type != 'none' and context.get('show_as_expedient', False)"
+                        required="expedient_type != 'none' and context.get('show_as_expedient')"
                         readonly="expedient_state in ['aprobada', 'rechazada'] and not is_expedient_admin" />
                 </group>
             </xpath>
 
             <!-- Hide standard sales fields when expedient_type is not 'none' -->
             <xpath expr="//group[1]" position="attributes">
-                <attribute name="invisible">expedient_type != 'none' and context.get('show_as_expedient', False)</attribute>
+                <attribute name="invisible">expedient_type != 'none' and context.get('show_as_expedient')</attribute>
             </xpath>
 
             <xpath expr="//group[2]" position="attributes">
-                <attribute name="invisible">expedient_type != 'none' and context.get('show_as_expedient', False)</attribute>
+                <attribute name="invisible">expedient_type != 'none' and context.get('show_as_expedient')</attribute>
             </xpath>
             <!-- Ocultar header completo para expedientes -->
             <!-- Reemplazar header completo para expedientes -->
             <xpath expr="//header" position="attributes">
-                <attribute name="invisible">expedient_type != 'none' and context.get('show_as_expedient', False)</attribute>
+                <attribute name="invisible">expedient_type != 'none' and context.get('show_as_expedient')</attribute>
             </xpath>
 
             <xpath expr="//header" position="after">
                 <header
-                    invisible="expedient_type == 'none' or not context.get('show_as_expedient', False)">
+                    invisible="expedient_type == 'none' or not context.get('show_as_expedient')">
                     <button name="action_set_post_incidencia"
                         type="object"
                         class="btn btn-warning"
@@ -113,15 +113,18 @@
             context is True -->
             <xpath expr="//group[1]" position="before">
                 <group name="expedient_info" string="Información del Expediente"
-                    invisible="expedient_type == 'none' or not context.get('show_as_expedient', False)">
+                    invisible="expedient_type == 'none' or not context.get('show_as_expedient')">
                     <group>
                         <!-- Partner field as first field in left column -->
                         <field name="partner_id"
                             readonly="expedient_state in ['aprobada', 'rechazada'] and not is_expedient_admin"
                             widget="res_partner_many2one" context="{'show_address': 1}"
                             options="{'always_reload': True,'no_open': True}" />
+                        <field name="sub_cartera_id"
+                            readonly="expedient_state in ['aprobada', 'rechazada'] and not is_expedient_admin"
+                            options="{'no_create': True, 'no_open': True}" />
                         <field name="person_under_study"
-                            required="expedient_type != 'none' and context.get('show_as_expedient', False)"
+                            required="expedient_type != 'none' and context.get('show_as_expedient')"
                             readonly="expedient_state in ['aprobada', 'rechazada'] and not is_expedient_admin" />
 
                         <field name="client_id"
@@ -158,13 +161,13 @@
                             string="Tiempo de Resolución" />
                         <separator string="Valoración del Expediente" />
                         <field name="person_type"
-                            required="expedient_type != 'none' and context.get('show_as_expedient', False)"
+                            required="expedient_type != 'none' and context.get('show_as_expedient')"
                             readonly="expedient_state in ['aprobada', 'rechazada'] and not is_expedient_admin" />
                         <field name="expedient_difficulty"
-                            required="expedient_type != 'none' and context.get('show_as_expedient', False)"
+                            required="expedient_type != 'none' and context.get('show_as_expedient')"
                             readonly="expedient_state in ['aprobada', 'rechazada'] and not is_expedient_admin" />
                         <field name="deadline"
-                            required="expedient_type != 'none' and context.get('show_as_expedient', False)"
+                            required="expedient_type != 'none' and context.get('show_as_expedient')"
                             readonly="expedient_state in ['aprobada', 'rechazada'] and not is_expedient_admin" />
                     </group>
                     <!-- Adjust notes field to be more flexible -->
@@ -180,7 +183,7 @@
             <!-- Status bar para expedientes -->
             <xpath expr="//sheet" position="inside">
                 <div class="position-absolute top-0 end-0 mt-3 me-3"
-                    invisible="expedient_type == 'none' or not context.get('show_as_expedient', False)">
+                    invisible="expedient_type == 'none' or not context.get('show_as_expedient')">
                     <field name="expedient_state"
                         widget="statusbar"
                         statusbar_visible="creada,pendiente_documentacion,aprobada,rechazada,cancelada"
@@ -194,7 +197,7 @@
             <xpath expr="//notebook/page[1]" position="before">
 
                 <page name="returns" string="Returns"
-                    invisible="expedient_type == 'none' or not context.get('show_as_expedient', False)">
+                    invisible="expedient_type == 'none' or not context.get('show_as_expedient')">
                     <field name="expedient_return_history_ids"
                         context="{'default_user_id': uid, 'form_view_ref': 'sale_order_expedient.view_expedient_return_history_form'}"
                         readonly="0">
@@ -211,7 +214,7 @@
 
                 <!-- Pestaña para la petición -->
                 <page name="request" string="Petición"
-                    invisible="expedient_type == 'none' or not context.get('show_as_expedient', False)">
+                    invisible="expedient_type == 'none' or not context.get('show_as_expedient')">
                     <field name="request"
                         readonly="expedient_state in ['aprobada', 'rechazada'] and not is_expedient_admin"
                         placeholder="Detalles de la petición del expediente..."
@@ -220,7 +223,7 @@
 
                 <!-- Pestaña para el resumen -->
                 <page name="summary" string="Resumen"
-                    invisible="expedient_type == 'none' or not context.get('show_as_expedient', False)">
+                    invisible="expedient_type == 'none' or not context.get('show_as_expedient')">
                     <field name="summary"
                         readonly="expedient_state in ['aprobada', 'rechazada'] and not is_expedient_admin"
                         placeholder="Resumen del expediente..."
@@ -229,7 +232,7 @@
 
                 <!-- Pestaña para documentoss OneDrive -->
                 <page name="onedrive_documents" string="Documentos OneDrive"
-                    invisible="expedient_type == 'none' or not context.get('show_as_expedient', False)">
+                    invisible="expedient_type == 'none' or not context.get('show_as_expedient')">
                     <field name="onedrive_document_ids"
                         widget="many2many"
                         nolabel="1"
@@ -245,7 +248,7 @@
                     </field>
                 </page>
                 <page name="authorization" string="Autorización"
-                    invisible="expedient_type == 'none' or not context.get('show_as_expedient', False)">
+                    invisible="expedient_type == 'none' or not context.get('show_as_expedient')">
                     <field name="authorization"
                         readonly="expedient_state in ['aprobada', 'rechazada'] and not is_expedient_admin"
                         placeholder="Detalles de la autorización del expediente..."
@@ -262,13 +265,13 @@
             <!-- Hide the Order Lines tab when expedient_type is not 'none' AND show_as_expedient is
             True -->
             <xpath expr="//notebook/page[@name='order_lines']" position="attributes">
-                <attribute name="invisible">expedient_type != 'none' and context.get('show_as_expedient', False)</attribute>
+                <attribute name="invisible">expedient_type != 'none' and context.get('show_as_expedient')</attribute>
             </xpath>
 
             <!-- Hide the Optional Products tab when expedient_type is not 'none' AND
             show_as_expedient is True -->
             <xpath expr="//notebook/page[@name='optional_products']" position="attributes">
-                <attribute name="invisible">expedient_type != 'none' and context.get('show_as_expedient', False)</attribute>
+                <attribute name="invisible">expedient_type != 'none' and context.get('show_as_expedient')</attribute>
             </xpath>
 
             <!--            &lt;!&ndash; Añadir nuevos campos en la sección de información del expediente

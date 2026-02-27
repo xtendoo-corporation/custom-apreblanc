@@ -56,6 +56,10 @@ class ExpedientCreateWizard(models.TransientModel):
     client_id = fields.Char(string="Client ID", required=True)
     expedient_number = fields.Char(string="Expedient Number", required=True)
     partner_readonly = fields.Boolean(string="Partner Readonly", default=False)
+    sub_cartera_id = fields.Many2one(
+        "res.partner",
+        string="Sub cartera",
+    )
 
     # Campos faltantes que aparecen en la vista
     expedient_date = fields.Date(string="Fecha de Expediente")
@@ -106,6 +110,8 @@ class ExpedientCreateWizard(models.TransientModel):
         if template.partner_id:
             self.partner_id = template.partner_id
             self.partner_readonly = True
+        if template.sub_cartera_id:
+            self.sub_cartera_id = template.sub_cartera_id.id
 
     def action_create_expedient(self):
         """Crear el expediente según el tipo seleccionado"""
@@ -192,6 +198,11 @@ class ExpedientCreateWizard(models.TransientModel):
             # No establecer fecha fin para estado 'creada'
             "expedient_date_end": False,
             "sale_order_template_id": self.sale_order_template_id.id,
+            "sub_cartera_id": (
+                self.sale_order_template_id.sub_cartera_id.id
+                if self.sale_order_template_id
+                else False
+            ),
             "state": "sale",  # Forzar estado sale desde la creación
             "person_under_study": self.person_under_study,  # Transferir el campo studied_person
             "person_type": False,
@@ -283,6 +294,11 @@ class ExpedientCreateWizard(models.TransientModel):
             "expedient_manager_id": self.env.user.id,
             "expedient_date_start": fields.Datetime.now(),
             "sale_order_template_id": self.sale_order_template_id.id,
+            "sub_cartera_id": (
+                self.sale_order_template_id.sub_cartera_id.id
+                if self.sale_order_template_id
+                else False
+            ),
             "person_under_study": self.person_under_study,  # Transferir el campo studied_person
             "person_type": False,
             "expedient_difficulty": False,

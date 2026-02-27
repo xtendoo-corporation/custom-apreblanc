@@ -27,6 +27,8 @@
                     <field name="sale_order_template_id" options="{'no_create': True}" required="1" />
                     <field name="partner_id" options="{'no_create': True, 'no_open': True}"
                         readonly="1" force_save="1" />
+                    <field name="sub_cartera_id" options="{'no_create': True, 'no_open': True}"
+                        readonly="1" force_save="1" />
                     <field name="client_id" />
                     <field name="expedient_number" />
                     <field name="person_under_study" />

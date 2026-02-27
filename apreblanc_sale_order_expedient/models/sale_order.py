@@ -79,6 +79,10 @@ class SaleOrder(models.Model):
         domain="[('partner_id', '=', partner_id)]",
         help="Relación con expediente prepagado",
     )
+    sub_cartera_id = fields.Many2one(
+        "res.partner",
+        string="Sub cartera",
+    )
 
     # Nuevo campo para fecha de recepción
     date_reception = fields.Date(
@@ -872,11 +876,13 @@ class SaleOrder(models.Model):
         # Validar campos obligatorios para expedientes al confirmar
         for order in self:
             print("Validando campos obligatorios para el expediente al confirmar...")
-            print(order.expedient_type,
-                    order.person_under_study,
-                    order.person_type,
-                    order.expedient_difficulty,
-                    order.deadline)
+            print(
+                order.expedient_type,
+                order.person_under_study,
+                order.person_type,
+                order.expedient_difficulty,
+                order.deadline,
+            )
             if order.expedient_type != "none":
                 errors = []
                 if not order.person_under_study:
@@ -1255,3 +1261,5 @@ class SaleOrder(models.Model):
         se realiza en action_confirm() cuando el presupuesto se aprueba.
         """
         super()._onchange_sale_order_template_id()
+        if self.sale_order_template_id and self.sale_order_template_id.sub_cartera_id:
+            self.sub_cartera_id = self.sale_order_template_id.sub_cartera_id
