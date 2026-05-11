@@ -19,3 +19,14 @@ class ResPartner(models.Model):
         ),
     )
 
+    birth_or_registration_date = fields.Date(
+        string="Fecha de nacimiento / Inscripción de la compañía",
+        tracking=True,
+        copy=False,
+        index=True,
+        help=(
+            "Fecha de nacimiento para personas o fecha de inscripción para "
+            "compañías en el contexto de entidades a estudiar."
+        ),
+    )
+

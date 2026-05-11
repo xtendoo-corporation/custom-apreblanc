@@ -15,6 +15,11 @@ class SaleOrder(models.Model):
     post_incidencia_activa = fields.Boolean(
         string="Post-incidencia Activa", default=False
     )
+    post_incidencia_ids = fields.One2many(
+        "sale.order.post.incidencia",
+        "sale_order_id",
+        string="Post-incidencias",
+    )
 
     _sql_constraints = [
         # Remove any constraints that enforce uniqueness on expedient_number alone

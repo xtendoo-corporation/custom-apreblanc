@@ -33,6 +33,7 @@
         'views/sale_order_template_views.xml',
         'views/expedient_views.xml',  # Primero cargar vistas base de expedientes
         'views/sale_order_views.xml',  # Luego las vistas de sale.order
+        'views/post_incidencia_views.xml',
         'views/sale_order_template_wizard_views.xml',
 
     ],

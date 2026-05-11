@@ -11,6 +11,7 @@
                     <field name="motivo" required="1" placeholder="Describe el motivo de la post-incidencia..."/>
                     <field name="fecha_incidencia" required="1"/>
                     <field name="responsable_id"/>
+                    <field name="selected" required="1"/>
                     <field name="prioridad" required="1"/>
                 </group>
                 <group string="Detalles adicionales">

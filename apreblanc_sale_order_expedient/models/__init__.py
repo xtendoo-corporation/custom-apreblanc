@@ -6,3 +6,4 @@ from . import pre_paid_expedient
 from . import sale_order_template
 from . import sale_order_template_line
 from . import sale_report
+from . import sale_order_post_incidencia

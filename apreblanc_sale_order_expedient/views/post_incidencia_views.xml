@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <record id="view_sale_order_post_incidencia_tree" model="ir.ui.view">
+            <field name="name">sale.order.post.incidencia.tree</field>
+            <field name="model">sale.order.post.incidencia</field>
+            <field name="arch" type="xml">
+                <tree create="0" delete="0">
+                    <field name="fecha_incidencia"/>
+                    <field name="motivo"/>
+                    <field name="responsable_id" widget="many2one_avatar"/>
+                    <field name="selected"/>
+                    <field name="prioridad" widget="badge"/>
+                    <field name="state" widget="badge"
+                        decoration-danger="state == 'abierta'"
+                        decoration-success="state == 'cerrada'"/>
+                    <field name="closed_date"/>
+                    <button name="action_close" type="object" string="Cerrar" class="btn-secondary"
+                        invisible="state == 'cerrada'"/>
+                    <button name="action_reopen" type="object" string="Reabrir" class="btn-link"
+                        invisible="state == 'abierta'"/>
+                </tree>
+            </field>
+        </record>
+
+        <record id="view_sale_order_post_incidencia_form" model="ir.ui.view">
+            <field name="name">sale.order.post.incidencia.form</field>
+            <field name="model">sale.order.post.incidencia</field>
+            <field name="arch" type="xml">
+                <form string="Post-incidencia">
+                    <header>
+                        <button name="action_close" type="object" string="Cerrar" class="btn-primary"
+                            invisible="state == 'cerrada'"/>
+                        <button name="action_reopen" type="object" string="Reabrir" class="btn-secondary"
+                            invisible="state == 'abierta'"/>
+                        <field name="state" widget="statusbar" statusbar_visible="abierta,cerrada"/>
+                    </header>
+                    <sheet>
+                        <group>
+                            <group>
+                                <field name="sale_order_id" readonly="1"/>
+                                <field name="motivo" readonly="1"/>
+                                <field name="fecha_incidencia" readonly="1"/>
+                                <field name="responsable_id" readonly="1"/>
+                            </group>
+                            <group>
+                                <field name="selected" readonly="1"/>
+                                <field name="prioridad" readonly="1"/>
+                                <field name="closed_date" readonly="1"/>
+                            </group>
+                        </group>
+                        <group string="Descripcion">
+                            <field name="descripcion_detallada" readonly="1" nolabel="1"/>
+                        </group>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+
+        <record id="view_order_form_expedient_post_incidencias" model="ir.ui.view">
+            <field name="name">sale.order.form.expedient.post.incidencias</field>
+            <field name="model">sale.order</field>
+            <field name="inherit_id" ref="apreblanc_sale_order_expedient.view_order_form_expedient"/>
+            <field name="arch" type="xml">
+                <xpath expr="//sheet/notebook" position="inside">
+                    <page name="post_incidencias" string="Post-incidencias"
+                        invisible="expedient_type == 'none' or not context.get('show_as_expedient')">
+                        <field name="post_incidencia_ids"
+                            context="{'default_sale_order_id': id}"
+                            mode="tree,form"
+                            nolabel="1">
+                            <tree create="0" delete="0">
+                                <field name="fecha_incidencia"/>
+                                <field name="motivo"/>
+                                <field name="responsable_id" widget="many2one_avatar"/>
+                                <field name="selected"/>
+                                <field name="prioridad" widget="badge"/>
+                                <field name="state" widget="badge"
+                                    decoration-danger="state == 'abierta'"
+                                    decoration-success="state == 'cerrada'"/>
+                                <field name="closed_date"/>
+                                <button name="action_close" type="object" string="Cerrar" class="btn-secondary"
+                                    invisible="state == 'cerrada'"/>
+                                <button name="action_reopen" type="object" string="Reabrir" class="btn-link"
+                                    invisible="state == 'abierta'"/>
+                            </tree>
+                            <form string="Post-incidencia">
+                                <group>
+                                    <group>
+                                        <field name="sale_order_id" readonly="1"/>
+                                        <field name="motivo" readonly="1"/>
+                                        <field name="fecha_incidencia" readonly="1"/>
+                                        <field name="responsable_id" readonly="1"/>
+                                    </group>
+                                    <group>
+                                        <field name="selected" readonly="1"/>
+                                        <field name="prioridad" readonly="1"/>
+                                        <field name="state" readonly="1"/>
+                                        <field name="closed_date" readonly="1"/>
+                                    </group>
+                                </group>
+                                <group string="Descripcion">
+                                    <field name="descripcion_detallada" readonly="1" nolabel="1"/>
+                                </group>
+                            </form>
+                        </field>
+                    </page>
+                </xpath>
+            </field>
+        </record>
+    </data>
+</odoo>
+

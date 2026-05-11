@@ -6,8 +6,13 @@
         <field name="model">res.partner</field>
         <field name="inherit_id" ref="base.view_partner_form"/>
         <field name="arch" type="xml">
-            <xpath expr="//field[@name='vat']" position="after">
-                <field name="is_study_entity" widget="boolean_toggle"/>
+            <xpath expr="//field[@name='vat']/ancestor::group[1]" position="after">
+                <group string="Entidad a estudiar">
+                    <field name="is_study_entity" string="Persona/Entidad a Estudiar"/>
+                    <field name="birth_or_registration_date"
+                        string="Fecha de nacimiento / Inscripcion empresa"
+                        invisible="not is_study_entity"/>
+                </group>
             </xpath>
         </field>
     </record>
