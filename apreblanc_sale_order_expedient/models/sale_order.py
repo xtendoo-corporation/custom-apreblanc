@@ -164,9 +164,14 @@ class SaleOrder(models.Model):
     )
 
     # Nuevos campos solicitados
-    person_under_study = fields.Char(
-        string="Persona a Estudiar",
-        help="Persona que está siendo estudiada en el expediente",
+    person_under_study_id = fields.Many2one(
+        comodel_name="res.partner",
+        string="Persona/Entidad a Estudiar",
+        domain="[('is_study_entity', '=', True)]",
+        tracking=True,
+        ondelete="restrict",
+        help="Persona o entidad que está siendo estudiada en el expediente. "
+             "Solo se muestran contactos marcados como 'Persona/Entidad a Estudiar'.",
     )
 
     # Campos HTML para información detallada
@@ -879,14 +884,14 @@ class SaleOrder(models.Model):
             print("Validando campos obligatorios para el expediente al confirmar...")
             print(
                 order.expedient_type,
-                order.person_under_study,
+                order.person_under_study_id,
                 order.person_type,
                 order.expedient_difficulty,
                 order.deadline,
             )
             if order.expedient_type != "none":
                 errors = []
-                if not order.person_under_study:
+                if not order.person_under_study_id:
                     errors.append(_("El campo 'Persona a Estudiar' es obligatorio."))
                 if not order.person_type:
                     errors.append(_("El campo 'Tipo de Persona' es obligatorio."))

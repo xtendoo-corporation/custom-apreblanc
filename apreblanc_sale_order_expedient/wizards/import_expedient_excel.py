@@ -154,6 +154,23 @@ class ImportExpedientExcel(models.TransientModel):
                     if isinstance(person_under_study, (int, float)):
                         person_under_study = str(int(person_under_study))
 
+                    # Resolver person_under_study como Many2one a res.partner
+                    person_under_study_id = False
+                    if person_under_study:
+                        study_partner = self.env['res.partner'].search([
+                            ('name', '=', person_under_study),
+                            ('is_study_entity', '=', True),
+                        ], limit=1)
+                        if not study_partner:
+                            study_partner = self.env['res.partner'].create({
+                                'name': person_under_study,
+                                'is_study_entity': True,
+                            })
+                            log_messages.append(
+                                f"Fila {row_index + 1}: Contacto creado automáticamente '{person_under_study}'"
+                            )
+                        person_under_study_id = study_partner.id
+
                     # Verificar si ya existe un registro con esta clave compuesta
                     existing_order = self.env['sale.order'].search([
                         ('client_id', '=', client_id),
@@ -167,7 +184,7 @@ class ImportExpedientExcel(models.TransientModel):
                         'expedient_number': expedient_number,
                         'expedient_type': self.expedient_type,  # Usar el tipo seleccionado por el usuario
                         'expedient_state': 'creada',
-                        'person_under_study': person_under_study,  # Nuevo campo de persona a estudiar
+                        'person_under_study_id': person_under_study_id,  # Many2one a res.partner
                         'person_type': person_type,  # Tipo de persona (física/jurídica)
                         'type_id': type_id_vals,  # Tipo de venta basado en el tipo de expediente
                     }

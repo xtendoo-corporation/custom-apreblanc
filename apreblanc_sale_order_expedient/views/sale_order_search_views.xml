@@ -11,7 +11,7 @@
                 <!-- Campos de búsqueda de expedientes -->
                 <field name="expedient_number" string="Número de Expediente" filter_domain="[('expedient_number','ilike',self)]"/>
                 <field name="client_id" string="ID Cliente" filter_domain="[('client_id','ilike',self)]"/>
-                <field name="person_under_study" string="Persona Estudiada" filter_domain="[('person_under_study','ilike',self)]"/>
+                <field name="person_under_study_id" string="Persona/Entidad Estudiada"/>
                 <field name="expedient_manager_id" string="Gestor de Expediente"/>
 
                 <!-- Separador y filtros de estado de expediente -->

@@ -31,7 +31,9 @@
                         readonly="1" force_save="1" />
                     <field name="client_id" />
                     <field name="expedient_number" />
-                    <field name="person_under_study" />
+                    <field name="person_under_study_id"
+                        context="{'default_is_study_entity': True}"
+                        options="{'no_create': False, 'quick_create': True}"/>
                 </group>
 
                 <div class="alert alert-info" role="alert">

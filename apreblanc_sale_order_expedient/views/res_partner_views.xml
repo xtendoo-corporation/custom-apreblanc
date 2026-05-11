@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Vista formulario: añadir el campo junto al VAT -->
+    <record id="view_partner_form_study_entity" model="ir.ui.view">
+        <field name="name">res.partner.form.study.entity</field>
+        <field name="model">res.partner</field>
+        <field name="inherit_id" ref="base.view_partner_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='vat']" position="after">
+                <field name="is_study_entity" widget="boolean_toggle"/>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- Vista tree: columna opcional -->
+    <record id="view_partner_tree_study_entity" model="ir.ui.view">
+        <field name="name">res.partner.tree.study.entity</field>
+        <field name="model">res.partner</field>
+        <field name="inherit_id" ref="base.view_partner_tree"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[1]" position="after">
+                <field name="is_study_entity" optional="show"
+                    string="A Estudiar"
+                    widget="boolean_favorite"
+                    options="{'icon_true': 'fa-eye', 'icon_false': 'fa-eye-slash'}"/>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- Vista búsqueda: filtro rápido + agrupación -->
+    <record id="view_res_partner_filter_study_entity" model="ir.ui.view">
+        <field name="name">res.partner.filter.study.entity</field>
+        <field name="model">res.partner</field>
+        <field name="inherit_id" ref="base.view_res_partner_filter"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='category_id']" position="after">
+                <field name="is_study_entity"/>
+                <filter string="Personas/Entidades a Estudiar"
+                        name="filter_is_study_entity"
+                        domain="[('is_study_entity', '=', True)]"/>
+            </xpath>
+            <xpath expr="//filter[@name='group_country']" position="after">
+                <filter string="A Estudiar"
+                        name="group_by_study_entity"
+                        context="{'group_by': 'is_study_entity'}"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>
+

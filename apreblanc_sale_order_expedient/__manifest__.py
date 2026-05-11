@@ -6,7 +6,7 @@
     'author': 'Xtendoo Software SLU,' 'Daniel Doomínguez',
     'website': 'https://www.xtendoo.es',
     'license': 'AGPL-3',
-    'depends': ['sale', 'sale_management', 'mail', 'xtendoo_onedrive_connector'],
+    'depends': ['sale', 'sale_management', 'mail', 'contacts', 'xtendoo_onedrive_connector'],
     'external_dependencies': {
         'python': ['xlrd'],
     },
@@ -28,6 +28,7 @@
         'wizards/post_incidencia_wizard_views.xml',
 
         # Vistas de modelos base
+        'views/res_partner_views.xml',
         'views/sale_order_search_views.xml',
         'views/sale_order_template_views.xml',
         'views/expedient_views.xml',  # Primero cargar vistas base de expedientes

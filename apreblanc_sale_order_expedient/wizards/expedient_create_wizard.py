@@ -9,9 +9,12 @@ class ExpedientCreateWizard(models.TransientModel):
     _name = "expedient.create.wizard"
     _description = "Wizard para crear expedientes post-pagados"
 
-    person_under_study = fields.Char(
-        string="Persona a Estudiar",
-        help="Persona que está siendo estudiada en el expediente",
+    person_under_study_id = fields.Many2one(
+        comodel_name="res.partner",
+        string="Persona/Entidad a Estudiar",
+        domain="[('is_study_entity', '=', True)]",
+        help="Persona o entidad que está siendo estudiada en el expediente. "
+             "Solo se muestran contactos marcados como 'Persona/Entidad a Estudiar'.",
     )
 
     show_warning_message = fields.Boolean(
@@ -204,7 +207,7 @@ class ExpedientCreateWizard(models.TransientModel):
                 else False
             ),
             "state": "sale",  # Forzar estado sale desde la creación
-            "person_under_study": self.person_under_study,  # Transferir el campo studied_person
+            "person_under_study_id": self.person_under_study_id.id if self.person_under_study_id else False,  # Transferir el campo studied_person
             "person_type": False,
             "expedient_difficulty": False,
             "deadline": False,
@@ -299,7 +302,7 @@ class ExpedientCreateWizard(models.TransientModel):
                 if self.sale_order_template_id
                 else False
             ),
-            "person_under_study": self.person_under_study,  # Transferir el campo studied_person
+            "person_under_study_id": self.person_under_study_id.id if self.person_under_study_id else False,  # Transferir el campo studied_person
             "person_type": False,
             "expedient_difficulty": False,
             "deadline": False,
@@ -352,7 +355,7 @@ class ExpedientCreateWizard(models.TransientModel):
 
         return sale_order
 
-    @api.depends("person_under_study", "client_id", "expedient_number")
+    @api.depends("person_under_study_id", "client_id", "expedient_number")
     def _compute_show_warning_message(self):
         for record in self:
             # Inicializar todos los campos de advertencia en False
@@ -362,9 +365,9 @@ class ExpedientCreateWizard(models.TransientModel):
             record.show_warning_message = False
 
             # Buscar expedientes existentes con la misma persona bajo estudio si el campo tiene valor
-            if record.person_under_study:
+            if record.person_under_study_id:
                 existing_orders_study = self.env["sale.order"].search(
-                    [("person_under_study", "=", record.person_under_study)]
+                    [("person_under_study_id", "=", record.person_under_study_id.id)]
                 )
                 if existing_orders_study:
                     record.show_warning_text_person = True
