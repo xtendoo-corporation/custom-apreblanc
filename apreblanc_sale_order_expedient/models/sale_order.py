@@ -369,6 +369,13 @@ class SaleOrder(models.Model):
             self.client_id = self.pre_paid_expedient_id.client_id
             self.expedient_number = self.pre_paid_expedient_id.expedient_number
 
+    @api.onchange("sub_cartera_id")
+    def _onchange_sub_cartera_id(self):
+        """Sincroniza la tarifa desde la subcartera seleccionada."""
+        for order in self:
+            if order.sub_cartera_id and order.sub_cartera_id.property_product_pricelist:
+                order.pricelist_id = order.sub_cartera_id.property_product_pricelist
+
     @api.model_create_multi
     def create(self, vals_list):
         """Establece fecha de inicio al crear expedientes y confirma los pre-pagados"""
@@ -376,6 +383,11 @@ class SaleOrder(models.Model):
         prepaid_ids = []
 
         for vals in vals_list:
+            if vals.get("sub_cartera_id") and not vals.get("pricelist_id"):
+                sub_cartera = self.env["res.partner"].browse(vals["sub_cartera_id"])
+                if sub_cartera.property_product_pricelist:
+                    vals["pricelist_id"] = sub_cartera.property_product_pricelist.id
+
             # Set expedient manager if not provided
             if vals.get("expedient_type") and vals["expedient_type"] != "none":
                 if not vals.get("expedient_manager_id"):
@@ -1179,6 +1191,12 @@ class SaleOrder(models.Model):
     def write(self, vals):
         """Track all field changes when post_incidencia is active"""
 
+        if vals.get("sub_cartera_id") and not vals.get("pricelist_id"):
+            sub_cartera = self.env["res.partner"].browse(vals["sub_cartera_id"])
+            if sub_cartera.property_product_pricelist:
+                vals = dict(vals)
+                vals["pricelist_id"] = sub_cartera.property_product_pricelist.id
+
         if self.post_incidencia_activa and vals:
             # Obtener valores anteriores antes de la actualización
             old_values = {}
@@ -1274,3 +1292,4 @@ class SaleOrder(models.Model):
         super()._onchange_sale_order_template_id()
         if self.sale_order_template_id and self.sale_order_template_id.sub_cartera_id:
             self.sub_cartera_id = self.sale_order_template_id.sub_cartera_id
+            self._onchange_sub_cartera_id()

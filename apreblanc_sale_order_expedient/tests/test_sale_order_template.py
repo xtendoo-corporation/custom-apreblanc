@@ -42,3 +42,129 @@ class TestSaleOrderTemplate(ExpedientBaseCase):
         self.assertIn(open_template, records_for_limited)
         self.assertNotIn(restricted_template, records_for_limited)
 
+    def test_template_create_sets_pricelist_from_sub_cartera_when_field_exists(self):
+        pricelist = self.env["product.pricelist"].create(
+            {
+                "name": "Tarifa Subcartera Test",
+                "currency_id": self.env.company.currency_id.id,
+            }
+        )
+        sub_cartera = self.env["res.partner"].create(
+            {
+                "name": "Subcartera Test",
+                "property_product_pricelist": pricelist.id,
+            }
+        )
+
+        template = self._create_template(sub_cartera_id=sub_cartera.id)
+        self.assertEqual(template.sub_cartera_id, sub_cartera)
+        if "pricelist_id" in template._fields:
+            self.assertEqual(template.pricelist_id, pricelist)
+
+    def test_pricelist_from_sub_cartera_overrides_cartera_pricelist(self):
+        """La tarifa de la subcartera debe prevalecer sobre la tarifa de la cartera."""
+        if "pricelist_id" not in self.env["sale.order.template"]._fields:
+            self.skipTest("El módulo no tiene el campo pricelist_id en sale.order.template")
+
+        pricelist_cartera = self.env["product.pricelist"].create(
+            {
+                "name": "Tarifa Cartera Principal",
+                "currency_id": self.env.company.currency_id.id,
+            }
+        )
+        pricelist_subcartera = self.env["product.pricelist"].create(
+            {
+                "name": "Tarifa Subcartera Específica",
+                "currency_id": self.env.company.currency_id.id,
+            }
+        )
+
+        # La cartera (partner) tiene su propio pricelist
+        cartera = self.env["res.partner"].create(
+            {
+                "name": "Cartera Principal Test",
+                "property_product_pricelist": pricelist_cartera.id,
+            }
+        )
+
+        # La subcartera tiene un pricelist diferente
+        sub_cartera = self.env["res.partner"].create(
+            {
+                "name": "Subcartera Específica Test",
+                "property_product_pricelist": pricelist_subcartera.id,
+            }
+        )
+
+        # Crear plantilla indicando ambas: cartera y subcartera
+        template = self.env["sale.order.template"].create(
+            {
+                "name": "Plantilla Prioridad Subcartera",
+                "partner_id": cartera.id,
+                "sub_cartera_id": sub_cartera.id,
+            }
+        )
+
+        self.assertEqual(
+            template.pricelist_id,
+            pricelist_subcartera,
+            "La tarifa debe ser la de la SUBCARTERA, no la de la cartera principal.",
+        )
+        self.assertNotEqual(
+            template.pricelist_id,
+            pricelist_cartera,
+            "La tarifa de la cartera principal NO debe aplicarse cuando hay subcartera.",
+        )
+
+    def test_write_pricelist_from_sub_cartera_overrides_cartera_pricelist(self):
+        """Al actualizar sub_cartera_id, la tarifa de la subcartera debe prevalecer."""
+        if "pricelist_id" not in self.env["sale.order.template"]._fields:
+            self.skipTest("El módulo no tiene el campo pricelist_id en sale.order.template")
+
+        pricelist_cartera = self.env["product.pricelist"].create(
+            {
+                "name": "Tarifa Cartera Write Test",
+                "currency_id": self.env.company.currency_id.id,
+            }
+        )
+        pricelist_subcartera = self.env["product.pricelist"].create(
+            {
+                "name": "Tarifa Subcartera Write Test",
+                "currency_id": self.env.company.currency_id.id,
+            }
+        )
+
+        cartera = self.env["res.partner"].create(
+            {
+                "name": "Cartera Write Test",
+                "property_product_pricelist": pricelist_cartera.id,
+            }
+        )
+        sub_cartera = self.env["res.partner"].create(
+            {
+                "name": "Subcartera Write Test",
+                "property_product_pricelist": pricelist_subcartera.id,
+            }
+        )
+
+        # Crear plantilla solo con cartera
+        template = self.env["sale.order.template"].create(
+            {
+                "name": "Plantilla Write Subcartera",
+                "partner_id": cartera.id,
+            }
+        )
+
+        # Asignar la subcartera mediante write (sin pasar pricelist_id explícito)
+        template.write({"sub_cartera_id": sub_cartera.id})
+
+        self.assertEqual(
+            template.pricelist_id,
+            pricelist_subcartera,
+            "Tras write, la tarifa debe ser la de la SUBCARTERA.",
+        )
+        self.assertNotEqual(
+            template.pricelist_id,
+            pricelist_cartera,
+            "Tras write, la tarifa de la cartera NO debe prevalecer sobre la subcartera.",
+        )
+

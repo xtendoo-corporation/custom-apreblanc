@@ -19,6 +19,12 @@ class SaleOrderTemplate(models.Model):
         "res.partner",
         string="Sub cartera",
     )
+    pricelist_id = fields.Many2one(
+        "product.pricelist",
+        string="Tarifa",
+        help="Tarifa de precios que se aplica a los pedidos creados con esta plantilla. "
+             "Si hay subcartera, se usa la tarifa de la subcartera.",
+    )
     allowed_group_ids = fields.Many2many(
         "res.groups",
         "sale_template_groups_rel",
@@ -38,6 +44,30 @@ class SaleOrderTemplate(models.Model):
         store=True,
         help="Indicates if this template is restricted to certain groups",
     )
+
+    @api.onchange("sub_cartera_id")
+    def _onchange_sub_cartera_id(self):
+        """Sincroniza la tarifa desde la subcartera seleccionada."""
+        for template in self:
+            if template.sub_cartera_id and template.sub_cartera_id.property_product_pricelist:
+                template.pricelist_id = template.sub_cartera_id.property_product_pricelist
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        for vals in vals_list:
+            if vals.get("sub_cartera_id") and not vals.get("pricelist_id"):
+                sub_cartera = self.env["res.partner"].browse(vals["sub_cartera_id"])
+                if sub_cartera.property_product_pricelist:
+                    vals["pricelist_id"] = sub_cartera.property_product_pricelist.id
+        return super().create(vals_list)
+
+    def write(self, vals):
+        if vals.get("sub_cartera_id") and not vals.get("pricelist_id"):
+            sub_cartera = self.env["res.partner"].browse(vals["sub_cartera_id"])
+            if sub_cartera.property_product_pricelist:
+                vals = dict(vals)
+                vals["pricelist_id"] = sub_cartera.property_product_pricelist.id
+        return super().write(vals)
 
     @api.depends("allowed_group_ids")
     def _compute_can_use_template(self):

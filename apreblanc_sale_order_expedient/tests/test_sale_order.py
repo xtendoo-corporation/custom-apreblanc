@@ -4,6 +4,24 @@ from .common import ExpedientBaseCase
 
 
 class TestSaleOrder(ExpedientBaseCase):
+    def test_create_sets_pricelist_from_sub_cartera(self):
+        pricelist = self.env["product.pricelist"].create(
+            {
+                "name": "Tarifa Pedido Subcartera",
+                "currency_id": self.env.company.currency_id.id,
+            }
+        )
+        sub_cartera = self.env["res.partner"].create(
+            {
+                "name": "Subcartera Pedido",
+                "property_product_pricelist": pricelist.id,
+            }
+        )
+
+        order = self._create_sale_order(sub_cartera_id=sub_cartera.id)
+
+        self.assertEqual(order.pricelist_id, pricelist)
+
     def test_create_prepaid_forces_sale_and_creada(self):
         order = self._create_sale_order(expedient_type="pre_paid")
 
