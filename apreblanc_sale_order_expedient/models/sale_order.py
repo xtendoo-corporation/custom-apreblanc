@@ -315,6 +315,21 @@ class SaleOrder(models.Model):
                 else:
                     order.expedient_resolution_time = False
 
+    @api.depends("partner_id", "company_id", "sale_order_template_id", "sub_cartera_id")
+    def _compute_pricelist_id(self):
+        super()._compute_pricelist_id()
+        for order in self:
+            template = order.sale_order_template_id
+            if template:
+                pricelist_id = template.pricelist_id.id or template._resolve_template_pricelist_id(
+                    partner_id=order.partner_id.id or template.partner_id.id,
+                    sub_cartera_id=order.sub_cartera_id.id or template.sub_cartera_id.id,
+                )
+                if pricelist_id:
+                    order.pricelist_id = pricelist_id
+            elif order.sub_cartera_id and order.sub_cartera_id.property_product_pricelist:
+                order.pricelist_id = order.sub_cartera_id.property_product_pricelist
+
     # Si es necesario, también podemos actualizar la fecha de fin automáticamente
     # cuando cambia el estado del expediente
     @api.onchange("expedient_state")
@@ -419,6 +434,73 @@ class SaleOrder(models.Model):
             limit=1,
         )
 
+    @api.model
+    def _get_pricelist_from_template_vals(self, vals):
+        """Resuelve la tarifa a aplicar cuando se crea/escribe desde una plantilla."""
+        if vals.get("pricelist_id"):
+            return vals["pricelist_id"]
+
+        template_id = vals.get("sale_order_template_id")
+        if not template_id:
+            return False
+
+        template = self.env["sale.order.template"].browse(template_id).exists()
+        if not template:
+            return False
+
+        if template.pricelist_id:
+            return template.pricelist_id.id
+
+        partner_id = vals.get("partner_id") or template.partner_id.id
+        sub_cartera_id = vals.get("sub_cartera_id") or template.sub_cartera_id.id
+
+        if sub_cartera_id and not vals.get("sub_cartera_id"):
+            vals.setdefault("sub_cartera_id", sub_cartera_id)
+
+        return template._resolve_template_pricelist_id(
+            partner_id=partner_id,
+            sub_cartera_id=sub_cartera_id,
+        )
+
+    def _ensure_template_pricelist(self):
+        """Asegura que el pedido tenga tarifa antes de recalcular o confirmar."""
+        for order in self.filtered("sale_order_template_id"):
+            pricelist_id = order._get_pricelist_from_template_vals(
+                {
+                    "sale_order_template_id": order.sale_order_template_id.id,
+                    "partner_id": order.partner_id.id,
+                    "sub_cartera_id": order.sub_cartera_id.id,
+                }
+            )
+            if not pricelist_id or order.pricelist_id.id == pricelist_id:
+                continue
+
+            if order.state in ("draft", "sent"):
+                super(SaleOrder, order).write({"pricelist_id": pricelist_id})
+                continue
+
+            self.env.cr.execute(
+                """
+                UPDATE sale_order
+                   SET pricelist_id = %s,
+                       write_date = NOW() AT TIME ZONE 'UTC'
+                 WHERE id = %s
+                """,
+                (pricelist_id, order.id),
+            )
+            order.invalidate_recordset(["pricelist_id", "currency_id", "currency_rate"])
+            order.modified(["pricelist_id"])
+        return self
+
+    def _recompute_template_prices(self):
+        """Recalcula precios de líneas con la tarifa actual del pedido."""
+        orders = self.filtered(
+            lambda o: o.pricelist_id and o.order_line.filtered(lambda l: l.product_id and not l.display_type)
+        )
+        if orders:
+            orders._recompute_prices()
+        return orders
+
     @api.model_create_multi
     def create(self, vals_list):
         """Establece fecha de inicio al crear expedientes y confirma los pre-pagados"""
@@ -426,6 +508,10 @@ class SaleOrder(models.Model):
         prepaid_ids = []
 
         for vals in vals_list:
+            template_pricelist_id = self._get_pricelist_from_template_vals(vals)
+            if template_pricelist_id and not vals.get("pricelist_id"):
+                vals["pricelist_id"] = template_pricelist_id
+
             if vals.get("sub_cartera_id") and not vals.get("pricelist_id"):
                 sub_cartera = self.env["res.partner"].browse(vals["sub_cartera_id"])
                 if sub_cartera.property_product_pricelist:
@@ -488,6 +574,9 @@ class SaleOrder(models.Model):
 
         # Crear las órdenes de venta
         orders = super().create(vals_list)
+
+        orders._ensure_template_pricelist()
+        orders._recompute_template_prices()
 
         # FORZAR CONFIRMACIÓN INMEDIATA para expedientes prepagados
         for order in orders:
@@ -967,6 +1056,8 @@ class SaleOrder(models.Model):
         Como sale.order.line no tiene un campo directo a sale.order.template.line en Odoo 17,
         emparejamos las líneas del pedido con las de la plantilla por product_id.
         """
+        self._ensure_template_pricelist()
+
         # Validar campos obligatorios para expedientes al confirmar
         for order in self:
             print("Validando campos obligatorios para el expediente al confirmar...")
@@ -1030,6 +1121,8 @@ class SaleOrder(models.Model):
                     % ", ".join(lines_to_remove.mapped("name"))
                 )
                 lines_to_remove.unlink()
+
+        self._recompute_template_prices()
 
         # Para expedientes prepagados, SIEMPRE confirmar sin validaciones
         pre_paid_orders = self.filtered(lambda o: o.expedient_type == "pre_paid")
@@ -1262,6 +1355,11 @@ class SaleOrder(models.Model):
     def write(self, vals):
         """Track all field changes when post_incidencia is active"""
 
+        template_pricelist_id = self._get_pricelist_from_template_vals(vals)
+        if template_pricelist_id and not vals.get("pricelist_id"):
+            vals = dict(vals)
+            vals["pricelist_id"] = template_pricelist_id
+
         if vals.get("sub_cartera_id") and not vals.get("pricelist_id"):
             sub_cartera = self.env["res.partner"].browse(vals["sub_cartera_id"])
             if sub_cartera.property_product_pricelist:
@@ -1361,6 +1459,11 @@ class SaleOrder(models.Model):
         se realiza en action_confirm() cuando el presupuesto se aprueba.
         """
         super()._onchange_sale_order_template_id()
-        if self.sale_order_template_id and self.sale_order_template_id.sub_cartera_id:
-            self.sub_cartera_id = self.sale_order_template_id.sub_cartera_id
-            self._onchange_sub_cartera_id()
+        if self.sale_order_template_id:
+            if self.sale_order_template_id.sub_cartera_id:
+                self.sub_cartera_id = self.sale_order_template_id.sub_cartera_id
+
+            if self.sale_order_template_id.pricelist_id:
+                self.pricelist_id = self.sale_order_template_id.pricelist_id
+            elif self.sub_cartera_id:
+                self._onchange_sub_cartera_id()

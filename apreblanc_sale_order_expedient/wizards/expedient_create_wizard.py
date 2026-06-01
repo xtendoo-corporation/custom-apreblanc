@@ -217,6 +217,9 @@ class ExpedientCreateWizard(models.TransientModel):
             "deadline": False,
         }
 
+        if self.sale_order_template_id.pricelist_id:
+            sale_order_vals["pricelist_id"] = self.sale_order_template_id.pricelist_id.id
+
         if sale_order_type:
             sale_order_vals["type_id"] = sale_order_type.id
 
@@ -225,10 +228,12 @@ class ExpedientCreateWizard(models.TransientModel):
             sale_order_vals["name"] = sequence_number
 
         # Si se ha seleccionado un expediente pre-pagado, usarlo
-        if hasattr(self, "pre_paid_expedient_id") and self.pre_paid_expedient_id:
-            sale_order_vals["pre_paid_expedient_id"] = self.pre_paid_expedient_id.id
+        pre_paid_expedient_id = getattr(self.pre_paid_expedient_id, "id", False)
+        if pre_paid_expedient_id:
+            sale_order_vals["pre_paid_expedient_id"] = pre_paid_expedient_id
 
         # Crear el pedido
+        _logger.debug("Creando expediente pre-pagado con valores: %s", sale_order_vals)
         sale_order = self.env["sale.order"].create(sale_order_vals)
 
         # Verificar que efectivamente se creó en estado 'sale'
@@ -263,7 +268,6 @@ class ExpedientCreateWizard(models.TransientModel):
                     "name": template_line.name or product.name,
                     "product_uom_qty": template_line.product_uom_qty,
                     "product_uom": template_line.product_uom_id.id,
-                    "price_unit": product.list_price,
                 }
                 # Añadir campos opcionales solo si existen
                 if hasattr(template_line, "discount"):
@@ -318,6 +322,9 @@ class ExpedientCreateWizard(models.TransientModel):
             "deadline": False,
         }
 
+        if self.sale_order_template_id.pricelist_id:
+            sale_order_vals["pricelist_id"] = self.sale_order_template_id.pricelist_id.id
+
         if sale_order_type:
             sale_order_vals["type_id"] = sale_order_type.id
 
@@ -341,7 +348,6 @@ class ExpedientCreateWizard(models.TransientModel):
                     "name": template_line.name or product.name,
                     "product_uom_qty": template_line.product_uom_qty,
                     "product_uom": template_line.product_uom_id.id,
-                    "price_unit": product.list_price,
                 }
                 # Añadir campos opcionales solo si existen
                 if hasattr(template_line, "discount"):

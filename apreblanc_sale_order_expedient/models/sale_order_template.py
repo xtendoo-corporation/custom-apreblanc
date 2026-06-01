@@ -1,13 +1,36 @@
 # -*- coding: utf-8 -*-
 # Part of Odoo. See LICENSE file for full copyright and licensing details.
 
-from odoo import fields, models, api, _
-from odoo.exceptions import ValidationError
+from odoo import fields, models, api
 from odoo.osv import expression
 
 
 class SaleOrderTemplate(models.Model):
     _inherit = "sale.order.template"
+
+    @api.model
+    def _resolve_template_pricelist_id(self, partner_id=False, sub_cartera_id=False):
+        """Prioriza subcartera, luego partner y finalmente la tarifa por defecto de Odoo."""
+        partner = (
+            self.env["res.partner"].browse(partner_id).with_company(self.env.company)
+            if partner_id
+            else self.env["res.partner"]
+        )
+        sub_cartera = (
+            self.env["res.partner"].browse(sub_cartera_id).with_company(self.env.company)
+            if sub_cartera_id
+            else self.env["res.partner"]
+        )
+
+        if sub_cartera and sub_cartera.property_product_pricelist:
+            return sub_cartera.property_product_pricelist.id
+        if partner and partner.property_product_pricelist:
+            return partner.property_product_pricelist.id
+
+        sale_order = self.env["sale.order"].new(
+            {"partner_id": partner.id} if partner else {}
+        )
+        return sale_order.pricelist_id.id or False
 
     partner_id = fields.Many2one(
         "res.partner",
@@ -45,28 +68,47 @@ class SaleOrderTemplate(models.Model):
         help="Indicates if this template is restricted to certain groups",
     )
 
-    @api.onchange("sub_cartera_id")
-    def _onchange_sub_cartera_id(self):
-        """Sincroniza la tarifa desde la subcartera seleccionada."""
+    @api.onchange("partner_id", "sub_cartera_id")
+    def _onchange_partner_or_sub_cartera_id(self):
+        """Sincroniza la tarifa con prioridad subcartera y fallback al partner."""
         for template in self:
-            if template.sub_cartera_id and template.sub_cartera_id.property_product_pricelist:
-                template.pricelist_id = template.sub_cartera_id.property_product_pricelist
+            template.pricelist_id = template._resolve_template_pricelist_id(
+                partner_id=template.partner_id.id,
+                sub_cartera_id=template.sub_cartera_id.id,
+            )
 
     @api.model_create_multi
     def create(self, vals_list):
         for vals in vals_list:
-            if vals.get("sub_cartera_id") and not vals.get("pricelist_id"):
-                sub_cartera = self.env["res.partner"].browse(vals["sub_cartera_id"])
-                if sub_cartera.property_product_pricelist:
-                    vals["pricelist_id"] = sub_cartera.property_product_pricelist.id
+            if not vals.get("pricelist_id"):
+                vals["pricelist_id"] = self._resolve_template_pricelist_id(
+                    partner_id=vals.get("partner_id"),
+                    sub_cartera_id=vals.get("sub_cartera_id"),
+                )
         return super().create(vals_list)
 
     def write(self, vals):
-        if vals.get("sub_cartera_id") and not vals.get("pricelist_id"):
-            sub_cartera = self.env["res.partner"].browse(vals["sub_cartera_id"])
-            if sub_cartera.property_product_pricelist:
-                vals = dict(vals)
-                vals["pricelist_id"] = sub_cartera.property_product_pricelist.id
+        if not vals.get("pricelist_id") and (
+            "partner_id" in vals or "sub_cartera_id" in vals
+        ):
+            if len(self) > 1:
+                results = []
+                for template in self:
+                    template_vals = dict(vals)
+                    template_vals["pricelist_id"] = template._resolve_template_pricelist_id(
+                        partner_id=template_vals.get("partner_id", template.partner_id.id),
+                        sub_cartera_id=template_vals.get(
+                            "sub_cartera_id", template.sub_cartera_id.id
+                        ),
+                    )
+                    results.append(super(SaleOrderTemplate, template).write(template_vals))
+                return all(results)
+
+            vals = dict(vals)
+            vals["pricelist_id"] = self._resolve_template_pricelist_id(
+                partner_id=vals.get("partner_id", self.partner_id.id),
+                sub_cartera_id=vals.get("sub_cartera_id", self.sub_cartera_id.id),
+            )
         return super().write(vals)
 
     @api.depends("allowed_group_ids")

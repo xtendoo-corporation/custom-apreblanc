@@ -16,6 +16,9 @@
                         <field name="sub_cartera_id"
                             options="{'no_create': True}"
                             string="Sub cartera" />
+                        <field name="pricelist_id"
+                            options="{'no_create': True}"
+                            string="Tarifa" />
                         <field name="allowed_group_ids"
                             widget="many2many_tags"
                             options="{'no_create': True}"

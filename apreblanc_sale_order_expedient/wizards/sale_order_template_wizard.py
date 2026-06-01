@@ -34,16 +34,20 @@ class SaleOrderTemplateWizard(models.TransientModel):
         """Create sale order from template with selected customer"""
         self.ensure_one()
 
-        # Create the sale order with the customer from the wizard
-        sale_order_vals = {
-            "partner_id": self.partner_id.id,
-            "sale_order_template_id": self.template_id.id,
-        }
-
-        sale_order = self.env["sale.order"].create(sale_order_vals)
-
-        # Apply the template to the sale order
+        sale_order = self.env["sale.order"].new(
+            {
+                "partner_id": self.partner_id.id,
+                "sale_order_template_id": self.template_id.id,
+            }
+        )
+        sale_order._onchange_partner_id()
         sale_order._onchange_sale_order_template_id()
+
+        if self.template_id.pricelist_id:
+            sale_order.pricelist_id = self.template_id.pricelist_id
+
+        sale_order_vals = sale_order._convert_to_write(sale_order._cache)
+        sale_order = self.env["sale.order"].create(sale_order_vals)
 
         return {
             "type": "ir.actions.act_window",

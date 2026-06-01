@@ -168,3 +168,35 @@ class TestSaleOrderTemplate(ExpedientBaseCase):
             "Tras write, la tarifa de la cartera NO debe prevalecer sobre la subcartera.",
         )
 
+    def test_template_pricelist_falls_back_to_odoo_default_when_sub_cartera_and_partner_have_none(self):
+        if "pricelist_id" not in self.env["sale.order.template"]._fields:
+            self.skipTest("El módulo no tiene el campo pricelist_id en sale.order.template")
+
+        partner = self.env["res.partner"].create(
+            {
+                "name": "Partner Fallback Test",
+            }
+        )
+        sub_cartera = self.env["res.partner"].create(
+            {
+                "name": "Subcartera Sin Tarifa",
+            }
+        )
+        default_pricelist = self.env["sale.order"].new(
+            {"partner_id": partner.id}
+        ).pricelist_id
+
+        template = self.env["sale.order.template"].create(
+            {
+                "name": "Plantilla Fallback Partner",
+                "partner_id": partner.id,
+                "sub_cartera_id": sub_cartera.id,
+            }
+        )
+
+        self.assertEqual(
+            template.pricelist_id,
+            default_pricelist,
+            "La tarifa debe caer a la predeterminada de Odoo cuando no haya una específica.",
+        )
+

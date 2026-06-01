@@ -54,7 +54,11 @@
             <!-- Only move specific fields that we know exist -->
             <xpath expr="//field[@name='validity_date']" position="replace" />
             <xpath expr="//field[@name='payment_term_id']" position="replace" />
-            <xpath expr="//field[@name='pricelist_id']" position="replace" />
+            <xpath expr="//field[@name='pricelist_id']" position="replace">
+                <field name="pricelist_id"
+                    options="{'no_open': True, 'no_create': True}"
+                    readonly="expedient_type != 'none' and expedient_state in ('aprobada', 'rechazada', 'cancelada') and not is_expedient_admin" />
+            </xpath>
 
             <!-- Find the "Other Information" tab and add the payment fields there -->
             <xpath expr="//page[@name='other_information']//group" position="inside">
@@ -155,6 +159,9 @@
                         <field name="date_order"
                             readonly="expedient_state in ['aprobada', 'rechazada'] and not is_expedient_admin"
                             string="Fecha de Inicio" widget="datetime" />
+                        <field name="pricelist_id"
+                            options="{'no_open': True, 'no_create': True}"
+                            readonly="expedient_state in ['aprobada', 'rechazada', 'cancelada'] and not is_expedient_admin" />
                         <field name="expedient_date_end"
                             readonly="expedient_state in ['aprobada', 'rechazada'] and not is_expedient_admin" />
                         <field name="expedient_resolution_time" readonly="1"
