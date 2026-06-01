@@ -501,6 +501,65 @@ class SaleOrder(models.Model):
             orders._recompute_prices()
         return orders
 
+    @api.model
+    def _get_template_line_signature(self, values):
+        return (
+            values.get("display_type") or False,
+            values.get("product_id") or False,
+            values.get("name") or "",
+            values.get("product_uom_qty") or 0.0,
+            values.get("product_uom") or False,
+            values.get("sequence") or 0,
+        )
+
+    def _create_applicable_template_lines(self):
+        """Crea al confirmar solo las líneas de plantilla que aplican y aún no existen."""
+        sale_order_line_model = self.env["sale.order.line"]
+
+        for order in self.filtered("sale_order_template_id"):
+            template = order.sale_order_template_id
+            existing_signatures = {
+                order._get_template_line_signature(
+                    {
+                        "display_type": line.display_type,
+                        "product_id": line.product_id.id,
+                        "name": line.name,
+                        "product_uom_qty": line.product_uom_qty,
+                        "product_uom": line.product_uom.id,
+                        "sequence": line.sequence,
+                    }
+                )
+                for line in order.order_line
+            }
+
+            lines_to_create = []
+            for template_line in template.sale_order_template_line_ids:
+                should_apply = True
+                if getattr(template_line, "application_rule", False) and hasattr(
+                    template_line, "_should_apply"
+                ):
+                    should_apply = template_line._should_apply(order)
+
+                if not should_apply:
+                    continue
+
+                line_vals = template_line._prepare_order_line_values()
+                signature = order._get_template_line_signature(line_vals)
+                if signature in existing_signatures:
+                    continue
+
+                if hasattr(template_line, "discount"):
+                    line_vals["discount"] = template_line.discount
+
+                line_vals["order_id"] = order.id
+                lines_to_create.append(line_vals)
+                existing_signatures.add(signature)
+
+            if lines_to_create:
+                sale_order_line_model.create(lines_to_create)
+
+        return self
+
     @api.model_create_multi
     def create(self, vals_list):
         """Establece fecha de inicio al crear expedientes y confirma los pre-pagados"""
@@ -1122,6 +1181,7 @@ class SaleOrder(models.Model):
                 )
                 lines_to_remove.unlink()
 
+        self._create_applicable_template_lines()
         self._recompute_template_prices()
 
         # Para expedientes prepagados, SIEMPRE confirmar sin validaciones

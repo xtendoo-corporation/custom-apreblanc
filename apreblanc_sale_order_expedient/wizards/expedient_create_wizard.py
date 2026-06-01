@@ -254,28 +254,8 @@ class ExpedientCreateWizard(models.TransientModel):
             self.env.cache.invalidate()
             sale_order = self.env["sale.order"].browse(sale_order.id)
 
-        # Agregar líneas desde la plantilla
-        if self.sale_order_template_id:
-            for (
-                template_line
-            ) in self.sale_order_template_id.sale_order_template_line_ids:
-                # NO filtrar aquí por _should_apply - se hará al confirmar
-                # cuando expedient_difficulty y otros campos ya tengan valor
-                product = template_line.product_id
-                line_vals = {
-                    "order_id": sale_order.id,
-                    "product_id": product.id,
-                    "name": template_line.name or product.name,
-                    "product_uom_qty": template_line.product_uom_qty,
-                    "product_uom": template_line.product_uom_id.id,
-                }
-                # Añadir campos opcionales solo si existen
-                if hasattr(template_line, "discount"):
-                    line_vals["discount"] = template_line.discount
-                if hasattr(template_line, "display_type"):
-                    line_vals["display_type"] = template_line.display_type
-
-                self.env["sale.order.line"].create(line_vals)
+        # Las líneas de plantilla se crearán al confirmar el pedido,
+        # cuando ya se conozcan los datos necesarios para evaluar reglas.
 
         # Mensaje explícito sobre el estado
         sale_order.message_post(
@@ -334,28 +314,8 @@ class ExpedientCreateWizard(models.TransientModel):
 
         sale_order = self.env["sale.order"].create(sale_order_vals)
 
-        # Agregar líneas desde la plantilla
-        if self.sale_order_template_id:
-            for (
-                template_line
-            ) in self.sale_order_template_id.sale_order_template_line_ids:
-                # NO filtrar aquí por _should_apply - se hará al confirmar
-                # cuando expedient_difficulty y otros campos ya tengan valor
-                product = template_line.product_id
-                line_vals = {
-                    "order_id": sale_order.id,
-                    "product_id": product.id,
-                    "name": template_line.name or product.name,
-                    "product_uom_qty": template_line.product_uom_qty,
-                    "product_uom": template_line.product_uom_id.id,
-                }
-                # Añadir campos opcionales solo si existen
-                if hasattr(template_line, "discount"):
-                    line_vals["discount"] = template_line.discount
-                if hasattr(template_line, "display_type"):
-                    line_vals["display_type"] = template_line.display_type
-
-                self.env["sale.order.line"].create(line_vals)
+        # Las líneas de plantilla se crearán al confirmar el pedido,
+        # cuando ya se conozcan los datos necesarios para evaluar reglas.
 
         # Copiar también otros datos de la plantilla
         if (

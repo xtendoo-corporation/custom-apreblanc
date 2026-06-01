@@ -348,7 +348,7 @@ class TestSaleOrder(ExpedientBaseCase):
             "El pedido debe heredar la tarifa de la plantilla al crearse desde sale.order.create().",
         )
 
-    def test_expedient_create_wizard_prices_template_lines_with_pricelist(self):
+    def test_expedient_create_wizard_does_not_create_template_lines_before_confirm(self):
         pricelist = self._create_pricelist_with_fixed_price(42.0)
         template = self._create_template_with_line(pricelist_id=pricelist.id)
 
@@ -356,8 +356,8 @@ class TestSaleOrder(ExpedientBaseCase):
             {
                 "expedient_type": "post_paid",
                 "partner_id": self.partner.id,
-                "client_id": "CLI-WIZ-LINE-PRICE",
-                "expedient_number": "EXP-WIZ-LINE-PRICE",
+                "client_id": "CLI-WIZ-NO-LINES",
+                "expedient_number": "EXP-WIZ-NO-LINES",
                 "sale_order_template_id": template.id,
             }
         )
@@ -366,13 +366,12 @@ class TestSaleOrder(ExpedientBaseCase):
         order = self.env["sale.order"].browse(action["res_id"])
 
         self.assertEqual(order.pricelist_id, pricelist)
-        self.assertEqual(
-            order.order_line.filtered(lambda l: l.product_id == self.product).price_unit,
-            42.0,
-            "La línea creada desde la plantilla debe calcularse con la tarifa del pedido, no con list_price.",
+        self.assertFalse(
+            order.order_line,
+            "El presupuesto no debe crear líneas de plantilla hasta la confirmación.",
         )
 
-    def test_action_confirm_recomputes_template_line_prices_with_pricelist(self):
+    def test_action_confirm_creates_applicable_template_lines_with_pricelist(self):
         pricelist = self._create_pricelist_with_fixed_price(42.0)
         template = self._create_template_with_line(pricelist_id=pricelist.id)
 
@@ -380,16 +379,14 @@ class TestSaleOrder(ExpedientBaseCase):
             {
                 "expedient_type": "post_paid",
                 "partner_id": self.partner.id,
-                "client_id": "CLI-WIZ-CONFIRM-PRICE",
-                "expedient_number": "EXP-WIZ-CONFIRM-PRICE",
+                "client_id": "CLI-WIZ-CONFIRM-LINES",
+                "expedient_number": "EXP-WIZ-CONFIRM-LINES",
                 "sale_order_template_id": template.id,
             }
         )
 
         action = wizard.action_create_expedient()
         order = self.env["sale.order"].browse(action["res_id"])
-        target_line = order.order_line.filtered(lambda l: l.product_id == self.product)
-        target_line.write({"price_unit": self.product.list_price})
 
         order.write(
             {
@@ -400,11 +397,13 @@ class TestSaleOrder(ExpedientBaseCase):
             }
         )
         order.action_confirm()
+        target_line = order.order_line.filtered(lambda l: l.product_id == self.product)
 
         self.assertEqual(order.pricelist_id, pricelist)
+        self.assertTrue(target_line, "La línea de plantilla debe crearse al confirmar.")
         self.assertEqual(
             target_line.price_unit,
             42.0,
-            "Al confirmar, la línea debe recalcularse con la tarifa de la plantilla aunque viniera con un precio incorrecto.",
+            "La línea creada al confirmar debe respetar la tarifa del pedido.",
         )
 
