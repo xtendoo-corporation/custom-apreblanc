@@ -301,7 +301,7 @@
         <field name="mode">primary</field>
         <field name="priority">99</field>
         <field name="arch" type="xml">
-            <tree string="Expedientes Postpago" decoration-danger="post_incidencia_activa"
+            <tree string="Expedientes Post-pago" decoration-danger="post_incidencia_activa"
                 decoration-bf="post_incidencia_activa">
                 <field name="partner_id" />
                 <field name="client_id" />
@@ -349,7 +349,7 @@
 
     <!-- Actualizar la acción para expedientes para incluir la vista pivot -->
     <record id="action_sale_order_expedient" model="ir.actions.act_window">
-        <field name="name">Expedientes Postpago</field>
+        <field name="name">Expedientes Post-pago</field>
         <field name="type">ir.actions.act_window</field>
         <field name="res_model">sale.order</field>
         <field name="view_mode">tree,form,pivot</field>
@@ -396,20 +396,20 @@
 
     <!-- Menú para expedientes con la acción configurada -->
     <menuitem id="menu_sale_order_expedient"
-        name="Expedientes Postpago"
+        name="Expedientes Post-pago"
         parent="sale.sale_order_menu"
         action="action_sale_order_expedient"
         sequence="25"
         groups="group_expedient_postpago,group_expedient_admin" />
 
-    <!-- Vista Tree para Expedientes Pre-pagados (siempre son pedidos de venta) -->
+    <!-- Vista Tree para Expedientes Pre-pagado (siempre son pedidos de venta) -->
     <record id="view_sale_order_prepaid_tree" model="ir.ui.view">
         <field name="name">sale.order.prepaid.tree</field>
         <field name="model">sale.order</field>
         <field name="arch" type="xml">
-            <tree string="Expedientes Pre-pagados" decoration-danger="post_incidencia_activa"
+            <tree string="Expedientes Pre-pagado" decoration-danger="post_incidencia_activa"
                 decoration-bf="post_incidencia_activa">
-                <!-- Nota: Cambiado de "Expedientes Pre-pagados" a "Pedidos de Venta Pre-pagados" -->
+                <!-- Nota: Cambiado de "Expedientes Pre-pagado" a "Pedidos de Venta Pre-pagados" -->
                 <field name="partner_id" />
                 <field name="client_id" />
                 <field name="expedient_number" />
@@ -441,9 +441,9 @@
         </field>
     </record>
 
-    <!-- Acción para Expedientes Pre-pagados -->
+    <!-- Acción para Expedientes Pre-pagado -->
     <record id="action_sale_order_prepaid" model="ir.actions.act_window">
-        <field name="name">Expedientes Pre-pagados</field>
+        <field name="name">Expedientes Pre-pagado</field>
         <field name="res_model">sale.order</field>
         <field name="view_mode">tree,form</field>
         <field name="view_id" ref="view_sale_order_prepaid_tree" />
@@ -465,9 +465,9 @@
         </field>
     </record>
 
-    <!-- Menú para Expedientes Pre-pagados -->
+    <!-- Menú para Expedientes Pre-pagado -->
     <menuitem id="menu_sale_order_prepaid"
-        name="Expedientes Pre-pagados"
+        name="Expedientes Pre-pagado"
         parent="sale.sale_order_menu"
         action="action_sale_order_prepaid"
         sequence="25"
