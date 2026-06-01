@@ -376,6 +376,49 @@ class SaleOrder(models.Model):
             if order.sub_cartera_id and order.sub_cartera_id.property_product_pricelist:
                 order.pricelist_id = order.sub_cartera_id.property_product_pricelist
 
+    @api.model
+    def _get_expedient_sale_order_type(self, expedient_type):
+        """Resuelve el tipo de venta a usar para expedientes sin depender de IDs fijos."""
+        if "type_id" not in self._fields:
+            return False
+
+        try:
+            sale_order_type_model = self.env["sale.order.type"].sudo()
+        except KeyError:
+            return False
+
+        candidate_names = {
+            "post_paid": ["post-pagado", "postpagado", "post paid", "postpago"],
+            "pre_paid": ["pre-pagado", "prepagado", "pre paid", "prepago"],
+        }.get(expedient_type, [])
+        company_domain = [("company_id", "in", [self.env.company.id, False])]
+
+        for candidate_name in candidate_names:
+            sale_type = sale_order_type_model.search(
+                company_domain + [("name", "ilike", candidate_name)],
+                order="company_id desc, id asc",
+                limit=1,
+            )
+            if sale_type:
+                return sale_type
+
+        default_type_id = self.default_get(["type_id"]).get("type_id")
+        if default_type_id:
+            default_type = sale_order_type_model.browse(default_type_id).exists()
+            if default_type:
+                return default_type
+
+        if hasattr(self, "_default_type_id"):
+            default_type = self._default_type_id()
+            if default_type:
+                return default_type.exists()
+
+        return sale_order_type_model.search(
+            company_domain,
+            order="company_id desc, id asc",
+            limit=1,
+        )
+
     @api.model_create_multi
     def create(self, vals_list):
         """Establece fecha de inicio al crear expedientes y confirma los pre-pagados"""
@@ -387,6 +430,27 @@ class SaleOrder(models.Model):
                 sub_cartera = self.env["res.partner"].browse(vals["sub_cartera_id"])
                 if sub_cartera.property_product_pricelist:
                     vals["pricelist_id"] = sub_cartera.property_product_pricelist.id
+
+            if vals.get("expedient_type") in ["post_paid", "pre_paid"]:
+                sale_order_type = False
+                if vals.get("type_id") and "type_id" in self._fields:
+                    try:
+                        sale_order_type = (
+                            self.env["sale.order.type"]
+                            .sudo()
+                            .browse(vals["type_id"])
+                            .exists()
+                        )
+                    except KeyError:
+                        sale_order_type = False
+                if not sale_order_type:
+                    sale_order_type = self._get_expedient_sale_order_type(
+                        vals["expedient_type"]
+                    )
+                if sale_order_type:
+                    vals["type_id"] = sale_order_type.id
+                else:
+                    vals.pop("type_id", None)
 
             # Set expedient manager if not provided
             if vals.get("expedient_type") and vals["expedient_type"] != "none":
@@ -427,6 +491,13 @@ class SaleOrder(models.Model):
 
         # FORZAR CONFIRMACIÓN INMEDIATA para expedientes prepagados
         for order in orders:
+            if order.expedient_type in ["post_paid", "pre_paid"]:
+                expected_sale_type = order._get_expedient_sale_order_type(
+                    order.expedient_type
+                )
+                if expected_sale_type and order.type_id != expected_sale_type:
+                    order.write({"type_id": expected_sale_type.id})
+
             if order.expedient_type == "pre_paid":
                 prepaid_ids.append(order.id)
                 # Verificar inmediatamente el estado

@@ -6,7 +6,14 @@
     'author': 'Xtendoo Software SLU,' 'Daniel Doomínguez',
     'website': 'https://www.xtendoo.es',
     'license': 'AGPL-3',
-    'depends': ['sale', 'sale_management', 'mail', 'contacts', 'xtendoo_onedrive_connector'],
+    'depends': [
+        'sale',
+        'sale_management',
+        'mail',
+        'contacts',
+        'sale_order_type',
+        'xtendoo_onedrive_connector',
+    ],
     'external_dependencies': {
         'python': ['xlrd'],
     },

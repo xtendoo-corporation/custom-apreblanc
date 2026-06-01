@@ -189,6 +189,10 @@ class ExpedientCreateWizard(models.TransientModel):
         if sequence:
             sequence_number = sequence.next_by_id()
 
+        sale_order_type = self.env["sale.order"]._get_expedient_sale_order_type(
+            "pre_paid"
+        )
+
         # Crear el pedido de venta
         sale_order_vals = {
             "partner_id": self.partner_id.id,
@@ -211,8 +215,10 @@ class ExpedientCreateWizard(models.TransientModel):
             "person_type": False,
             "expedient_difficulty": False,
             "deadline": False,
-            "type_id": 3,
         }
+
+        if sale_order_type:
+            sale_order_vals["type_id"] = sale_order_type.id
 
         # Si hay una secuencia configurada, agregar el nombre
         if sequence_number:
@@ -287,6 +293,10 @@ class ExpedientCreateWizard(models.TransientModel):
         if sequence:
             sequence_number = sequence.next_by_id()
 
+        sale_order_type = self.env["sale.order"]._get_expedient_sale_order_type(
+            "post_paid"
+        )
+
         # Crear el pedido de venta para expediente post-pagado
         sale_order_vals = {
             "partner_id": self.partner_id.id,
@@ -306,8 +316,10 @@ class ExpedientCreateWizard(models.TransientModel):
             "person_type": False,
             "expedient_difficulty": False,
             "deadline": False,
-            "type_id": 2,
         }
+
+        if sale_order_type:
+            sale_order_vals["type_id"] = sale_order_type.id
 
         # Si hay una secuencia configurada, agregar el nombre
         if sequence_number:
