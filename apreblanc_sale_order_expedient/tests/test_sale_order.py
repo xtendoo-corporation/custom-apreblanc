@@ -98,6 +98,59 @@ class TestSaleOrder(ExpedientBaseCase):
         with self.assertRaises(ValidationError):
             order.action_confirm()
 
+    def test_write_auto_confirms_regular_sale_order(self):
+        order = self._create_sale_order(expedient_type="none")
+
+        order.write({"client_order_ref": "AUTO-CONFIRM-NONE"})
+
+        self.assertEqual(
+            order.state,
+            "sale",
+            "Los pedidos normales también deben confirmarse automáticamente al hacer write si aún no están confirmados.",
+        )
+
+    def test_write_auto_confirms_post_paid_when_required_fields_are_completed(self):
+        order = self._create_sale_order(expedient_type="post_paid")
+
+        order.write(
+            {
+                "person_under_study_id": self.study_partner.id,
+                "person_type": "fisica",
+                "expedient_difficulty": "simple",
+                "deadline": "24",
+            }
+        )
+
+        self.assertEqual(
+            order.state,
+            "sale",
+            "El expediente post-pagado debe confirmarse automáticamente al completar los datos obligatorios.",
+        )
+
+    def test_write_does_not_auto_confirm_post_paid_when_required_fields_are_missing(self):
+        order = self._create_sale_order(expedient_type="post_paid")
+
+        order.write(
+            {
+                "person_under_study_id": self.study_partner.id,
+                "person_type": "fisica",
+            }
+        )
+
+        self.assertEqual(
+            order.state,
+            "draft",
+            "Si faltan datos obligatorios del expediente, el write no debe confirmar el pedido.",
+        )
+
+    def test_write_does_not_reconfirm_order_already_confirmed(self):
+        order = self._create_sale_order(expedient_type="none")
+        order.action_confirm()
+
+        order.write({"client_order_ref": "YA-CONFIRMADO"})
+
+        self.assertEqual(order.state, "sale")
+
     def test_action_expedient_aprobada_sets_end_date_and_sale_state(self):
         order = self._create_sale_order(
             expedient_type="post_paid",

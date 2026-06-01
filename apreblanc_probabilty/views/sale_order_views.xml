@@ -8,11 +8,9 @@
         <field name="arch" type="xml">
             <!-- Place probability and margin_percent fields after date_order -->
             <field name="date_order" position="after">
-                <field name="expedient_type" invisible="1"/>
-                <field name="probability" widget="percentage"
-                       invisible="expedient_type in ['none', False]"/>
-                <field name="margin_percent" widget="percentage"
-                       invisible="expedient_type in ['none', False]"/>
+<!--                <field name="expedient_type" invisible="1"/>-->
+                <field name="probability" widget="percentage"/>
+                <field name="margin_percent" widget="percentage"/>
             </field>
         </field>
     </record>

@@ -501,6 +501,42 @@ class SaleOrder(models.Model):
             orders._recompute_prices()
         return orders
 
+    def _get_expedient_missing_required_fields(self):
+        """Devuelve los mensajes de campos obligatorios que faltan para expedientes."""
+        self.ensure_one()
+        if self.expedient_type == "none":
+            return []
+
+        missing = []
+        if not self.person_under_study_id:
+            missing.append(_("El campo 'Persona a Estudiar' es obligatorio."))
+        if not self.person_type:
+            missing.append(_("El campo 'Tipo de Persona' es obligatorio."))
+        if not self.expedient_difficulty:
+            missing.append(_("El campo 'Dificultad' es obligatorio."))
+        if not self.deadline:
+            missing.append(_("El campo 'Plazo' es obligatorio."))
+        return missing
+
+    def _is_ready_for_auto_confirm(self):
+        """Indica si el pedido está en condiciones mínimas para intentar confirmarse."""
+        self.ensure_one()
+        if self.state not in ("draft", "sent"):
+            return False
+        if self._get_expedient_missing_required_fields():
+            return False
+        return bool(self.order_line or self.sale_order_template_id)
+
+    def _auto_confirm_after_write(self):
+        """Confirma automáticamente pedidos pendientes cuando ya tienen datos suficientes."""
+        if self.env.context.get("skip_auto_confirm_on_write"):
+            return self
+
+        orders_to_confirm = self.filtered(lambda order: order._is_ready_for_auto_confirm())
+        for order in orders_to_confirm:
+            order.with_context(skip_auto_confirm_on_write=True).action_confirm()
+        return self
+
     @api.model
     def _get_template_line_signature(self, values):
         return (
@@ -1115,39 +1151,25 @@ class SaleOrder(models.Model):
         Como sale.order.line no tiene un campo directo a sale.order.template.line en Odoo 17,
         emparejamos las líneas del pedido con las de la plantilla por product_id.
         """
-        self._ensure_template_pricelist()
+        orders_to_confirm = self.filtered(lambda order: order.state in ("draft", "sent"))
+        if not orders_to_confirm:
+            return True
+
+        orders_to_confirm._ensure_template_pricelist()
 
         # Validar campos obligatorios para expedientes al confirmar
-        for order in self:
-            print("Validando campos obligatorios para el expediente al confirmar...")
-            print(
-                order.expedient_type,
-                order.person_under_study_id,
-                order.person_type,
-                order.expedient_difficulty,
-                order.deadline,
-            )
-            if order.expedient_type != "none":
-                errors = []
-                if not order.person_under_study_id:
-                    errors.append(_("El campo 'Persona a Estudiar' es obligatorio."))
-                if not order.person_type:
-                    errors.append(_("El campo 'Tipo de Persona' es obligatorio."))
-                if not order.expedient_difficulty:
-                    errors.append(_("El campo 'Dificultad' es obligatorio."))
-                if not order.deadline:
-                    errors.append(_("El campo 'Plazo' es obligatorio."))
-
-                if errors:
-                    raise ValidationError(
-                        _(
-                            "No se puede confirmar el expediente porque faltan campos obligatorios:\n\n%s"
-                        )
-                        % "\n".join(errors)
+        for order in orders_to_confirm:
+            errors = order._get_expedient_missing_required_fields()
+            if errors:
+                raise ValidationError(
+                    _(
+                        "No se puede confirmar el expediente porque faltan campos obligatorios:\n\n%s"
                     )
+                    % "\n".join(errors)
+                )
 
         # Filtrar líneas que no cumplan la regla antes de confirmar
-        for order in self:
+        for order in orders_to_confirm:
             if not order.sale_order_template_id:
                 continue
 
@@ -1181,12 +1203,12 @@ class SaleOrder(models.Model):
                 )
                 lines_to_remove.unlink()
 
-        self._create_applicable_template_lines()
-        self._recompute_template_prices()
+        orders_to_confirm._create_applicable_template_lines()
+        orders_to_confirm._recompute_template_prices()
 
         # Para expedientes prepagados, SIEMPRE confirmar sin validaciones
-        pre_paid_orders = self.filtered(lambda o: o.expedient_type == "pre_paid")
-        regular_orders = self - pre_paid_orders
+        pre_paid_orders = orders_to_confirm.filtered(lambda o: o.expedient_type == "pre_paid")
+        regular_orders = orders_to_confirm - pre_paid_orders
 
         result = True
 
@@ -1493,8 +1515,12 @@ class SaleOrder(models.Model):
                     message_type="notification",
                     subtype_xmlid="mail.mt_note",
                 )
+            self._auto_confirm_after_write()
             return result
-        return super().write(vals)
+
+        result = super().write(vals)
+        self._auto_confirm_after_write()
+        return result
 
     @api.constrains("parts_involved", "account_numbers")
     def _check_positive_values(self):
