@@ -15,6 +15,10 @@ from odoo.exceptions import UserError
 
 
 _logger = logging.getLogger(__name__)
+_XML_NS = {
+    "main": "http://schemas.openxmlformats.org/spreadsheetml/2006/main",
+    "rel": "http://schemas.openxmlformats.org/officeDocument/2006/relationships",
+}
 _UINT8 = struct.Struct("<B")
 _INT32 = struct.Struct("<i")
 _UINT32 = struct.Struct("<I")
@@ -215,7 +219,17 @@ class ImportExpedientExcel(models.TransientModel):
 
     def _load_excel_sheet(self, excel_data):
         if zipfile.is_zipfile(io.BytesIO(excel_data)):
-            return self._load_xlsb_sheet(excel_data)
+            with zipfile.ZipFile(io.BytesIO(excel_data), "r") as workbook_zip:
+                archive_names = set(workbook_zip.namelist())
+                if "xl/workbook.bin" in archive_names:
+                    return self._load_xlsb_sheet_from_zip(workbook_zip)
+                if "xl/workbook.xml" in archive_names:
+                    return self._load_xlsx_sheet_from_zip(workbook_zip)
+                raise UserError(
+                    _(
+                        "El archivo Excel comprimido no contiene una estructura compatible (.xlsb/.xlsx)."
+                    )
+                )
         return self._load_xls_sheet(excel_data)
 
     def _load_xls_sheet(self, excel_data):
@@ -230,10 +244,22 @@ class ImportExpedientExcel(models.TransientModel):
 
     def _load_xlsb_sheet(self, excel_data):
         with zipfile.ZipFile(io.BytesIO(excel_data), "r") as workbook_zip:
-            shared_strings = self._read_xlsb_shared_strings(workbook_zip)
-            sheet_path = self._get_first_xlsb_sheet_path(workbook_zip)
-            rows = self._read_xlsb_rows(workbook_zip, sheet_path, shared_strings)
+            return self._load_xlsb_sheet_from_zip(workbook_zip)
+
+    def _load_xlsb_sheet_from_zip(self, workbook_zip):
+        shared_strings = self._read_xlsb_shared_strings(workbook_zip)
+        sheet_path = self._get_first_xlsb_sheet_path(workbook_zip)
+        rows = self._read_xlsb_rows(workbook_zip, sheet_path, shared_strings)
         return ImportedExcelSheet(rows, self._convert_xlsb_date, "xlsb")
+
+    def _load_xlsx_sheet_from_zip(self, workbook_zip):
+        shared_strings = self._read_xlsx_shared_strings(workbook_zip)
+        sheet_path, uses_1904_dates = self._get_first_xlsx_sheet_path(workbook_zip)
+        rows = self._read_xlsx_rows(workbook_zip, sheet_path, shared_strings)
+        date_converter = (
+            self._convert_xlsx_1904_date if uses_1904_dates else self._convert_xlsb_date
+        )
+        return ImportedExcelSheet(rows, date_converter, "xlsx")
 
     def _read_xlsb_shared_strings(self, workbook_zip):
         try:
@@ -273,6 +299,49 @@ class ImportExpedientExcel(models.TransientModel):
             )
 
         raise UserError(_("No se ha encontrado ninguna hoja en el archivo Excel binario."))
+
+    def _read_xlsx_shared_strings(self, workbook_zip):
+        try:
+            shared_strings_root = ET.fromstring(workbook_zip.read("xl/sharedStrings.xml"))
+        except KeyError:
+            return []
+
+        shared_strings = []
+        for string_item in shared_strings_root.findall("main:si", _XML_NS):
+            text_parts = [
+                text_node.text or ""
+                for text_node in string_item.findall(".//main:t", _XML_NS)
+            ]
+            shared_strings.append("".join(text_parts))
+        return shared_strings
+
+    def _get_first_xlsx_sheet_path(self, workbook_zip):
+        relationships_root = ET.fromstring(workbook_zip.read("xl/_rels/workbook.xml.rels"))
+        relationships = {
+            relation.attrib["Id"]: relation.attrib["Target"]
+            for relation in relationships_root
+        }
+
+        workbook_root = ET.fromstring(workbook_zip.read("xl/workbook.xml"))
+        workbook_props = workbook_root.find("main:workbookPr", _XML_NS)
+        uses_1904_dates = workbook_props is not None and workbook_props.attrib.get(
+            "date1904"
+        ) in ("1", "true", "True")
+
+        for sheet_node in workbook_root.findall("main:sheets/main:sheet", _XML_NS):
+            relation_id = sheet_node.attrib.get(
+                "{http://schemas.openxmlformats.org/officeDocument/2006/relationships}id"
+            )
+            if not relation_id or relation_id not in relationships:
+                continue
+            return (
+                posixpath.normpath(
+                    posixpath.join("xl", relationships[relation_id].lstrip("/"))
+                ),
+                uses_1904_dates,
+            )
+
+        raise UserError(_("No se ha encontrado ninguna hoja en el archivo Excel OpenXML."))
 
     def _read_xlsb_rows(self, workbook_zip, sheet_path, shared_strings):
         sheet_data = workbook_zip.read(sheet_path)
@@ -330,6 +399,40 @@ class ImportExpedientExcel(models.TransientModel):
             rows.append(row_values)
         return rows
 
+    def _read_xlsx_rows(self, workbook_zip, sheet_path, shared_strings):
+        worksheet_root = ET.fromstring(workbook_zip.read(sheet_path))
+        row_map = {}
+        highest_column = -1
+        highest_row = -1
+
+        for row_node in worksheet_root.findall("main:sheetData/main:row", _XML_NS):
+            row_index = int(row_node.attrib.get("r", "1")) - 1
+            highest_row = max(highest_row, row_index)
+            row_values = row_map.setdefault(row_index, {})
+
+            for cell_node in row_node.findall("main:c", _XML_NS):
+                cell_ref = cell_node.attrib.get("r", "")
+                column_index = self._xlsx_column_reference_to_index(cell_ref)
+                if column_index < 0:
+                    continue
+
+                row_values[column_index] = self._read_xlsx_cell_value(
+                    cell_node,
+                    shared_strings,
+                )
+                highest_column = max(highest_column, column_index)
+
+        if not row_map:
+            return []
+
+        rows = []
+        for row_index in range(highest_row + 1):
+            row_values = [False] * (highest_column + 1)
+            for column_index, value in row_map.get(row_index, {}).items():
+                row_values[column_index] = value
+            rows.append(row_values)
+        return rows
+
     def _read_xlsb_cell_value(self, record_id, payload, shared_strings):
         reader = XlsbPayloadReader(payload)
         column_index = reader.read_uint32()
@@ -361,6 +464,52 @@ class ImportExpedientExcel(models.TransientModel):
 
         return column_index, value
 
+    def _read_xlsx_cell_value(self, cell_node, shared_strings):
+        cell_type = cell_node.attrib.get("t")
+        value_node = cell_node.find("main:v", _XML_NS)
+
+        if cell_type == "inlineStr":
+            text_parts = [
+                text_node.text or ""
+                for text_node in cell_node.findall(".//main:t", _XML_NS)
+            ]
+            return "".join(text_parts) or False
+
+        if cell_type == "s":
+            if value_node is None or value_node.text is None:
+                return False
+            string_index = int(value_node.text)
+            return (
+                shared_strings[string_index]
+                if 0 <= string_index < len(shared_strings)
+                else False
+            )
+
+        if cell_type == "b":
+            return value_node is not None and value_node.text == "1"
+
+        if cell_type == "str":
+            return value_node.text if value_node is not None else False
+
+        if value_node is None or value_node.text in (None, ""):
+            return False
+
+        raw_value = value_node.text
+        try:
+            return float(raw_value)
+        except (TypeError, ValueError):
+            return raw_value
+
+    def _xlsx_column_reference_to_index(self, cell_reference):
+        letters = "".join(char for char in cell_reference if char.isalpha()).upper()
+        if not letters:
+            return -1
+
+        column_index = 0
+        for letter in letters:
+            column_index = (column_index * 26) + (ord(letter) - ord("A") + 1)
+        return column_index - 1
+
     def _convert_xlsb_date(self, value):
         if not isinstance(value, (int, float)):
             return None
@@ -371,6 +520,14 @@ class ImportExpedientExcel(models.TransientModel):
             return datetime(1900, 1, 1, 0, 0, 0) + timedelta(seconds=seconds)
         if whole_days >= 61:
             return base_date + timedelta(days=whole_days - 1, seconds=seconds)
+        return base_date + timedelta(days=whole_days, seconds=seconds)
+
+    def _convert_xlsx_1904_date(self, value):
+        if not isinstance(value, (int, float)):
+            return None
+        base_date = datetime(1904, 1, 1, 0, 0, 0)
+        whole_days = int(value)
+        seconds = round((value % 1) * 24 * 60 * 60)
         return base_date + timedelta(days=whole_days, seconds=seconds)
 
     def _normalize_text(self, value):

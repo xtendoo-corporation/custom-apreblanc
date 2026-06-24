@@ -1,4 +1,6 @@
 import base64
+import io
+import zipfile
 from datetime import datetime
 from unittest.mock import patch
 
@@ -39,6 +41,67 @@ class TestImportExpedientExcel(ExpedientBaseCase):
             }
         )
 
+    def _build_xlsx_bytes(self):
+        buffer = io.BytesIO()
+        with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as archive:
+            archive.writestr(
+                "[Content_Types].xml",
+                """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                    <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                    <Default Extension="xml" ContentType="application/xml"/>
+                    <Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>
+                    <Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>
+                    <Override PartName="/xl/sharedStrings.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sharedStrings+xml"/>
+                </Types>""",
+            )
+            archive.writestr(
+                "xl/workbook.xml",
+                """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+                <workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"
+                          xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+                    <sheets>
+                        <sheet name="Hoja1" sheetId="1" r:id="rId1"/>
+                    </sheets>
+                </workbook>""",
+            )
+            archive.writestr(
+                "xl/_rels/workbook.xml.rels",
+                """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                    <Relationship Id="rId1"
+                        Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet"
+                        Target="worksheets/sheet1.xml"/>
+                </Relationships>""",
+            )
+            archive.writestr(
+                "xl/sharedStrings.xml",
+                """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+                <sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" count="4" uniqueCount="4">
+                    <si><t>ID Oferta</t></si>
+                    <si><t>MACRO</t></si>
+                    <si><t>P-XML-001</t></si>
+                    <si><t>C2-XML-0001</t></si>
+                </sst>""",
+            )
+            archive.writestr(
+                "xl/worksheets/sheet1.xml",
+                """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+                <worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+                    <sheetData>
+                        <row r="1">
+                            <c r="F1" t="s"><v>0</v></c>
+                            <c r="G1" t="s"><v>1</v></c>
+                        </row>
+                        <row r="2">
+                            <c r="F2" t="s"><v>2</v></c>
+                            <c r="G2" t="s"><v>3</v></c>
+                        </row>
+                    </sheetData>
+                </worksheet>""",
+            )
+        return buffer.getvalue()
+
     def test_load_excel_sheet_supports_xlsb_with_xls_extension(self):
         file_path = get_module_resource(
             "apreblanc_sale_order_expedient", "data", "solvia_caixa_pre.xls"
@@ -53,6 +116,17 @@ class TestImportExpedientExcel(ExpedientBaseCase):
         self.assertEqual(sheet.cell_value(0, 5), "ID Oferta")
         self.assertEqual(sheet.cell_value(1, 5), "P-314008")
         self.assertEqual(sheet.cell_value(1, 6), "C2-02173-0006")
+
+    def test_load_excel_sheet_supports_xlsx_openxml_archives(self):
+        excel_data = self._build_xlsx_bytes()
+
+        wizard = self._create_wizard(excel_data)
+        sheet = wizard._load_excel_sheet(excel_data)
+
+        self.assertEqual(sheet.source_format, "xlsx")
+        self.assertEqual(sheet.cell_value(0, 5), "ID Oferta")
+        self.assertEqual(sheet.cell_value(1, 5), "P-XML-001")
+        self.assertEqual(sheet.cell_value(1, 6), "C2-XML-0001")
 
     def test_action_import_maps_new_excel_columns(self):
         wizard = self._create_wizard()
