@@ -26,6 +26,17 @@
         </field>
     </record>
 
+    <record id="view_order_tree_sub_cartera" model="ir.ui.view">
+        <field name="name">sale.order.tree.sub.cartera</field>
+        <field name="model">sale.order</field>
+        <field name="inherit_id" ref="sale.view_order_tree" />
+        <field name="arch" type="xml">
+            <field name="state" position="after">
+                <field name="sub_cartera_id" optional="show" />
+            </field>
+        </field>
+    </record>
+
     <!-- Update the form view to show date_end instead of deadline -->
     <record id="view_order_form_expedient" model="ir.ui.view">
         <field name="name">sale.order.form.expedient</field>

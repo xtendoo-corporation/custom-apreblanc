@@ -31,6 +31,7 @@
             <!-- Agregar opciones de agrupación al grupo existente -->
             <group position="inside">
                 <filter string="ID de Cliente" name="client" domain="[]" context="{'group_by': 'client_id'}"/>
+                <filter string="Subcartera" name="sub_cartera" domain="[]" context="{'group_by': 'sub_cartera_id'}"/>
                 <filter string="Estado del Expediente" name="expedient_state_group" domain="[]" context="{'group_by': 'expedient_state'}"/>
                 <filter string="Gestor de Expediente" name="expedient_manager" domain="[]" context="{'group_by': 'expedient_manager_id'}"/>
                 <filter string="Tipo de Expediente" name="expedient_type_group" domain="[]" context="{'group_by': 'expedient_type'}"/>
