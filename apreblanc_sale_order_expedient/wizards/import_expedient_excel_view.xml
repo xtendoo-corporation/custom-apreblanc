@@ -27,9 +27,9 @@
                         <div class="alert alert-info" role="alert">
                             <p><strong>Instrucciones:</strong></p>
                             <p>1. Seleccione un archivo Excel que contenga los datos de expedientes.</p>
-                            <p>2. El archivo puede ser un Excel clásico o un Excel binario `.xlsb` aunque llegue con extensión `.xls`.</p>
-                            <p>3. Se importan las columnas B (Cliente), C (Cartera), F (ID Oferta), G (MACRO), I/J/L para fechas y K (Estado).</p>
-                            <p>4. La combinación de ID Oferta y MACRO debe ser única en el sistema.</p>
+                            <p>2. El archivo debe tener las columnas F (Client ID) y G (Expedient Number) que forman la clave primaria compuesta.</p>
+                            <p>3. La combinación de Client ID y Expedient Number debe ser única en el sistema.</p>
+                            <p>4. La columna 2 se utilizará como nombre del cliente.</p>
                         </div>
                     </div>
                     <div invisible="state != 'done'">
@@ -72,17 +72,12 @@
         <field name="target">new</field>
     </record>
 
-    <menuitem id="menu_sale_apreblanc_root"
-              name="Apreblanc"
-              parent="sale.sale_menu_root"
-              sequence="81"/>
-
     <!-- Elemento de menú para acceder al asistente -->
     <menuitem id="menu_import_expedient_excel"
               name="Importar Expedientes Excel"
-              parent="menu_sale_apreblanc_root"
+              parent="sale.menu_sale_config"
               action="action_import_expedient_excel"
-              sequence="10"/>
+              sequence="100"/>
 
     <!-- Botón en la vista de lista de órdenes de venta -->
     <record id="action_sale_order_import_excel_button" model="ir.actions.act_window">

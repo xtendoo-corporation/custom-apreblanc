@@ -1,0 +1,90 @@
+<odoo>
+
+    <!-- ========================= -->
+    <!-- TREE VIEW -->
+    <!-- ========================= -->
+    <record id="view_apreblanc_sale_order_chatter_report_tree" model="ir.ui.view">
+        <field name="name">apreblanc.sale.order.chatter.report.tree</field>
+        <field name="model">apreblanc.sale.order.chatter.report</field>
+        <field name="arch" type="xml">
+
+            <tree string="Sale Order Chatter Messages" default_order="date desc">
+
+                <field name="order_id" string="Expediente"/>
+                <field name="author_id" string="Autor"/>
+                <field name="date" string="Fecha"/>
+                <field name="body" widget="html" string="Mensaje"/>
+
+            </tree>
+
+        </field>
+    </record>
+
+
+    <!-- ========================= -->
+    <!-- SEARCH VIEW (FILTROS + GROUP BY) -->
+    <!-- ========================= -->
+    <record id="view_apreblanc_sale_order_chatter_report_search" model="ir.ui.view">
+        <field name="name">apreblanc.sale.order.chatter.report.search</field>
+        <field name="model">apreblanc.sale.order.chatter.report</field>
+        <field name="arch" type="xml">
+
+            <search>
+
+                <!-- FILTROS BÁSICOS -->
+                <field name="order_id"/>
+                <field name="author_id"/>
+                <field name="date"/>
+                <field name="body"/>
+
+                <!-- FILTROS RÁPIDOS -->
+                <filter string="Últimos 7 días"
+                        name="last_7_days"
+                        domain="[( 'date','>=',(context_today() - relativedelta(days=7)) )]"/>
+
+                <filter string="Hoy"
+                        name="today"
+                        domain="[( 'date','>=',context_today() )]"/>
+
+                <!-- GROUP BY -->
+                <group expand="1" string="Agrupar por">
+
+                    <filter string="Pedido"
+                            name="group_by_order"
+                            context="{'group_by':'order_id'}"/>
+
+                    <filter string="Autor"
+                            name="group_by_author"
+                            context="{'group_by':'author_id'}"/>
+
+                    <filter string="Fecha"
+                            name="group_by_date"
+                            context="{'group_by':'date'}"/>
+
+                </group>
+
+            </search>
+
+        </field>
+    </record>
+
+
+    <!-- ========================= -->
+    <!-- ACTION -->
+    <!-- ========================= -->
+    <record id="action_apreblanc_sale_order_chatter_report" model="ir.actions.act_window">
+        <field name="name">Análisis de expedientes</field>
+        <field name="res_model">apreblanc.sale.order.chatter.report</field>
+        <field name="view_mode">tree</field>
+
+        <field name="search_view_id" ref="view_apreblanc_sale_order_chatter_report_search"/>
+
+        <field name="context">
+            {
+                'search_default_group_by_order': 1
+            }
+        </field>
+
+    </record>
+
+</odoo>

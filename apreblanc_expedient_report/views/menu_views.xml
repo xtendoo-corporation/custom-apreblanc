@@ -1,0 +1,23 @@
+<odoo>
+
+<!--    <menuitem id="menu_expedient_root"-->
+<!--              name="Expedients"-->
+<!--              sequence="10"/>-->
+
+<!--    <menuitem id="menu_expedient_report"-->
+<!--              name="Analysis"-->
+<!--              parent="sale.menu_sale_report"-->
+<!--              action="action_expedient_report"-->
+<!--              sequence="10"/>-->
+
+<!--        <menuitem id="menu_sale_order_chatter_direct_root"-->
+<!--              name="Chatter"-->
+<!--              sequence="10"/>-->
+
+    <menuitem id="menu_sale_order_chatter_direct"
+              name="Análisis de Expedientes"
+              parent="sale.menu_sale_report"
+              action="action_apreblanc_sale_order_chatter_report"
+              sequence="10"/>
+
+</odoo>

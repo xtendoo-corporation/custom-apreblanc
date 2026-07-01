@@ -7,17 +7,6 @@ from odoo import fields, models
 class ResPartner(models.Model):
     _inherit = "res.partner"
 
-    effective_pricelist_id = fields.Many2one(
-        comodel_name="product.pricelist",
-        string="Tarifa efectiva",
-        related="property_product_pricelist",
-        readonly=False,
-        help=(
-            "Campo de compatibilidad para vistas heredadas que todavía "
-            "referencian la tarifa efectiva del contacto."
-        ),
-    )
-
     is_study_entity = fields.Boolean(
         string="Persona/Entidad a Estudiar",
         default=False,
@@ -40,3 +29,4 @@ class ResPartner(models.Model):
             "compañías en el contexto de entidades a estudiar."
         ),
     )
+

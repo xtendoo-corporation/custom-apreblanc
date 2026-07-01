@@ -1,695 +1,69 @@
 # -*- coding: utf-8 -*-
+from odoo import api, fields, models, _
+from odoo.exceptions import UserError, ValidationError
 import base64
 import io
 import logging
-import posixpath
-import struct
-import xml.etree.ElementTree as ET
-import zipfile
-from datetime import datetime, timedelta
-
 import xlrd
 
-from odoo import fields, models, _
-from odoo.exceptions import UserError
-
-
 _logger = logging.getLogger(__name__)
-_XML_NS = {
-    "main": "http://schemas.openxmlformats.org/spreadsheetml/2006/main",
-    "rel": "http://schemas.openxmlformats.org/officeDocument/2006/relationships",
-}
-_UINT8 = struct.Struct("<B")
-_INT32 = struct.Struct("<i")
-_UINT32 = struct.Struct("<I")
-_DOUBLE = struct.Struct("<d")
-
-_XLSB_RECORD_ROW = 0x0000
-_XLSB_RECORD_BLANK = 0x0001
-_XLSB_RECORD_NUM = 0x0002
-_XLSB_RECORD_BOOLERR = 0x0003
-_XLSB_RECORD_BOOL = 0x0004
-_XLSB_RECORD_FLOAT = 0x0005
-_XLSB_RECORD_STRING = 0x0007
-_XLSB_RECORD_FORMULA_STRING = 0x0008
-_XLSB_RECORD_FORMULA_FLOAT = 0x0009
-_XLSB_RECORD_FORMULA_BOOL = 0x000A
-_XLSB_RECORD_FORMULA_BOOLERR = 0x000B
-_XLSB_RECORD_SHEET = 0x019C
-_XLSB_RECORD_SHEETDATA = 0x0191
-_XLSB_RECORD_SHEETDATA_END = 0x0192
-_XLSB_RECORD_DIMENSION = 0x0194
-_XLSB_RECORD_SHARED_STRING = 0x0013
-_XLSB_RECORD_SHARED_STRINGS_END = 0x01A0
-
-_XLSB_CELL_RECORDS = {
-    _XLSB_RECORD_BLANK,
-    _XLSB_RECORD_NUM,
-    _XLSB_RECORD_BOOLERR,
-    _XLSB_RECORD_BOOL,
-    _XLSB_RECORD_FLOAT,
-    _XLSB_RECORD_STRING,
-    _XLSB_RECORD_FORMULA_STRING,
-    _XLSB_RECORD_FORMULA_FLOAT,
-    _XLSB_RECORD_FORMULA_BOOL,
-    _XLSB_RECORD_FORMULA_BOOLERR,
-}
-
-
-class XlsbPayloadReader:
-    def __init__(self, payload):
-        self._buffer = io.BytesIO(payload)
-
-    def skip(self, length):
-        self._buffer.seek(length, io.SEEK_CUR)
-
-    def read_byte(self):
-        data = self._buffer.read(1)
-        if not data:
-            return None
-        return _UINT8.unpack(data)[0]
-
-    def read_uint32(self):
-        data = self._buffer.read(4)
-        if len(data) < 4:
-            return None
-        return _UINT32.unpack(data)[0]
-
-    def read_double(self):
-        data = self._buffer.read(8)
-        if len(data) < 8:
-            return None
-        return _DOUBLE.unpack(data)[0]
-
-    def read_rk_number(self):
-        data = self._buffer.read(4)
-        if len(data) < 4:
-            return None
-        raw_value = _INT32.unpack(data)[0]
-        if raw_value & 0x02:
-            value = float(raw_value >> 2)
-        else:
-            value = _DOUBLE.unpack(
-                b"\x00\x00\x00\x00" + _UINT32.pack(raw_value & 0xFFFFFFFC)
-            )[0]
-        if raw_value & 0x01:
-            value /= 100
-        return value
-
-    def read_wide_string(self):
-        length = self.read_uint32()
-        if length is None:
-            return None
-        raw_value = self._buffer.read(length * 2)
-        if len(raw_value) < length * 2:
-            return None
-        return raw_value.decode("utf-16le", errors="replace")
-
-
-class XlsbRecordStream:
-    def __init__(self, raw_data):
-        self._buffer = io.BytesIO(raw_data)
-
-    def __iter__(self):
-        return self
-
-    def __next__(self):
-        record_id = self._read_record_id()
-        if record_id is None:
-            raise StopIteration
-        record_length = self._read_record_length()
-        if record_length is None:
-            raise StopIteration
-        payload = self._buffer.read(record_length)
-        return record_id, payload
-
-    def _read_record_id(self):
-        value = 0
-        for shift in range(0, 32, 8):
-            byte = self._buffer.read(1)
-            if not byte:
-                return None
-            byte = _UINT8.unpack(byte)[0]
-            value |= byte << shift
-            if byte & 0x80 == 0:
-                return value
-        return value
-
-    def _read_record_length(self):
-        value = 0
-        for shift in range(0, 28, 7):
-            byte = self._buffer.read(1)
-            if not byte:
-                return None
-            byte = _UINT8.unpack(byte)[0]
-            value |= (byte & 0x7F) << shift
-            if byte & 0x80 == 0:
-                return value
-        return value
-
-
-class ImportedExcelSheet:
-    def __init__(self, rows, date_converter, source_format):
-        self._rows = rows
-        self._date_converter = date_converter
-        self.source_format = source_format
-        self.nrows = len(rows)
-        self.ncols = max((len(row) for row in rows), default=0)
-
-    def cell_value(self, row_index, column_index):
-        row = self._rows[row_index]
-        return row[column_index] if column_index < len(row) else False
-
-    def convert_date(self, value):
-        return self._date_converter(value)
 
 
 class ImportExpedientExcel(models.TransientModel):
-    _name = "import.expedient.excel"
-    _description = "Asistente para importar expedientes desde Excel"
+    _name = 'import.expedient.excel'
+    _description = 'Asistente para importar expedientes desde Excel'
 
-    _STATE_MAPPING = {
-        "creada": "creada",
-        "pendiente": "pendiente_documentacion",
-        "pendiente documentacion": "pendiente_documentacion",
-        "pendiente_documentacion": "pendiente_documentacion",
-        "pte doc adicional": "pendiente_documentacion",
-        "pte. doc. adicional": "pendiente_documentacion",
-        "aprobada": "aprobada",
-        "autorizada": "aprobada",
-        "rechazada": "rechazada",
-        "cancelada": "cancelada",
-        "cn": "cancelada",
-    }
+    excel_file = fields.Binary(string='Archivo Excel', required=True)
+    file_name = fields.Char(string='Nombre del archivo')
 
-    excel_file = fields.Binary(string="Archivo Excel", required=True)
-    file_name = fields.Char(string="Nombre del archivo")
+    # Campo para seleccionar el cliente al que se asignarán todos los expedientes
     partner_id = fields.Many2one(
-        "res.partner",
-        string="Cliente",
+        'res.partner',
+        string='Cliente',
         required=True,
-        help="Cliente al que se asignarán todos los expedientes importados",
+        help='Cliente al que se asignarán todos los expedientes importados'
     )
-    expedient_type = fields.Selection(
-        [
-            ("post_paid", "Post-pagado"),
-            ("pre_paid", "Pre-pagado"),
-        ],
-        string="Tipo de Expediente",
+
+    # Opciones de importación
+    expedient_type = fields.Selection([
+        ('post_paid', 'Post-pagado'),
+        ('pre_paid', 'Pre-pagado'),
+    ],
+        string='Tipo de Expediente',
         required=True,
-        default="post_paid",
-        help="Seleccione el tipo de expediente que desea importar",
+        default='post_paid',
+        help='Seleccione el tipo de expediente que desea importar'
     )
+
+    # Barra de progreso
     progress = fields.Float(string="Progreso", default=0.0, readonly=True)
     progress_text = fields.Char(string="Estado de la importación", readonly=True)
-    import_total = fields.Integer(string="Total de registros", readonly=True)
-    import_created = fields.Integer(string="Registros creados", readonly=True)
-    import_updated = fields.Integer(string="Registros actualizados", readonly=True)
-    import_skipped = fields.Integer(string="Registros omitidos", readonly=True)
-    import_failed = fields.Integer(string="Registros fallidos", readonly=True)
-    import_log = fields.Text(string="Log de importación", readonly=True)
-    state = fields.Selection(
-        [
-            ("draft", "Borrador"),
-            ("done", "Importado"),
-        ],
-        default="draft",
-        string="Estado",
+
+    # Resultados
+    import_total = fields.Integer(string='Total de registros', readonly=True)
+    import_created = fields.Integer(string='Registros creados', readonly=True)
+    import_updated = fields.Integer(string='Registros actualizados', readonly=True)
+    import_skipped = fields.Integer(string='Registros omitidos', readonly=True)
+    import_failed = fields.Integer(string='Registros fallidos', readonly=True)
+
+    # Log de importación
+    import_log = fields.Text(string='Log de importación', readonly=True)
+
+    state = fields.Selection([
+        ('draft', 'Borrador'),
+        ('done', 'Importado')
+    ],
+        default='draft',
+        string='Estado'
     )
 
-    def _load_excel_sheet(self, excel_data):
-        if zipfile.is_zipfile(io.BytesIO(excel_data)):
-            with zipfile.ZipFile(io.BytesIO(excel_data), "r") as workbook_zip:
-                archive_names = set(workbook_zip.namelist())
-                if "xl/workbook.bin" in archive_names:
-                    return self._load_xlsb_sheet_from_zip(workbook_zip)
-                if "xl/workbook.xml" in archive_names:
-                    return self._load_xlsx_sheet_from_zip(workbook_zip)
-                raise UserError(
-                    _(
-                        "El archivo Excel comprimido no contiene una estructura compatible (.xlsb/.xlsx)."
-                    )
-                )
-        return self._load_xls_sheet(excel_data)
-
-    def _load_xls_sheet(self, excel_data):
-        workbook = xlrd.open_workbook(file_contents=excel_data)
-        sheet = workbook.sheet_by_index(0)
-        rows = [sheet.row_values(row_index) for row_index in range(sheet.nrows)]
-        return ImportedExcelSheet(
-            rows,
-            lambda value: xlrd.xldate.xldate_as_datetime(value, workbook.datemode),
-            "xls",
-        )
-
-    def _load_xlsb_sheet(self, excel_data):
-        with zipfile.ZipFile(io.BytesIO(excel_data), "r") as workbook_zip:
-            return self._load_xlsb_sheet_from_zip(workbook_zip)
-
-    def _load_xlsb_sheet_from_zip(self, workbook_zip):
-        shared_strings = self._read_xlsb_shared_strings(workbook_zip)
-        sheet_path = self._get_first_xlsb_sheet_path(workbook_zip)
-        rows = self._read_xlsb_rows(workbook_zip, sheet_path, shared_strings)
-        return ImportedExcelSheet(rows, self._convert_xlsb_date, "xlsb")
-
-    def _load_xlsx_sheet_from_zip(self, workbook_zip):
-        shared_strings = self._read_xlsx_shared_strings(workbook_zip)
-        sheet_path, uses_1904_dates = self._get_first_xlsx_sheet_path(workbook_zip)
-        rows = self._read_xlsx_rows(workbook_zip, sheet_path, shared_strings)
-        date_converter = (
-            self._convert_xlsx_1904_date if uses_1904_dates else self._convert_xlsb_date
-        )
-        return ImportedExcelSheet(rows, date_converter, "xlsx")
-
-    def _read_xlsb_shared_strings(self, workbook_zip):
-        try:
-            shared_strings_data = workbook_zip.read("xl/sharedStrings.bin")
-        except KeyError:
-            return []
-
-        shared_strings = []
-        for record_id, payload in XlsbRecordStream(shared_strings_data):
-            if record_id == _XLSB_RECORD_SHARED_STRING:
-                reader = XlsbPayloadReader(payload)
-                reader.skip(1)
-                shared_strings.append(reader.read_wide_string())
-            elif record_id == _XLSB_RECORD_SHARED_STRINGS_END:
-                break
-        return shared_strings
-
-    def _get_first_xlsb_sheet_path(self, workbook_zip):
-        relationships_root = ET.fromstring(workbook_zip.read("xl/_rels/workbook.bin.rels"))
-        relationships = {
-            relation.attrib["Id"]: relation.attrib["Target"]
-            for relation in relationships_root
-        }
-
-        for record_id, payload in XlsbRecordStream(workbook_zip.read("xl/workbook.bin")):
-            if record_id != _XLSB_RECORD_SHEET:
-                continue
-
-            reader = XlsbPayloadReader(payload)
-            reader.skip(4)
-            reader.read_uint32()
-            relation_id = reader.read_wide_string()
-            if relation_id not in relationships:
-                continue
-            return posixpath.normpath(
-                posixpath.join("xl", relationships[relation_id].lstrip("/"))
-            )
-
-        raise UserError(_("No se ha encontrado ninguna hoja en el archivo Excel binario."))
-
-    def _read_xlsx_shared_strings(self, workbook_zip):
-        try:
-            shared_strings_root = ET.fromstring(workbook_zip.read("xl/sharedStrings.xml"))
-        except KeyError:
-            return []
-
-        shared_strings = []
-        for string_item in shared_strings_root.findall("main:si", _XML_NS):
-            text_parts = [
-                text_node.text or ""
-                for text_node in string_item.findall(".//main:t", _XML_NS)
-            ]
-            shared_strings.append("".join(text_parts))
-        return shared_strings
-
-    def _get_first_xlsx_sheet_path(self, workbook_zip):
-        relationships_root = ET.fromstring(workbook_zip.read("xl/_rels/workbook.xml.rels"))
-        relationships = {
-            relation.attrib["Id"]: relation.attrib["Target"]
-            for relation in relationships_root
-        }
-
-        workbook_root = ET.fromstring(workbook_zip.read("xl/workbook.xml"))
-        workbook_props = workbook_root.find("main:workbookPr", _XML_NS)
-        uses_1904_dates = workbook_props is not None and workbook_props.attrib.get(
-            "date1904"
-        ) in ("1", "true", "True")
-
-        for sheet_node in workbook_root.findall("main:sheets/main:sheet", _XML_NS):
-            relation_id = sheet_node.attrib.get(
-                "{http://schemas.openxmlformats.org/officeDocument/2006/relationships}id"
-            )
-            if not relation_id or relation_id not in relationships:
-                continue
-            return (
-                posixpath.normpath(
-                    posixpath.join("xl", relationships[relation_id].lstrip("/"))
-                ),
-                uses_1904_dates,
-            )
-
-        raise UserError(_("No se ha encontrado ninguna hoja en el archivo Excel OpenXML."))
-
-    def _read_xlsb_rows(self, workbook_zip, sheet_path, shared_strings):
-        sheet_data = workbook_zip.read(sheet_path)
-        row_map = {}
-        current_row = None
-        detected_columns = 0
-        highest_column = -1
-        inside_sheet_data = False
-
-        for record_id, payload in XlsbRecordStream(sheet_data):
-            if record_id == _XLSB_RECORD_DIMENSION:
-                reader = XlsbPayloadReader(payload)
-                reader.read_uint32()
-                reader.read_uint32()
-                first_column = reader.read_uint32()
-                last_column = reader.read_uint32()
-                if first_column is not None and last_column is not None:
-                    detected_columns = (last_column - first_column) + 1
-                continue
-
-            if record_id == _XLSB_RECORD_SHEETDATA:
-                inside_sheet_data = True
-                continue
-
-            if record_id == _XLSB_RECORD_SHEETDATA_END:
-                break
-
-            if not inside_sheet_data:
-                continue
-
-            if record_id == _XLSB_RECORD_ROW:
-                current_row = XlsbPayloadReader(payload).read_uint32()
-                row_map.setdefault(current_row, {})
-                continue
-
-            if record_id in _XLSB_CELL_RECORDS and current_row is not None:
-                column_index, value = self._read_xlsb_cell_value(
-                    record_id,
-                    payload,
-                    shared_strings,
-                )
-                row_map.setdefault(current_row, {})[column_index] = value
-                highest_column = max(highest_column, column_index)
-
-        if not row_map:
-            return []
-
-        total_columns = max(detected_columns, highest_column + 1)
-        total_rows = max(row_map) + 1
-        rows = []
-        for row_index in range(total_rows):
-            row_values = [False] * total_columns
-            for column_index, value in row_map.get(row_index, {}).items():
-                row_values[column_index] = value
-            rows.append(row_values)
-        return rows
-
-    def _read_xlsx_rows(self, workbook_zip, sheet_path, shared_strings):
-        worksheet_root = ET.fromstring(workbook_zip.read(sheet_path))
-        row_map = {}
-        highest_column = -1
-        highest_row = -1
-
-        for row_node in worksheet_root.findall("main:sheetData/main:row", _XML_NS):
-            row_index = int(row_node.attrib.get("r", "1")) - 1
-            highest_row = max(highest_row, row_index)
-            row_values = row_map.setdefault(row_index, {})
-
-            for cell_node in row_node.findall("main:c", _XML_NS):
-                cell_ref = cell_node.attrib.get("r", "")
-                column_index = self._xlsx_column_reference_to_index(cell_ref)
-                if column_index < 0:
-                    continue
-
-                row_values[column_index] = self._read_xlsx_cell_value(
-                    cell_node,
-                    shared_strings,
-                )
-                highest_column = max(highest_column, column_index)
-
-        if not row_map:
-            return []
-
-        rows = []
-        for row_index in range(highest_row + 1):
-            row_values = [False] * (highest_column + 1)
-            for column_index, value in row_map.get(row_index, {}).items():
-                row_values[column_index] = value
-            rows.append(row_values)
-        return rows
-
-    def _read_xlsb_cell_value(self, record_id, payload, shared_strings):
-        reader = XlsbPayloadReader(payload)
-        column_index = reader.read_uint32()
-        reader.read_uint32()
-        value = False
-
-        if record_id == _XLSB_RECORD_NUM:
-            value = reader.read_rk_number()
-        elif record_id == _XLSB_RECORD_BOOLERR:
-            raw_value = reader.read_byte()
-            value = hex(raw_value) if raw_value is not None else False
-        elif record_id == _XLSB_RECORD_BOOL:
-            value = reader.read_byte() != 0
-        elif record_id == _XLSB_RECORD_FLOAT:
-            value = reader.read_double()
-        elif record_id == _XLSB_RECORD_STRING:
-            string_index = reader.read_uint32()
-            if string_index is not None and string_index < len(shared_strings):
-                value = shared_strings[string_index]
-        elif record_id == _XLSB_RECORD_FORMULA_STRING:
-            value = reader.read_wide_string()
-        elif record_id == _XLSB_RECORD_FORMULA_FLOAT:
-            value = reader.read_double()
-        elif record_id == _XLSB_RECORD_FORMULA_BOOL:
-            value = reader.read_byte() != 0
-        elif record_id == _XLSB_RECORD_FORMULA_BOOLERR:
-            raw_value = reader.read_byte()
-            value = hex(raw_value) if raw_value is not None else False
-
-        return column_index, value
-
-    def _read_xlsx_cell_value(self, cell_node, shared_strings):
-        cell_type = cell_node.attrib.get("t")
-        value_node = cell_node.find("main:v", _XML_NS)
-
-        if cell_type == "inlineStr":
-            text_parts = [
-                text_node.text or ""
-                for text_node in cell_node.findall(".//main:t", _XML_NS)
-            ]
-            return "".join(text_parts) or False
-
-        if cell_type == "s":
-            if value_node is None or value_node.text is None:
-                return False
-            string_index = int(value_node.text)
-            return (
-                shared_strings[string_index]
-                if 0 <= string_index < len(shared_strings)
-                else False
-            )
-
-        if cell_type == "b":
-            return value_node is not None and value_node.text == "1"
-
-        if cell_type == "str":
-            return value_node.text if value_node is not None else False
-
-        if value_node is None or value_node.text in (None, ""):
-            return False
-
-        raw_value = value_node.text
-        try:
-            return float(raw_value)
-        except (TypeError, ValueError):
-            return raw_value
-
-    def _xlsx_column_reference_to_index(self, cell_reference):
-        letters = "".join(char for char in cell_reference if char.isalpha()).upper()
-        if not letters:
-            return -1
-
-        column_index = 0
-        for letter in letters:
-            column_index = (column_index * 26) + (ord(letter) - ord("A") + 1)
-        return column_index - 1
-
-    def _convert_xlsb_date(self, value):
-        if not isinstance(value, (int, float)):
-            return None
-        base_date = datetime(1899, 12, 31, 0, 0, 0)
-        whole_days = int(value)
-        seconds = round((value % 1) * 24 * 60 * 60)
-        if whole_days == 0:
-            return datetime(1900, 1, 1, 0, 0, 0) + timedelta(seconds=seconds)
-        if whole_days >= 61:
-            return base_date + timedelta(days=whole_days - 1, seconds=seconds)
-        return base_date + timedelta(days=whole_days, seconds=seconds)
-
-    def _convert_xlsx_1904_date(self, value):
-        if not isinstance(value, (int, float)):
-            return None
-        base_date = datetime(1904, 1, 1, 0, 0, 0)
-        whole_days = int(value)
-        seconds = round((value % 1) * 24 * 60 * 60)
-        return base_date + timedelta(days=whole_days, seconds=seconds)
-
-    def _normalize_text(self, value):
-        if value in (False, None, ""):
-            return False
-        if isinstance(value, str):
-            normalized = " ".join(value.replace("\xa0", " ").split())
-            return normalized or False
-        if isinstance(value, float) and value.is_integer():
-            return str(int(value))
-        return str(value).strip() or False
-
-    def _normalize_identifier(self, value):
-        normalized = self._normalize_text(value)
-        return normalized or False
-
-    def _map_person_type(self, value):
-        person_type = self._normalize_text(value)
-        if not person_type:
-            return False
-        person_type = person_type.upper()
-        if person_type == "PF":
-            return "fisica"
-        if person_type == "PJ":
-            return "juridica"
-        return False
-
-    def _map_difficulty(self, value):
-        if value in (False, None, ""):
-            return False
-        if isinstance(value, (int, float)):
-            if int(value) == 1:
-                return "simple"
-            if int(value) == 2:
-                return "complex"
-            return False
-
-        difficulty = self._normalize_text(value)
-        if not difficulty:
-            return False
-        difficulty = difficulty.lower()
-        if "simple" in difficulty:
-            return "simple"
-        if "compl" in difficulty:
-            return "complex"
-        return False
-
-    def _map_state(self, value):
-        state = self._normalize_text(value)
-        if not state:
-            return False
-
-        state = state.lower()
-        if state in self._STATE_MAPPING:
-            return self._STATE_MAPPING[state]
-
-        for key, mapped_value in self._STATE_MAPPING.items():
-            if key in state:
-                return mapped_value
-        return False
-
-    def _resolve_study_partner(self, person_under_study, log_messages, row_number):
-        if not person_under_study:
-            return False
-
-        partner_model = self.env["res.partner"]
-        study_partner = partner_model.search(
-            [
-                ("name", "=", person_under_study),
-                ("is_study_entity", "=", True),
-            ],
-            limit=1,
-        )
-        if not study_partner:
-            study_partner = partner_model.create(
-                {
-                    "name": person_under_study,
-                    "is_study_entity": True,
-                }
-            )
-            log_messages.append(
-                f"Fila {row_number}: Contacto creado automáticamente '{person_under_study}'"
-            )
-        return study_partner.id
-
-    def _resolve_partner_by_name(self, name):
-        if not name:
-            return False
-
-        partner_model = self.env["res.partner"]
-        partner = partner_model.search([("name", "=", name)], limit=1)
-        if partner:
-            return partner
-        return partner_model.search([("name", "ilike", name)], limit=1)
-
-    def _resolve_sub_cartera_partner(self, name, log_messages, row_number):
-        if not name:
-            return False
-
-        partner = self._resolve_partner_by_name(name)
-        if partner:
-            return partner
-
-        partner = self.env["res.partner"].create({"name": name})
-        log_messages.append(
-            f"Fila {row_number}: Subcartera creada automáticamente '{name}'"
-        )
-        return partner
-
-    def _resolve_user_by_name(self, name):
-        if not name:
-            return False
-
-        user_model = self.env["res.users"].sudo()
-        user = user_model.search([("name", "=", name)], limit=1)
-        if user:
-            return user
-        return user_model.search([("name", "ilike", name)], limit=1)
-
-    def _read_datetime_cell(self, sheet, row_index, column_index, field_label):
-        if sheet.ncols <= column_index:
-            return False
-
-        cell_value = sheet.cell_value(row_index, column_index)
-        if isinstance(cell_value, (int, float)) and cell_value:
-            try:
-                return fields.Datetime.to_string(sheet.convert_date(cell_value))
-            except (TypeError, ValueError) as error:
-                _logger.warning(
-                    "Error al convertir la fecha %s en fila %s: %s",
-                    field_label,
-                    row_index + 1,
-                    error,
-                )
-                return False
-
-        return self._normalize_text(cell_value)
-
-    def _read_date_cell(self, sheet, row_index, column_index, field_label):
-        if sheet.ncols <= column_index:
-            return False
-
-        cell_value = sheet.cell_value(row_index, column_index)
-        if isinstance(cell_value, (int, float)) and cell_value:
-            try:
-                return fields.Date.to_string(sheet.convert_date(cell_value).date())
-            except (AttributeError, TypeError, ValueError) as error:
-                _logger.warning(
-                    "Error al convertir la fecha %s en fila %s: %s",
-                    field_label,
-                    row_index + 1,
-                    error,
-                )
-                return False
-
-        return self._normalize_text(cell_value)
-
     def action_import_excel(self):
+        """Importar datos de expedientes desde archivo Excel"""
         self.ensure_one()
         if not self.excel_file:
-            raise UserError(_("Por favor, seleccione un archivo Excel."))
+            raise UserError(_('Por favor, seleccione un archivo Excel.'))
 
+        # Inicializar contadores
         created = 0
         updated = 0
         skipped = 0
@@ -697,198 +71,345 @@ class ImportExpedientExcel(models.TransientModel):
         total = 0
         log_messages = []
 
-        self.write(
-            {
-                "state": "draft",
-                "progress": 0.0,
-                "progress_text": "Iniciando importación...",
-            }
-        )
+        # Cambiar a modo de procesamiento
+        self.write({
+            'state': 'draft',
+            'progress': 0.0,
+            'progress_text': 'Iniciando importación...'
+        })
+        # Forzar actualización de la UI
         self.env.cr.commit()
 
         try:
+            # Decodificar archivo Excel
             excel_data = base64.b64decode(self.excel_file)
-            sheet = self._load_excel_sheet(excel_data)
+            book = xlrd.open_workbook(file_contents=excel_data)
+            sheet = book.sheet_by_index(0)
 
-            if sheet.nrows < 2:
-                raise UserError(_("El archivo Excel no tiene datos."))
+            # Validar que el archivo tiene el formato esperado
+            if sheet.nrows < 2:  # Al menos una fila de encabezado y una de datos
+                raise UserError(_('El archivo Excel no tiene datos.'))
 
-            total_rows = sheet.nrows - 1
-            self.write(
-                {
-                    "progress": 5.0,
-                    "progress_text": f"Analizando {total_rows} registros...",
-                }
-            )
-            self.env.cr.commit()
+            # Calcular el total de filas para la barra de progreso
+            total_rows = sheet.nrows - 1  # Restamos 1 para excluir la fila de encabezado
 
-            sale_order_type = self.env["sale.order"]._get_expedient_sale_order_type(
+            # Actualizar progreso: inicio
+            self.write({
+                'progress': 5.0,  # 5% inicial
+                'progress_text': f'Analizando {total_rows} registros...'
+            })
+            self.env.cr.commit()  # Forzar actualización de la UI
+            sale_order_type = self.env['sale.order']._get_expedient_sale_order_type(
                 self.expedient_type
             )
             type_id_vals = sale_order_type.id if sale_order_type else False
 
+            # Leer datos desde la segunda fila (índice 1), asumiendo que la primera fila es encabezado
             for row_index in range(1, sheet.nrows):
                 total += 1
                 try:
+                    # Actualizar barra de progreso periódicamente (cada 10 filas o según necesidad)
                     if row_index % 10 == 0 or row_index == 1:
-                        progress_percent = 5.0 + ((row_index / total_rows) * 90.0)
-                        self.write(
-                            {
-                                "progress": progress_percent,
-                                "progress_text": f"Procesando registro {row_index}/{total_rows} ({int(progress_percent)}%)",
-                            }
-                        )
-                        self.env.cr.commit()
+                        progress_percent = 5.0 + ((row_index / total_rows) * 90.0)  # 5% al inicio, hasta 95% al final
+                        self.write({
+                            'progress': progress_percent,
+                            'progress_text': f'Procesando registro {row_index}/{total_rows} ({int(progress_percent)}%)'
+                        })
+                        self.env.cr.commit()  # Forzar actualización de la UI
 
-                    analyst_name = self._normalize_text(sheet.cell_value(row_index, 0))
-                    person_under_study = self._normalize_text(sheet.cell_value(row_index, 1))
-                    cartera_name = self._normalize_text(sheet.cell_value(row_index, 2))
-                    person_type = self._map_person_type(sheet.cell_value(row_index, 3))
-                    expedient_difficulty = self._map_difficulty(sheet.cell_value(row_index, 4))
-                    client_id = self._normalize_identifier(sheet.cell_value(row_index, 5))
-                    expedient_number = self._normalize_identifier(sheet.cell_value(row_index, 6))
+                    # Columna B (índice 1): Ahora es "person_under_study" en lugar del nombre del cliente
+                    person_under_study = sheet.cell_value(row_index, 1)
+
+                    # Columna D (índice 3): Procesar el tipo de persona (PF/PJ)
+                    person_type_value = sheet.cell_value(row_index, 3)
+                    person_type = False
+                    if isinstance(person_type_value, str):
+                        person_type_value = person_type_value.upper().strip()
+                        if person_type_value == 'PF':
+                            person_type = 'fisica'
+                        elif person_type_value == 'PJ':
+                            person_type = 'juridica'
+
+                    # Obtener la dificultad del expediente de la columna E (índice 4)
+                    expedient_difficulty = sheet.cell_value(row_index, 4)
+
+                    # Extraer las claves compuestas: client_id y expedient_number (columnas F y G)
+                    client_id = sheet.cell_value(row_index, 5)  # Columna F (índice 5)
+                    expedient_number = sheet.cell_value(row_index, 6)  # Columna G (índice 6)
 
                     if not client_id or not expedient_number:
-                        log_messages.append(
-                            f"Fila {row_index + 1}: Omitida - Falta ID Oferta o MACRO"
-                        )
+                        log_messages.append(f"Fila {row_index + 1}: Omitida - Falta Client ID o Expedient Number")
                         skipped += 1
                         continue
 
-                    person_under_study_id = self._resolve_study_partner(
-                        person_under_study,
-                        log_messages,
-                        row_index + 1,
-                    )
+                    # Convertir a string si son números
+                    if isinstance(client_id, (int, float)):
+                        client_id = str(int(client_id))
+                    if isinstance(expedient_number, (int, float)):
+                        expedient_number = str(int(expedient_number))
+                    if isinstance(person_under_study, (int, float)):
+                        person_under_study = str(int(person_under_study))
 
-                    existing_order = self.env["sale.order"].search(
-                        [
-                            ("client_id", "=", client_id),
-                            ("expedient_number", "=", expedient_number),
-                        ],
-                        limit=1,
-                    )
+                    # Resolver person_under_study como Many2one a res.partner
+                    person_under_study_id = False
+                    if person_under_study:
+                        study_partner = self.env['res.partner'].search([
+                            ('name', '=', person_under_study),
+                            ('is_study_entity', '=', True),
+                        ], limit=1)
+                        if not study_partner:
+                            study_partner = self.env['res.partner'].create({
+                                'name': person_under_study,
+                                'is_study_entity': True,
+                            })
+                            log_messages.append(
+                                f"Fila {row_index + 1}: Contacto creado automáticamente '{person_under_study}'"
+                            )
+                        person_under_study_id = study_partner.id
 
+                    # Verificar si ya existe un registro con esta clave compuesta
+                    existing_order = self.env['sale.order'].search([
+                        ('client_id', '=', client_id),
+                        ('expedient_number', '=', expedient_number)
+                    ], limit=1)
+
+                    # Preparar los valores para crear/actualizar
                     vals = {
-                        "partner_id": self.partner_id.id,
-                        "client_id": client_id,
-                        "expedient_number": expedient_number,
-                        "expedient_type": self.expedient_type,
-                        "expedient_state": "creada",
-                        "person_under_study_id": person_under_study_id,
-                        "person_type": person_type,
-                        "deadline": "more",
+                        'partner_id': self.partner_id.id,  # Usar el partner seleccionado en el wizard
+                        'client_id': client_id,
+                        'expedient_number': expedient_number,
+                        'expedient_type': self.expedient_type,  # Usar el tipo seleccionado por el usuario
+                        'expedient_state': 'creada',
+                        'person_under_study_id': person_under_study_id,  # Many2one a res.partner
+                        'person_type': person_type,  # Tipo de persona (física/jurídica)
                     }
 
                     if type_id_vals:
-                        vals["type_id"] = type_id_vals
+                        vals['type_id'] = type_id_vals  # Tipo de venta basado en el tipo de expediente
 
+                    # Procesar la dificultad del expediente (columna E)
                     if expedient_difficulty:
-                        vals["expedient_difficulty"] = expedient_difficulty
+                        if isinstance(expedient_difficulty, str):
+                            expedient_difficulty = expedient_difficulty.lower()
+                            if 'simple' in expedient_difficulty:
+                                vals['expedient_difficulty'] = 'simple'
+                            elif 'compl' in expedient_difficulty:
+                                vals['expedient_difficulty'] = 'complex'
+                        elif isinstance(expedient_difficulty, (int, float)):
+                            # Si es un número, interpretamos 1 como simple y 2 como complejo
+                            if int(expedient_difficulty) == 1:
+                                vals['expedient_difficulty'] = 'simple'
+                            elif int(expedient_difficulty) == 2:
+                                vals['expedient_difficulty'] = 'complex'
 
-                    sub_cartera = self._resolve_sub_cartera_partner(
-                        cartera_name,
-                        log_messages,
-                        row_index + 1,
-                    )
-                    if sub_cartera:
-                        vals["sub_cartera_id"] = sub_cartera.id
+                        if 'expedient_difficulty' in vals:
+                            log_messages.append(f"Fila {row_index + 1}: Dificultad establecida a '{vals['expedient_difficulty']}'")
 
-                    analyst_user = self._resolve_user_by_name(analyst_name)
-                    if analyst_user:
-                        vals["expedient_manager_id"] = analyst_user.id
-                    elif analyst_name:
-                        log_messages.append(
-                            f"Fila {row_index + 1}: No se encontró el analista '{analyst_name}', se usará el usuario actual"
-                        )
+                    # Obtener valor de columna I: date_reception (índice 8)
+                    if sheet.ncols > 8:
+                        date_reception_value = sheet.cell_value(row_index, 8)
+                        if isinstance(date_reception_value, (int, float)) and date_reception_value:
+                            # Convertir el número de Excel a fecha
+                            try:
+                                date_reception = xlrd.xldate.xldate_as_datetime(date_reception_value, book.datemode)
+                                vals['date_reception'] = fields.Datetime.to_string(date_reception)
+                                log_messages.append(
+                                    f"Fila {row_index + 1}: Fecha de recepción establecida a '{date_reception}'")
+                            except Exception as e:
+                                _logger.warning(f"Error al convertir fecha date_reception: {e}")
+                        elif isinstance(date_reception_value, str) and date_reception_value.strip():
+                            # Intentar procesar como string de fecha (formato ISO)
+                            try:
+                                vals['date_reception'] = date_reception_value
+                                log_messages.append(f"Fila {row_index + 1}: Fecha de recepción (texto) establecida")
+                            except Exception as e:
+                                _logger.warning(f"Error al procesar fecha date_reception como string: {e}")
+                    # Obtener valor de columna I: date_order (índice 8)
+                    if sheet.ncols > 9:
+                        date_order_value = sheet.cell_value(row_index, 9)
+                        if isinstance(date_order_value, (int, float)) and date_order_value:
+                            # Convertir el número de Excel a fecha
+                            try:
+                                date_order = xlrd.xldate.xldate_as_datetime(date_order_value, book.datemode)
+                                vals['date_order'] = fields.Datetime.to_string(date_order)
+                                log_messages.append(
+                                    f"Fila {row_index + 1}: Fecha de pedido establecida a '{date_order}'")
+                            except Exception as e:
+                                _logger.warning(f"Error al convertir fecha date_order: {e}")
+                        elif isinstance(date_order_value, str) and date_order_value.strip():
+                            # Intentar procesar como string de fecha (formato ISO)
+                            try:
+                                vals['date_order'] = date_order_value
+                            except Exception as e:
+                                _logger.warning(f"Error al procesar fecha date_order como string: {e}")
 
-                    date_reception = self._read_date_cell(
-                        sheet, row_index, 8, "date_reception"
-                    )
-                    if date_reception:
-                        vals["date_reception"] = date_reception
+                    # Obtener valor de columna K: expedient_state (índice 10)
+                    if sheet.ncols > 10:
+                        state_value = sheet.cell_value(row_index, 10)
+                        if isinstance(state_value, str) and state_value.strip():
+                            state_value = state_value.lower().strip()
+                            # Mapear el valor de texto al valor esperado en Odoo
+                            state_mapping = {
+                                'creada': 'creada',
+                                'pendiente': 'pendiente_documentacion',
+                                'pendiente documentacion': 'pendiente_documentacion',
+                                'pendiente_documentacion': 'pendiente_documentacion',
+                                'pte doc adicional': 'pendiente_documentacion',
+                                'pte. doc. adicional': 'pendiente_documentacion',
+                                'Pte doc adicional': 'pendiente_documentacion',
+                                'Pte. Doc. Adicional': 'pendiente_documentacion',
+                                'aprobada': 'aprobada',
+                                'autorizada': 'aprobada',
+                                'Autorizada': 'aprobada',
+                                'rechazada': 'rechazada',
+                                'cancelada': 'cancelada',
+                                'CANCELADA': 'cancelada',
+                                'cn': 'cancelada'
+                            }
 
-                    date_order = self._read_datetime_cell(
-                        sheet, row_index, 9, "date_order"
-                    )
-                    if date_order:
-                        vals["date_order"] = date_order
+                            if state_value in state_mapping:
+                                vals['expedient_state'] = state_mapping[state_value]
+                                log_messages.append(f"Fila {row_index + 1}: Estado establecido a '{vals['expedient_state']}'")
+                            else:
+                                # Si no se reconoce, intentar hacer coincidencia parcial para casos no contemplados
+                                for key, value in state_mapping.items():
+                                    if key in state_value:
+                                        vals['expedient_state'] = value
+                                        log_messages.append(f"Fila {row_index + 1}: Estado '{state_value}' mapeado a '{value}' por coincidencia parcial")
+                                        break
 
-                    mapped_state = self._map_state(sheet.cell_value(row_index, 10))
-                    if mapped_state:
-                        vals["expedient_state"] = mapped_state
+                    # Obtener valor de columna M: expedient_date_end (índice 12)
+                    if sheet.ncols > 12:
+                        end_date_value = sheet.cell_value(row_index, 12)
+                        if isinstance(end_date_value, (int, float)) and end_date_value:
+                            # Convertir el número de Excel a fecha
+                            try:
+                                end_date = xlrd.xldate.xldate_as_datetime(end_date_value, book.datemode)
+                                vals['expedient_date_end'] = fields.Datetime.to_string(end_date)
+                                log_messages.append(f"Fila {row_index + 1}: Fecha de fin establecida a '{end_date}'")
+                            except Exception as e:
+                                _logger.warning(f"Error al convertir fecha expedient_date_end: {e}")
+                        elif isinstance(end_date_value, str) and end_date_value.strip():
+                            # Intentar procesar como string de fecha (formato ISO)
+                            try:
+                                vals['expedient_date_end'] = end_date_value
+                            except Exception as e:
+                                _logger.warning(f"Error al procesar fecha expedient_date_end como string: {e}")
 
-                    expedient_date_end = self._read_datetime_cell(
-                        sheet, row_index, 11, "expedient_date_end"
-                    )
-                    if expedient_date_end:
-                        vals["expedient_date_end"] = expedient_date_end
+                    # Obtener valor de columna N: request (índice 13)
+                    if sheet.ncols > 13:
+                        request_value = sheet.cell_value(row_index, 13)
+                        if isinstance(request_value, str) and request_value.strip():
+                            vals['request'] = request_value
+                            log_messages.append(f"Fila {row_index + 1}: Petición del expediente capturada")
+                        elif isinstance(request_value, (int, float)):
+                            # Convertir a string si es un número
+                            vals['request'] = str(request_value)
+                            log_messages.append(f"Fila {row_index + 1}: Petición del expediente (convertida de número) capturada")
 
+                    # Obtener valor de columna O: summary (índice 14)
+                    if sheet.ncols > 14:
+                        summary_value = sheet.cell_value(row_index, 14)
+                        if isinstance(summary_value, str) and summary_value.strip():
+                            vals['summary'] = summary_value
+                            log_messages.append(f"Fila {row_index + 1}: Resumen del expediente capturado")
+                        elif isinstance(summary_value, (int, float)):
+                            # Convertir a string si es un número
+                            vals['summary'] = str(summary_value)
+                            log_messages.append(f"Fila {row_index + 1}: Resumen del expediente (convertido de número) capturado")
+
+                    # Obtener valor de columna P: authorization (índice 15)
+                    if sheet.ncols > 15:
+                        authorization_value = sheet.cell_value(row_index, 15)
+                        if isinstance(authorization_value, str) and authorization_value.strip():
+                            vals['authorization'] = authorization_value
+                            log_messages.append(f"Fila {row_index + 1}: Autorización del expediente capturada")
+                        elif isinstance(authorization_value, (int, float)):
+                            # Convertir a string si es un número
+                            vals['authorization'] = str(authorization_value)
+                            log_messages.append(f"Fila {row_index + 1}: Autorización del expediente (convertida de número) capturada")
+
+                    # Otras columnas que se pueden mapear
+                    try:
+                        # Ejemplo de mapeo de campos adicionales
+                        # if sheet.ncols > 7:  # Si hay columna H
+                        #     parts_involved = sheet.cell_value(row_index, 7)
+                        #     if isinstance(parts_involved, (int, float)) and parts_involved > 0:
+                        #         vals['parts_involved'] = int(parts_involved)
+
+                        if sheet.ncols > 8:  # Si hay columna I - Dificultad
+                            difficulty = sheet.cell_value(row_index, 8)
+                            if isinstance(difficulty, str):
+                                difficulty = difficulty.lower()
+                                if 'simple' in difficulty:
+                                    vals['expedient_difficulty'] = 'simple'
+                                elif 'compl' in difficulty:
+                                    vals['expedient_difficulty'] = 'complex'
+                    except Exception as mapping_error:
+                        _logger.error(f"Error en mapeo de campos adicionales: {mapping_error}")
+
+                    # Crear o actualizar el registro
                     if existing_order:
+                        # Siempre actualizamos registros existentes
                         existing_order.write(vals)
                         updated += 1
-                        log_messages.append(
-                            f"Fila {row_index + 1}: Actualizado - {client_id}/{expedient_number}"
-                        )
-                        continue
+                        log_messages.append(f"Fila {row_index + 1}: Actualizado - {client_id}/{expedient_number}")
+                    else:
+                        # Obtener la secuencia correcta según el tipo de expediente
+                        sequence_code = 'sale.order.post' if self.expedient_type == 'post_paid' else 'sale.order.pre'
+                        sequence = self.env['ir.sequence'].search([('code', '=', sequence_code)], limit=1)
 
-                    sequence_code = (
-                        "sale.order.post"
-                        if self.expedient_type == "post_paid"
-                        else "sale.order.pre"
-                    )
-                    sequence = self.env["ir.sequence"].search(
-                        [("code", "=", sequence_code)],
-                        limit=1,
-                    )
-                    if sequence:
-                        vals["name"] = sequence.next_by_id()
+                        if sequence:
+                            # Generar el número de la secuencia
+                            sequence_number = sequence.next_by_id()
+                            vals['name'] = sequence_number
+                            log_messages.append(f"Fila {row_index + 1}: Número de secuencia generado: {sequence_number}")
 
-                    vals["state"] = "draft"
-                    self.env["sale.order"].create(vals)
-                    created += 1
-                    log_messages.append(
-                        f"Fila {row_index + 1}: Creado - {client_id}/{expedient_number}"
-                    )
+                        # Creamos un pedido de venta
+                        vals.update({
+                            'state': 'draft',
+                        })
+                        self.env['sale.order'].create(vals)
+                        created += 1
+                        log_messages.append(f"Fila {row_index + 1}: Creado - {client_id}/{expedient_number}")
+
                 except Exception as row_error:
                     failed += 1
-                    log_messages.append(f"Fila {row_index + 1}: Error - {row_error}")
-                    _logger.error("Error en fila %s: %s", row_index + 1, row_error)
+                    log_messages.append(f"Fila {row_index + 1}: Error - {str(row_error)}")
+                    _logger.error(f"Error en fila {row_index + 1}: {str(row_error)}")
 
-            self.write(
-                {
-                    "progress": 100.0,
-                    "progress_text": f"Importación completada: {created} creados, {updated} actualizados",
-                }
-            )
-            self.env.cr.commit()
+            # Actualizar progreso: finalización
+            self.write({
+                'progress': 100.0,
+                'progress_text': f'Importación completada: {created} creados, {updated} actualizados'
+            })
+            self.env.cr.commit()  # Forzar actualización de la UI
 
-            self.write(
-                {
-                    "import_total": total,
-                    "import_created": created,
-                    "import_updated": updated,
-                    "import_skipped": skipped,
-                    "import_failed": failed,
-                    "import_log": "\n".join(log_messages),
-                    "state": "done",
-                }
-            )
+            # Actualizar resultados
+            self.write({
+                'import_total': total,
+                'import_created': created,
+                'import_updated': updated,
+                'import_skipped': skipped,
+                'import_failed': failed,
+                'import_log': '\n'.join(log_messages),
+                'state': 'done'
+            })
 
             return {
-                "type": "ir.actions.act_window",
-                "res_model": self._name,
-                "res_id": self.id,
-                "view_mode": "form",
-                "target": "new",
+                'type': 'ir.actions.act_window',
+                'res_model': self._name,
+                'res_id': self.id,
+                'view_mode': 'form',
+                'target': 'new',
             }
-        except Exception as error:
-            self.write(
-                {
-                    "progress": 0,
-                    "progress_text": f"Error: {error}",
-                    "state": "draft",
-                }
-            )
+
+        except Exception as e:
+            # En caso de error, actualizar el progreso
+            self.write({
+                'progress': 0,
+                'progress_text': f'Error: {str(e)}',
+                'state': 'draft'
+            })
             self.env.cr.commit()
-            raise UserError(_("Error al procesar el archivo Excel: %s") % error)
+            raise UserError(_(f'Error al procesar el archivo Excel: {str(e)}'))

@@ -16,15 +16,3 @@ class TestResPartner(ExpedientBaseCase):
         self.assertTrue(partner.is_study_entity)
         self.assertEqual(str(partner.birth_or_registration_date), "2020-01-10")
 
-    def test_effective_pricelist_compatibility_field(self):
-        pricelist = self.env["product.pricelist"].create(
-            {
-                "name": "Tarifa compatibilidad",
-                "currency_id": self.env.company.currency_id.id,
-            }
-        )
-
-        self.partner.effective_pricelist_id = pricelist
-
-        self.assertEqual(self.partner.effective_pricelist_id, pricelist)
-        self.assertEqual(self.partner.property_product_pricelist, pricelist)

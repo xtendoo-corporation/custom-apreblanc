@@ -1,0 +1,37 @@
+<odoo>
+
+    <template id="message_timeline">
+
+        <div class="o_message_timeline">
+
+            <t t-foreach="messages" t-as="m">
+
+                <div style="
+                    border-left: 3px solid #875A7B;
+                    margin-bottom: 8px;
+                    padding: 6px 10px;
+                    background: #f9f9f9;
+                    border-radius: 4px;
+                ">
+
+                    <div style="font-weight: bold; color: #333;">
+                        <t t-esc="m.author_id.name or 'Sistema'"/>
+                    </div>
+
+                    <div style="font-size: 11px; color: #888;">
+                        <t t-esc="m.date"/>
+                    </div>
+
+                    <div style="margin-top: 4px;">
+                        <t t-raw="m.body"/>
+                    </div>
+
+                </div>
+
+            </t>
+
+        </div>
+
+    </template>
+
+</odoo>

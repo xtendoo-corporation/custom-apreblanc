@@ -483,14 +483,14 @@ msgstr ""
 #: model:ir.actions.act_window,name:apreblanc_sale_order_expedient.action_apreblanc_sale_order_expedient
 #: model:ir.ui.menu,name:apreblanc_sale_order_expedient.menu_apreblanc_sale_order_expedient
 #: model_terms:ir.ui.view,arch_db:apreblanc_sale_order_expedient.view_expedient_tree_custom
-msgid "Expedientes Post-pago"
+msgid "Expedientes Postpago"
 msgstr ""
 
 #. module: apreblanc_sale_order_expedient
 #: model:ir.actions.act_window,name:apreblanc_sale_order_expedient.action_sale_order_prepaid
 #: model:ir.ui.menu,name:apreblanc_sale_order_expedient.menu_sale_order_prepaid
 #: model_terms:ir.ui.view,arch_db:apreblanc_sale_order_expedient.view_sale_order_prepaid_tree
-msgid "Expedientes Pre-pagado"
+msgid "Expedientes Pre-pagados"
 msgstr ""
 
 #. module: apreblanc_sale_order_expedient
