@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        <record id="mt_economic_change" model="mail.message.subtype">
+            <field name="name">Economic Amount Change</field>
+            <field name="description">Cambio en campos económicos (importes)</field>
+            <field name="internal" eval="True"/>
+            <field name="default" eval="False"/>
+        </record>
+    </data>
+</odoo>

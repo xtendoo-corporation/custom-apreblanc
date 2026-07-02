@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="0">
+        <record id="group_economic_messages" model="res.groups">
+            <field name="name">Ver mensajes económicos en chatter</field>
+            <field name="category_id" ref="base.module_category_accounting"/>
+            <field name="comment">Permite visualizar los mensajes de seguimiento de cambios en campos económicos (importes) en el chatter de pedidos, facturas y otros documentos.</field>
+        </record>
+    </data>
+</odoo>
