@@ -1,0 +1,51 @@
+from odoo.tests import tagged
+from odoo.tests.common import TransactionCase
+
+
+@tagged("post_install", "-at_install")
+class ServiceProjectControlBaseCase(TransactionCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.partner = cls.env["res.partner"].create({"name": "Cliente servicio test"})
+        cls.product_uom_hour = cls.env.ref("uom.product_uom_hour")
+        cls.service_product = cls.env["product.product"].create(
+            {
+                "name": "Servicio controlado",
+                "detailed_type": "service",
+                "list_price": 150.0,
+                "uom_id": cls.product_uom_hour.id,
+                "uom_po_id": cls.product_uom_hour.id,
+                "apreblanc_target_hours": 2.5,
+            }
+        )
+        cls.material_product = cls.env["product.product"].create(
+            {
+                "name": "Material auxiliar",
+                "detailed_type": "consu",
+                "list_price": 25.0,
+            }
+        )
+        cls.env.user.action_create_employee()
+
+    @classmethod
+    def _line_vals(cls, product, qty, price=None, name=None):
+        return {
+            "product_id": product.id,
+            "name": name or product.display_name,
+            "product_uom_qty": qty,
+            "product_uom": product.uom_id.id,
+            "price_unit": price if price is not None else product.list_price,
+        }
+
+    @classmethod
+    def _create_sale_order(cls, line_dicts):
+        return cls.env["sale.order"].create(
+            {
+                "partner_id": cls.partner.id,
+                "partner_invoice_id": cls.partner.id,
+                "partner_shipping_id": cls.partner.id,
+                "pricelist_id": cls.partner.property_product_pricelist.id,
+                "order_line": [(0, 0, line_vals) for line_vals in line_dicts],
+            }
+        )

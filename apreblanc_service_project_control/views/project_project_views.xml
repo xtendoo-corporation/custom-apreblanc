@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="edit_project_apreblanc_service_project" model="ir.ui.view">
+        <field name="name">project.project.form.apreblanc.service.project</field>
+        <field name="model">project.project</field>
+        <field name="inherit_id" ref="project.edit_project"/>
+        <field name="arch" type="xml">
+            <header position="inside">
+                <button
+                    name="action_apreblanc_approve_overtime"
+                    type="object"
+                    string="Autorizar exceso"
+                    class="btn-secondary"
+                    invisible="not apreblanc_control_enabled or apreblanc_overtime_approved"
+                />
+                <button
+                    name="action_apreblanc_reset_overtime"
+                    type="object"
+                    string="Revocar autorización"
+                    class="btn-secondary"
+                    invisible="not apreblanc_control_enabled or not apreblanc_overtime_approved"
+                />
+            </header>
+            <div name="button_box" position="inside">
+                <button
+                    name="action_view_apreblanc_sale_order"
+                    type="object"
+                    class="oe_stat_button"
+                    icon="fa-shopping-cart"
+                    invisible="not apreblanc_sale_order_id"
+                >
+                    <div class="o_stat_info">
+                        <span class="o_stat_text">Pedido origen</span>
+                    </div>
+                </button>
+            </div>
+            <field name="user_id" position="after">
+                <field name="apreblanc_project_manager_id" widget="many2one_avatar_user"/>
+                <field name="apreblanc_junior_user_id" widget="many2one_avatar_user"/>
+                <field name="apreblanc_senior_user_id" widget="many2one_avatar_user"/>
+            </field>
+            <group name="group_time_managment" position="replace">
+                <group name="group_time_managment" string="Control horario" col="2" class="row mt16 o_settings_container">
+                    <div>
+                        <field name="apreblanc_control_enabled"/>
+                        <field name="apreblanc_sale_order_id" readonly="1"/>
+                        <field name="allocated_hours" readonly="1"/>
+                        <field name="apreblanc_hours_consumed" readonly="1"/>
+                        <field name="remaining_hours" readonly="1"/>
+                        <field name="apreblanc_hours_progress" readonly="1"/>
+                        <field name="apreblanc_hours_deviation" readonly="1"/>
+                        <field name="apreblanc_profitability_pct" readonly="1"/>
+                        <field name="apreblanc_hours_status" readonly="1" widget="badge"/>
+                        <field name="apreblanc_overtime_approved" readonly="1"/>
+                        <field name="apreblanc_overtime_approved_by" readonly="1"/>
+                        <field name="apreblanc_overtime_approved_date" readonly="1"/>
+                    </div>
+                </group>
+            </group>
+        </field>
+    </record>
+</odoo>
