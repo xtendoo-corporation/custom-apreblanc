@@ -5,7 +5,25 @@
         <field name="model">project.project</field>
         <field name="inherit_id" ref="project.edit_project"/>
         <field name="arch" type="xml">
-            <header position="inside">
+            <xpath expr="//form" position="inside">
+                <field name="apreblanc_onedrive_error" invisible="1"/>
+                <field name="apreblanc_onedrive_error_message" invisible="1"/>
+            </xpath>
+            <xpath expr="//sheet" position="before">
+                <div class="alert alert-danger" role="alert" invisible="not apreblanc_onedrive_error">
+                    <strong>⚠️ Error OneDrive:</strong>
+                    <div class="mt-2">
+                        <field name="apreblanc_onedrive_error_message" nolabel="1"/>
+                    </div>
+                    <button
+                        name="action_apreblanc_retry_onedrive_folder"
+                        type="object"
+                        string="🔄 Reintentar crear carpeta"
+                        class="btn-primary mt-2"
+                    />
+                </div>
+            </xpath>
+            <xpath expr="//header" position="inside">
                 <button
                     name="action_apreblanc_approve_overtime"
                     type="object"
@@ -20,8 +38,8 @@
                     class="btn-secondary"
                     invisible="not apreblanc_control_enabled or not apreblanc_overtime_approved"
                 />
-            </header>
-            <div name="button_box" position="inside">
+            </xpath>
+            <xpath expr="//div[@name='button_box']" position="inside">
                 <button
                     name="action_view_apreblanc_sale_order"
                     type="object"
@@ -33,17 +51,18 @@
                         <span class="o_stat_text">Pedido origen</span>
                     </div>
                 </button>
-            </div>
-            <field name="user_id" position="after">
+            </xpath>
+            <xpath expr="//field[@name='user_id']" position="after">
                 <field name="apreblanc_project_manager_id" widget="many2one_avatar_user"/>
                 <field name="apreblanc_junior_user_id" widget="many2one_avatar_user"/>
                 <field name="apreblanc_senior_user_id" widget="many2one_avatar_user"/>
-            </field>
-            <group name="group_time_managment" position="replace">
+            </xpath>
+            <xpath expr="//group[@name='group_time_managment']" position="replace">
                 <group name="group_time_managment" string="Control horario" col="2" class="row mt16 o_settings_container">
                     <div>
                         <field name="apreblanc_control_enabled"/>
                         <field name="apreblanc_sale_order_id" readonly="1"/>
+                        <field name="apreblanc_onedrive_folder_name" readonly="1"/>
                         <field name="allocated_hours" readonly="1"/>
                         <field name="apreblanc_hours_consumed" readonly="1"/>
                         <field name="remaining_hours" readonly="1"/>
@@ -56,7 +75,7 @@
                         <field name="apreblanc_overtime_approved_date" readonly="1"/>
                     </div>
                 </group>
-            </group>
+            </xpath>
         </field>
     </record>
 </odoo>

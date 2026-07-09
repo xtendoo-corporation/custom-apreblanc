@@ -18,17 +18,44 @@
                     </div>
                 </button>
             </div>
-            <group name="order_details" position="after">
-                <group string="Control servicio" invisible="apreblanc_hours_target == 0 and not apreblanc_service_project_id">
-                    <field name="apreblanc_service_project_id" readonly="1"/>
-                    <field name="apreblanc_hours_target" readonly="1"/>
-                    <field name="apreblanc_hours_consumed" readonly="1"/>
-                    <field name="apreblanc_hours_remaining" readonly="1"/>
-                    <field name="apreblanc_hours_progress" readonly="1"/>
-                    <field name="apreblanc_hours_deviation" readonly="1"/>
-                    <field name="apreblanc_profitability_pct" readonly="1"/>
-                </group>
-            </group>
+            <page name="order_lines" position="after">
+                <page string="Control servicio" name="control_servicio" invisible="apreblanc_hours_target == 0 and not apreblanc_service_project_id">
+                    <div class="row">
+                        <div class="col-lg-12">
+                            <div class="d-flex flex-wrap gap-2">
+                                <div class="flex-fill">
+                                    <span class="o_form_label d-block mb-1">Proyecto operativo</span>
+                                    <field name="apreblanc_service_project_id" readonly="1" nolabel="1"/>
+                                </div>
+                                <div class="flex-fill text-end">
+                                    <span class="o_form_label d-block mb-1">Horas presupuestadas</span>
+                                    <field name="apreblanc_hours_target" readonly="1" nolabel="1"/>
+                                </div>
+                                <div class="flex-fill text-end">
+                                    <span class="o_form_label d-block mb-1">Horas consumidas</span>
+                                    <field name="apreblanc_hours_consumed" readonly="1" nolabel="1"/>
+                                </div>
+                                <div class="flex-fill text-end">
+                                    <span class="o_form_label d-block mb-1">Horas restantes</span>
+                                    <field name="apreblanc_hours_remaining" readonly="1" nolabel="1"/>
+                                </div>
+                                <div class="flex-fill text-end">
+                                    <span class="o_form_label d-block mb-1">% consumo</span>
+                                    <field name="apreblanc_hours_progress" readonly="1" nolabel="1"/>
+                                </div>
+                                <div class="flex-fill text-end">
+                                    <span class="o_form_label d-block mb-1">Desviación</span>
+                                    <field name="apreblanc_hours_deviation" readonly="1" nolabel="1"/>
+                                </div>
+                                <div class="flex-fill text-end">
+                                    <span class="o_form_label d-block mb-1">Rentabilidad estimada %</span>
+                                    <field name="apreblanc_profitability_pct" readonly="1" nolabel="1"/>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </page>
+            </page>
         </field>
     </record>
 </odoo>

@@ -11,6 +11,7 @@
         "project",
         "hr_timesheet",
         "mail",
+        "xtendoo_onedrive_connector",
     ],
     "data": [
         "views/product_template_views.xml",

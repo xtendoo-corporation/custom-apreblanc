@@ -1,5 +1,8 @@
 from odoo import _, api, fields, models
 from odoo.exceptions import UserError
+import logging
+
+_logger = logging.getLogger(__name__)
 
 
 class ProjectProject(models.Model):
@@ -73,6 +76,30 @@ class ProjectProject(models.Model):
         string="Fecha autorización",
         copy=False,
         readonly=True,
+    )
+    apreblanc_onedrive_folder_id = fields.Char(
+        string="Carpeta OneDrive ID",
+        copy=False,
+        readonly=True,
+        help="ID de la carpeta creada en OneDrive para este proyecto",
+    )
+    apreblanc_onedrive_folder_name = fields.Char(
+        string="Carpeta OneDrive",
+        copy=False,
+        readonly=True,
+        help="Nombre de la carpeta en OneDrive para este proyecto",
+    )
+    apreblanc_onedrive_error = fields.Boolean(
+        string="Error OneDrive",
+        default=False,
+        copy=False,
+        help="Indica si hubo un error al crear la carpeta en OneDrive",
+    )
+    apreblanc_onedrive_error_message = fields.Text(
+        string="Mensaje de error OneDrive",
+        copy=False,
+        readonly=True,
+        help="Detalles del error al crear la carpeta en OneDrive",
     )
 
     @api.depends("allocated_hours", "timesheet_ids.unit_amount", "apreblanc_overtime_approved")
@@ -150,3 +177,93 @@ class ProjectProject(models.Model):
             "view_mode": "form",
             "res_id": self.apreblanc_sale_order_id.id,
         }
+
+    @api.model
+    def create(self, vals):
+        project = super().create(vals)
+        
+        if project.apreblanc_control_enabled and project.apreblanc_sale_order_id:
+            try:
+                project._create_onedrive_folder()
+            except Exception as e:
+                _logger.warning(f"⚠️ Error creando carpeta OneDrive para proyecto {project.id}: {str(e)}")
+                project.message_post(
+                    body=_("Advertencia: No se pudo crear la carpeta en OneDrive. Error: %s") % str(e)
+                )
+        
+        return project
+
+    def _get_onedrive_folder_name(self):
+        """Generar el nombre de la carpeta en OneDrive"""
+        self.ensure_one()
+        
+        if self.partner_id and self.name:
+            folder_name = f"{self.name} - {self.partner_id.name}"
+        elif self.name:
+            folder_name = self.name
+        else:
+            folder_name = f"Proyecto_{self.id}"
+        
+        return folder_name
+
+    def _create_onedrive_folder(self):
+        """Crear carpeta en OneDrive para el proyecto"""
+        self.ensure_one()
+        
+        try:
+            folder_name = self._get_onedrive_folder_name()
+            _logger.info(f"📁 Creando carpeta OneDrive para proyecto {self.id}: '{folder_name}'")
+            
+            # Obtener el modelo onedrive.document y el servicio
+            try:
+                onedrive_doc_model = self.env['onedrive.document']
+            except Exception as e:
+                _logger.warning(f"⚠️ Modelo onedrive.document no disponible: {e}")
+                return
+            
+            # Obtener token y headers
+            onedrive_service = self.env['onedrive.service']
+            token = onedrive_service._get_token()
+            headers = {'Authorization': f'Bearer {token}'}
+            
+            _logger.info(f"Token obtenido para OneDrive")
+            
+            # Crear la carpeta usando el método correcto con headers
+            folder_id = onedrive_doc_model._ensure_folder_exists(
+                folder_name=folder_name,
+                parent_folder_id=None,
+                headers=headers
+            )
+            
+            self.apreblanc_onedrive_folder_id = folder_id
+            self.apreblanc_onedrive_folder_name = folder_name
+            self.apreblanc_onedrive_error = False
+            self.apreblanc_onedrive_error_message = ""
+            
+            _logger.info(f"✅ Carpeta OneDrive creada exitosamente: ID={folder_id}, Nombre='{folder_name}'")
+            self.message_post(
+                body=_("✅ Carpeta OneDrive creada: %s") % folder_name
+            )
+            
+        except Exception as e:
+            error_msg = str(e)
+            _logger.error(f"❌ Error al crear carpeta OneDrive: {error_msg}", exc_info=True)
+            
+            # Guardar error en el proyecto
+            self.apreblanc_onedrive_error = True
+            self.apreblanc_onedrive_error_message = error_msg
+            
+            self.message_post(
+                body=_("❌ Error al crear carpeta OneDrive: %s") % error_msg
+            )
+
+    def action_apreblanc_retry_onedrive_folder(self):
+        """Reintentar crear la carpeta en OneDrive"""
+        for project in self:
+            try:
+                project._create_onedrive_folder()
+            except Exception as e:
+                _logger.error(f"Error reintentando crear carpeta OneDrive: {str(e)}")
+                project.apreblanc_onedrive_error = True
+                project.apreblanc_onedrive_error_message = str(e)
+        return True
