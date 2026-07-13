@@ -6,6 +6,7 @@
         <field name="inherit_id" ref="project.view_task_form2"/>
         <field name="arch" type="xml">
             <field name="project_id" position="after">
+                <field name="apreblanc_audit_phase" widget="badge"/>
                 <field name="apreblanc_sale_line_id" readonly="1" invisible="not apreblanc_sale_line_id"/>
             </field>
         </field>

@@ -1,4 +1,4 @@
-from odoo import _, api, fields, models
+from odoo import _, api, fields, models, tools
 from odoo.exceptions import UserError
 import logging
 
@@ -50,6 +50,22 @@ class ProjectProject(models.Model):
     apreblanc_profitability_pct = fields.Float(
         string="Rentabilidad estimada %",
         compute="_compute_apreblanc_hours_metrics",
+    )
+    apreblanc_preparation_hours = fields.Float(
+        string="Horas preparacion",
+        compute="_compute_apreblanc_phase_hours",
+    )
+    apreblanc_information_hours = fields.Float(
+        string="Horas recogida",
+        compute="_compute_apreblanc_phase_hours",
+    )
+    apreblanc_analysis_hours = fields.Float(
+        string="Horas analisis",
+        compute="_compute_apreblanc_phase_hours",
+    )
+    apreblanc_report_hours = fields.Float(
+        string="Horas informe",
+        compute="_compute_apreblanc_phase_hours",
     )
     apreblanc_hours_status = fields.Selection(
         [
@@ -128,6 +144,23 @@ class ProjectProject(models.Model):
             else:
                 project.apreblanc_hours_status = "normal"
 
+    @api.depends("timesheet_ids.unit_amount", "timesheet_ids.apreblanc_task_phase")
+    def _compute_apreblanc_phase_hours(self):
+        for project in self:
+            phase_totals = {
+                "preparation": 0.0,
+                "information": 0.0,
+                "analysis": 0.0,
+                "report": 0.0,
+            }
+            for line in project.timesheet_ids:
+                if line.apreblanc_task_phase in phase_totals:
+                    phase_totals[line.apreblanc_task_phase] += line.unit_amount
+            project.apreblanc_preparation_hours = phase_totals["preparation"]
+            project.apreblanc_information_hours = phase_totals["information"]
+            project.apreblanc_analysis_hours = phase_totals["analysis"]
+            project.apreblanc_report_hours = phase_totals["report"]
+
     def _check_apreblanc_overtime_authorization(self):
         self.ensure_one()
         if self.env.user == self.apreblanc_project_manager_id:
@@ -178,11 +211,15 @@ class ProjectProject(models.Model):
             "res_id": self.apreblanc_sale_order_id.id,
         }
 
-    @api.model
-    def create(self, vals):
-        project = super().create(vals)
-        
-        if project.apreblanc_control_enabled and project.apreblanc_sale_order_id:
+    @api.model_create_multi
+    def create(self, vals_list):
+        projects = super().create(vals_list)
+
+        for project in projects.filtered(
+            lambda record: record.apreblanc_control_enabled
+            and record.apreblanc_sale_order_id
+            and not tools.config["test_enable"]
+        ):
             try:
                 project._create_onedrive_folder()
             except Exception as e:
@@ -190,69 +227,69 @@ class ProjectProject(models.Model):
                 project.message_post(
                     body=_("Advertencia: No se pudo crear la carpeta en OneDrive. Error: %s") % str(e)
                 )
-        
-        return project
+
+        return projects
 
     def _get_onedrive_folder_name(self):
         """Generar el nombre de la carpeta en OneDrive"""
         self.ensure_one()
-        
+
         if self.partner_id and self.name:
             folder_name = f"{self.name} - {self.partner_id.name}"
         elif self.name:
             folder_name = self.name
         else:
             folder_name = f"Proyecto_{self.id}"
-        
+
         return folder_name
 
     def _create_onedrive_folder(self):
         """Crear carpeta en OneDrive para el proyecto"""
         self.ensure_one()
-        
+
         try:
             folder_name = self._get_onedrive_folder_name()
             _logger.info(f"📁 Creando carpeta OneDrive para proyecto {self.id}: '{folder_name}'")
-            
+
             # Obtener el modelo onedrive.document y el servicio
             try:
                 onedrive_doc_model = self.env['onedrive.document']
             except Exception as e:
                 _logger.warning(f"⚠️ Modelo onedrive.document no disponible: {e}")
                 return
-            
+
             # Obtener token y headers
             onedrive_service = self.env['onedrive.service']
             token = onedrive_service._get_token()
             headers = {'Authorization': f'Bearer {token}'}
-            
+
             _logger.info(f"Token obtenido para OneDrive")
-            
+
             # Crear la carpeta usando el método correcto con headers
             folder_id = onedrive_doc_model._ensure_folder_exists(
                 folder_name=folder_name,
                 parent_folder_id=None,
                 headers=headers
             )
-            
+
             self.apreblanc_onedrive_folder_id = folder_id
             self.apreblanc_onedrive_folder_name = folder_name
             self.apreblanc_onedrive_error = False
             self.apreblanc_onedrive_error_message = ""
-            
+
             _logger.info(f"✅ Carpeta OneDrive creada exitosamente: ID={folder_id}, Nombre='{folder_name}'")
             self.message_post(
                 body=_("✅ Carpeta OneDrive creada: %s") % folder_name
             )
-            
+
         except Exception as e:
             error_msg = str(e)
             _logger.error(f"❌ Error al crear carpeta OneDrive: {error_msg}", exc_info=True)
-            
+
             # Guardar error en el proyecto
             self.apreblanc_onedrive_error = True
             self.apreblanc_onedrive_error_message = error_msg
-            
+
             self.message_post(
                 body=_("❌ Error al crear carpeta OneDrive: %s") % error_msg
             )

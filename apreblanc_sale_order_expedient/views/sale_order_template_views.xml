@@ -54,6 +54,7 @@
             <field name="res_model">sale.order.template</field>
             <field name="view_mode">tree,form</field>
             <field name="domain">[]</field>
+            <field name="groups_id" eval="[(6, 0, [ref('apreblanc_sale_order_expedient.group_expedient_admin')])]"/>
             <field name="help" type="html">
                 <p class="o_view_nocontent_smiling_face">
                     Crea una nueva plantilla para expedientes
@@ -65,14 +66,16 @@
         <menuitem id="menu_expedient_configuration"
             name="Expedientes"
             parent="sale.menu_sale_config"
-            sequence="39" />
+            sequence="39"
+            groups="apreblanc_sale_order_expedient.group_expedient_admin" />
 
         <!-- Menú para plantillas de expedientes -->
         <menuitem id="menu_sale_order_expedient_templates"
             name="Plantillas"
             parent="menu_expedient_configuration"
             action="action_sale_order_expedient_templates"
-            sequence="10" />
+            sequence="10"
+            groups="apreblanc_sale_order_expedient.group_expedient_admin" />
 
         <!-- Vistas para expedient.return.reason -->
         <record id="view_expedient_return_reason_tree" model="ir.ui.view">
@@ -113,6 +116,7 @@
             <field name="name">Return Reasons</field>
             <field name="res_model">expedient.return.reason</field>
             <field name="view_mode">tree,form</field>
+            <field name="groups_id" eval="[(6, 0, [ref('apreblanc_sale_order_expedient.group_expedient_admin')])]"/>
         </record>
 
         <!-- Menú para razones de devolución -->
@@ -120,7 +124,8 @@
             name="Return Reasons"
             parent="menu_expedient_configuration"
             action="action_expedient_return_reason"
-            sequence="50" />
+            sequence="50"
+            groups="apreblanc_sale_order_expedient.group_expedient_admin" />
 
     </data>
 </odoo>

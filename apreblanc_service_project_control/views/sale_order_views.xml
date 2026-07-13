@@ -52,6 +52,24 @@
                                     <field name="apreblanc_profitability_pct" readonly="1" nolabel="1"/>
                                 </div>
                             </div>
+                            <div class="d-flex flex-wrap gap-2 mt-3">
+                                <div class="flex-fill text-end">
+                                    <span class="o_form_label d-block mb-1">Horas preparacion</span>
+                                    <field name="apreblanc_preparation_hours" readonly="1" nolabel="1"/>
+                                </div>
+                                <div class="flex-fill text-end">
+                                    <span class="o_form_label d-block mb-1">Horas recogida</span>
+                                    <field name="apreblanc_information_hours" readonly="1" nolabel="1"/>
+                                </div>
+                                <div class="flex-fill text-end">
+                                    <span class="o_form_label d-block mb-1">Horas analisis</span>
+                                    <field name="apreblanc_analysis_hours" readonly="1" nolabel="1"/>
+                                </div>
+                                <div class="flex-fill text-end">
+                                    <span class="o_form_label d-block mb-1">Horas informe</span>
+                                    <field name="apreblanc_report_hours" readonly="1" nolabel="1"/>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </page>

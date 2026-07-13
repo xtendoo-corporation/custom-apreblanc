@@ -180,6 +180,26 @@ class TestSaleOrder(ExpedientBaseCase):
         self.assertFalse(order.return_reason_id)
         self.assertFalse(order.return_notes)
 
+    def test_configuration_and_import_actions_are_admin_only(self):
+        admin_group = self.env.ref("apreblanc_sale_order_expedient.group_expedient_admin")
+        action_templates = self.env.ref("apreblanc_sale_order_expedient.action_sale_order_expedient_templates")
+        action_return_reason = self.env.ref("apreblanc_sale_order_expedient.action_expedient_return_reason")
+        action_import = self.env.ref("apreblanc_sale_order_expedient.action_import_expedient_excel")
+        action_import_button = self.env.ref("apreblanc_sale_order_expedient.action_sale_order_import_excel_button")
+        menu_config = self.env.ref("apreblanc_sale_order_expedient.menu_expedient_configuration")
+        menu_templates = self.env.ref("apreblanc_sale_order_expedient.menu_sale_order_expedient_templates")
+        menu_return_reason = self.env.ref("apreblanc_sale_order_expedient.menu_expedient_return_reason")
+        menu_import = self.env.ref("apreblanc_sale_order_expedient.menu_import_expedient_excel")
+
+        self.assertEqual(action_templates.groups_id, admin_group)
+        self.assertEqual(action_return_reason.groups_id, admin_group)
+        self.assertEqual(action_import.groups_id, admin_group)
+        self.assertEqual(action_import_button.groups_id, admin_group)
+        self.assertEqual(menu_config.groups_id, admin_group)
+        self.assertEqual(menu_templates.groups_id, admin_group)
+        self.assertEqual(menu_return_reason.groups_id, admin_group)
+        self.assertEqual(menu_import.groups_id, admin_group)
+
     @skip("Legacy failure no relacionado con la tarifa; pendiente de revisar aparte.")
     def test_cron_update_missing_expedient_end_dates(self):
         order = self._create_sale_order(

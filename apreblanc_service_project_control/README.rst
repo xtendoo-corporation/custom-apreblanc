@@ -11,8 +11,10 @@ Cuando se confirma un pedido con líneas de servicio:
 
 * se crea un proyecto operativo asociado al pedido,
 * se genera una tarea por cada línea de servicio,
+* se encadenan las tareas en el mismo orden del presupuesto cuando hay varias anualidades o hitos,
 * se calcula una bolsa de horas objetivo en función del producto y la cantidad,
 * se monitoriza el consumo horario real mediante partes de horas,
+* cada parte de horas conserva la fase operativa de la tarea en el momento de imputar,
 * se bloquean nuevas imputaciones cuando se supera el objetivo, salvo
   autorización expresa.
 
@@ -53,10 +55,12 @@ Campos que añade el módulo
     horas, desviación y rentabilidad.
 
 ``project.task``
-    Trazabilidad con la línea del pedido que originó la tarea.
+  Trazabilidad con la línea del pedido que originó la tarea y fase operativa
+  de auditoría.
 
 ``account.analytic.line``
-    Validación del límite horario antes de aceptar nuevas imputaciones.
+  Validación del límite horario antes de aceptar nuevas imputaciones y copia
+  de la fase de la tarea sobre la imputación.
 
 Manual de uso
 -------------
@@ -84,10 +88,16 @@ Manual de uso
      restantes, desviación, rentabilidad y estado.
    * El proyecto conserva un enlace directo al pedido origen.
    * Puede informarse el jefe de proyecto, gestor junior y gestor senior.
+   * Las tareas arrancan en la fase ``Preparacion`` y avanzan por las cuatro
+     fases estándar: preparación, recogida de información, análisis e informe.
+   * Si el pedido tiene varias líneas de servicio, cada tarea posterior queda
+     bloqueada por la anterior hasta que esta se complete.
 
 5. Imputar horas.
 
    * Las horas se registran en tareas del proyecto mediante partes de horas.
+   * La descripción del parte incorpora automáticamente la fase activa de la
+     tarea para facilitar el análisis posterior.
    * Mientras no se supere el objetivo, el sistema permite seguir imputando.
    * Cuando el consumo alcanza el 80% del objetivo, el estado pasa a umbral de
      aviso.
@@ -137,7 +147,9 @@ La cobertura funcional mínima del módulo valida:
 
 * la creación automática del proyecto al confirmar el pedido,
 * la generación de tareas desde líneas de servicio,
+* el encadenado de dependencias entre tareas sucesivas,
 * el cálculo de horas objetivo trasladado al proyecto,
+* la inclusión de la fase operativa en la imputación de horas,
 * el bloqueo de imputaciones al superar el objetivo,
 * la continuidad del registro horario tras la autorización del exceso.
 
@@ -152,6 +164,6 @@ Evolución prevista
 ------------------
 
 * Integración automática con OneDrive para crear carpeta documental.
-* Estructuras por fases de auditoría o plantillas por tipo de servicio.
+* Plantillas específicas por tipo de servicio o expediente.
 * Roles avanzados apoyados en addons específicos de proyecto.
 * Alertas automáticas por umbrales intermedios y cuadros de mando ampliados.

@@ -1,12 +1,42 @@
-from odoo import _, api, models
+from odoo import _, api, fields, models
 from odoo.exceptions import UserError
 
 
 class AccountAnalyticLine(models.Model):
     _inherit = "account.analytic.line"
 
+    apreblanc_task_phase = fields.Selection(
+        selection=[
+            ("preparation", "Preparacion"),
+            ("information", "Recogida de informacion"),
+            ("analysis", "Analisis"),
+            ("report", "Redaccion y entrega de informe"),
+        ],
+        string="Fase Apreblanc",
+        copy=False,
+        readonly=True,
+    )
+
+    @api.model
+    def _apreblanc_prepare_timesheet_vals(self, vals):
+        task = self.env["project.task"].browse(vals.get("task_id")) if vals.get("task_id") else False
+        if not task:
+            return vals
+
+        phase = task.apreblanc_audit_phase
+        phase_label = task._get_apreblanc_audit_phase_label(phase)
+        name = vals.get("name") or _("Parte de horas")
+        prefix = _("[%(phase)s]", phase=phase_label)
+
+        prepared_vals = dict(vals)
+        prepared_vals.setdefault("apreblanc_task_phase", phase)
+        if not name.startswith(prefix):
+            prepared_vals["name"] = _("%(prefix)s %(name)s", prefix=prefix, name=name)
+        return prepared_vals
+
     @api.model_create_multi
     def create(self, vals_list):
+        vals_list = [self._apreblanc_prepare_timesheet_vals(vals) for vals in vals_list]
         lines = super().create(vals_list)
         lines._apreblanc_check_project_hours_limit()
         return lines

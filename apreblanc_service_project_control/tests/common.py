@@ -7,6 +7,7 @@ class ServiceProjectControlBaseCase(TransactionCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
+        cls.env["res.config.settings"].create({"group_project_task_dependencies": True}).execute()
         cls.partner = cls.env["res.partner"].create({"name": "Cliente servicio test"})
         cls.product_uom_hour = cls.env.ref("uom.product_uom_hour")
         cls.service_product = cls.env["product.product"].create(
@@ -46,6 +47,9 @@ class ServiceProjectControlBaseCase(TransactionCase):
                 "partner_invoice_id": cls.partner.id,
                 "partner_shipping_id": cls.partner.id,
                 "pricelist_id": cls.partner.property_product_pricelist.id,
-                "order_line": [(0, 0, line_vals) for line_vals in line_dicts],
+                "order_line": [
+                    (0, 0, {**line_vals, "sequence": index * 10})
+                    for index, line_vals in enumerate(line_dicts, start=1)
+                ],
             }
         )

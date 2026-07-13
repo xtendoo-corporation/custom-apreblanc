@@ -69,6 +69,7 @@
                     <field name="payment_term_id"
                         readonly="expedient_type != 'none' and expedient_state in ('aprobada', 'rechazada', 'cancelada') and not is_expedient_admin" />
                     <field name="pricelist_id"
+                        groups="apreblanc_sale_order_expedient.group_expedient_admin"
                         readonly="expedient_type != 'none' and expedient_state in ('aprobada', 'rechazada', 'cancelada') and not is_expedient_admin" />
                 </group>
 
@@ -160,6 +161,7 @@
                             readonly="expedient_state in ['aprobada', 'rechazada'] and not is_expedient_admin"
                             string="Fecha de Inicio" widget="datetime" />
                         <field name="pricelist_id"
+                            groups="apreblanc_sale_order_expedient.group_expedient_admin"
                             options="{'no_open': True, 'no_create': True}"
                             readonly="expedient_state in ['aprobada', 'rechazada', 'cancelada'] and not is_expedient_admin" />
                         <field name="expedient_date_end"

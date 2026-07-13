@@ -35,6 +35,22 @@ class SaleOrder(models.Model):
         string="Rentabilidad estimada %",
         compute="_compute_apreblanc_service_metrics",
     )
+    apreblanc_preparation_hours = fields.Float(
+        string="Horas preparacion",
+        compute="_compute_apreblanc_service_metrics",
+    )
+    apreblanc_information_hours = fields.Float(
+        string="Horas recogida",
+        compute="_compute_apreblanc_service_metrics",
+    )
+    apreblanc_analysis_hours = fields.Float(
+        string="Horas analisis",
+        compute="_compute_apreblanc_service_metrics",
+    )
+    apreblanc_report_hours = fields.Float(
+        string="Horas informe",
+        compute="_compute_apreblanc_service_metrics",
+    )
 
     @api.depends(
         "order_line.apreblanc_target_hours",
@@ -44,6 +60,10 @@ class SaleOrder(models.Model):
         "apreblanc_service_project_id.apreblanc_hours_progress",
         "apreblanc_service_project_id.apreblanc_hours_deviation",
         "apreblanc_service_project_id.apreblanc_profitability_pct",
+        "apreblanc_service_project_id.apreblanc_preparation_hours",
+        "apreblanc_service_project_id.apreblanc_information_hours",
+        "apreblanc_service_project_id.apreblanc_analysis_hours",
+        "apreblanc_service_project_id.apreblanc_report_hours",
     )
     def _compute_apreblanc_service_metrics(self):
         for order in self:
@@ -55,6 +75,10 @@ class SaleOrder(models.Model):
                 order.apreblanc_hours_progress = project.apreblanc_hours_progress
                 order.apreblanc_hours_deviation = project.apreblanc_hours_deviation
                 order.apreblanc_profitability_pct = project.apreblanc_profitability_pct
+                order.apreblanc_preparation_hours = project.apreblanc_preparation_hours
+                order.apreblanc_information_hours = project.apreblanc_information_hours
+                order.apreblanc_analysis_hours = project.apreblanc_analysis_hours
+                order.apreblanc_report_hours = project.apreblanc_report_hours
                 continue
 
             target = sum(order.order_line.filtered(lambda line: not line.display_type).mapped("apreblanc_target_hours"))
@@ -64,6 +88,10 @@ class SaleOrder(models.Model):
             order.apreblanc_hours_progress = 0.0
             order.apreblanc_hours_deviation = -target
             order.apreblanc_profitability_pct = 100.0 if target else 0.0
+            order.apreblanc_preparation_hours = 0.0
+            order.apreblanc_information_hours = 0.0
+            order.apreblanc_analysis_hours = 0.0
+            order.apreblanc_report_hours = 0.0
 
     def action_confirm(self):
         result = super().action_confirm()
@@ -86,6 +114,7 @@ class SaleOrder(models.Model):
             "company_id": self.company_id.id,
             "user_id": self.user_id.id,
             "allow_timesheets": True,
+            "allow_task_dependencies": len(service_lines) > 1,
             "allocated_hours": sum(service_lines.mapped("apreblanc_target_hours")),
             "apreblanc_control_enabled": True,
             "apreblanc_sale_order_id": self.id,
@@ -105,7 +134,7 @@ class SaleOrder(models.Model):
 
     def _apreblanc_create_service_project(self):
         self.ensure_one()
-        service_lines = self._apreblanc_get_service_lines()
+        service_lines = self._apreblanc_get_service_lines().sorted(lambda line: (line.sequence, line.id))
         if not service_lines:
             return False
 
@@ -113,7 +142,9 @@ class SaleOrder(models.Model):
             self._apreblanc_prepare_project_vals(service_lines)
         )
         task_vals = [self._apreblanc_prepare_task_vals(project, line) for line in service_lines]
-        self.env["project.task"].create(task_vals)
+        tasks = self.env["project.task"].create(task_vals)
+        for previous_task, current_task in zip(tasks, tasks[1:]):
+            current_task.write({"depend_on_ids": [(4, previous_task.id)]})
         self.apreblanc_service_project_id = project.id
 
         body = _("Proyecto operativo creado automáticamente desde el pedido confirmado.")
