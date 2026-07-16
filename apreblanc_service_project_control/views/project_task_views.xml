@@ -5,10 +5,13 @@
         <field name="model">project.task</field>
         <field name="inherit_id" ref="project.view_task_form2"/>
         <field name="arch" type="xml">
-            <field name="project_id" position="after">
-                <field name="apreblanc_audit_phase" widget="badge"/>
+            <field name="partner_id" position="after">
+                <field name="apreblanc_start_date"/>
                 <field name="apreblanc_sale_line_id" readonly="1" invisible="not apreblanc_sale_line_id"/>
             </field>
+            <xpath expr="//field[@name='timesheet_ids']/tree//field[@name='name']" position="after">
+                <field name="apreblanc_task_stage_name" readonly="1"/>
+            </xpath>
         </field>
     </record>
 </odoo>

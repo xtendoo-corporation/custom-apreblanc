@@ -117,6 +117,27 @@ class ProjectProject(models.Model):
         readonly=True,
         help="Detalles del error al crear la carpeta en OneDrive",
     )
+    apreblanc_service_type = fields.Selection(
+        [
+            ("audit", "Auditoría"),
+            ("consulting", "Consultoría"),
+            ("training", "Formación"),
+        ],
+        string="Tipo de servicio",
+        tracking=True,
+        help="Tipo de servicio prestado en este proyecto",
+    )
+    apreblanc_project_stage = fields.Selection(
+        [
+            ("complete_audit", "Auditoría Completa"),
+            ("follow_up_1", "Primer Seguimiento"),
+            ("follow_up_2", "Segundo Seguimiento"),
+        ],
+        string="Etapa del proyecto",
+        default="complete_audit",
+        tracking=True,
+        help="Etapa actual del proyecto (Auditoría Completa, Primer Seguimiento, Segundo Seguimiento)",
+    )
 
     @api.depends("allocated_hours", "timesheet_ids.unit_amount", "apreblanc_overtime_approved")
     def _compute_apreblanc_hours_metrics(self):
@@ -304,3 +325,32 @@ class ProjectProject(models.Model):
                 project.apreblanc_onedrive_error = True
                 project.apreblanc_onedrive_error_message = str(e)
         return True
+
+    def _create_apreblanc_default_tasks(self):
+        """Crear las 4 tareas estándar del proyecto"""
+        self.ensure_one()
+        
+        if not self.apreblanc_control_enabled:
+            return
+        
+        # Las 4 tareas estándar que todo proyecto debe tener
+        standard_tasks = [
+            {"name": _("Trabajo previo"), "sequence": 1},
+            {"name": _("Recogida de información"), "sequence": 2},
+            {"name": _("Análisis de información"), "sequence": 3},
+            {"name": _("Informe"), "sequence": 4},
+        ]
+        
+        task_vals_list = []
+        for task_data in standard_tasks:
+            task_vals_list.append({
+                "name": task_data["name"],
+                "project_id": self.id,
+                "sequence": task_data["sequence"],
+                "partner_id": self.partner_id.id,
+                "apreblanc_sale_line_id": False,
+            })
+        
+        if task_vals_list:
+            self.env["project.task"].create(task_vals_list)
+            _logger.info(f"✅ Se crearon 4 tareas estándar para el proyecto {self.id}")

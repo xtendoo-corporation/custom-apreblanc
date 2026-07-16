@@ -18,6 +18,10 @@
                     </div>
                 </button>
             </div>
+            <xpath expr="//field[@name='order_line']/tree//field[@name='price_unit']" position="after">
+                <field name="apreblanc_target_hours" optional="show"/>
+                <field name="apreblanc_start_date" optional="show"/>
+            </xpath>
             <page name="order_lines" position="after">
                 <page string="Control servicio" name="control_servicio" invisible="apreblanc_hours_target == 0 and not apreblanc_service_project_id">
                     <div class="row">

@@ -1,10 +1,28 @@
 from odoo import _, api, fields, models
 from odoo.exceptions import UserError
 
+APREBLANC_PROJECT_STAGES = [
+    ("Pendiente de asignar", 10, False),
+    ("Trabajo previo", 20, False),
+    ("Recogida de información", 30, False),
+    ("Análisis de información", 40, False),
+    ("Informe", 50, True),
+]
+
 
 class SaleOrder(models.Model):
     _inherit = "sale.order"
 
+    apreblanc_service_type = fields.Selection(
+        [
+            ("audit", "Auditoría"),
+            ("consulting", "Consultoría"),
+            ("training", "Formación"),
+        ],
+        string="Tipo de servicio",
+        help="Tipo de servicio que se prestará",
+        required=True,
+    )
     apreblanc_service_project_id = fields.Many2one(
         "project.project",
         string="Proyecto operativo",
@@ -121,11 +139,31 @@ class SaleOrder(models.Model):
             "apreblanc_project_manager_id": self.user_id.id,
         }
 
-    def _apreblanc_prepare_task_vals(self, project, line):
+    def _apreblanc_get_or_create_project_stages(self):
+        self.ensure_one()
+        stage_model = self.env["project.task.type"]
+        stages = {}
+        for stage_name, sequence, fold in APREBLANC_PROJECT_STAGES:
+            stage = stage_model.search([("name", "=", stage_name)], limit=1)
+            if not stage:
+                stage = stage_model.create(
+                    {
+                        "name": stage_name,
+                        "sequence": sequence,
+                        "fold": fold,
+                    }
+                )
+            stages[stage_name] = stage
+        return stages
+
+    def _apreblanc_prepare_task_vals(self, project, line, default_stage, task_sequence):
         task_name = line.name.splitlines()[0] if line.name else line.product_id.display_name
         return {
             "name": task_name,
             "project_id": project.id,
+            "stage_id": default_stage.id,
+            "sequence": task_sequence,
+            "apreblanc_start_date": line.apreblanc_start_date,
             "partner_id": self.partner_id.id,
             "description": line.name,
             "allocated_hours": line.apreblanc_target_hours,
@@ -141,9 +179,29 @@ class SaleOrder(models.Model):
         project = self.env["project.project"].create(
             self._apreblanc_prepare_project_vals(service_lines)
         )
-        task_vals = [self._apreblanc_prepare_task_vals(project, line) for line in service_lines]
+        stages = self._apreblanc_get_or_create_project_stages()
+        project.write({"type_ids": [(6, 0, [stage.id for stage in stages.values()])]})
+        pending_stage = stages["Pendiente de asignar"]
+        task_vals = [
+            self._apreblanc_prepare_task_vals(
+                project,
+                line,
+                pending_stage,
+                task_sequence=index * 10,
+            )
+            for index, line in enumerate(service_lines, start=1)
+        ]
         tasks = self.env["project.task"].create(task_vals)
-        for previous_task, current_task in zip(tasks, tasks[1:]):
+        task_by_sale_line = {
+            task.apreblanc_sale_line_id.id: task
+            for task in tasks.filtered("apreblanc_sale_line_id")
+        }
+        ordered_tasks = [
+            task_by_sale_line[line.id]
+            for line in service_lines
+            if line.id in task_by_sale_line
+        ]
+        for previous_task, current_task in zip(ordered_tasks, ordered_tasks[1:]):
             current_task.write({"depend_on_ids": [(4, previous_task.id)]})
         self.apreblanc_service_project_id = project.id
 
