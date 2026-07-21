@@ -98,6 +98,49 @@ class TestSaleOrder(ExpedientBaseCase):
         with self.assertRaises(ValidationError):
             order.action_confirm()
 
+    def test_action_confirm_keeps_custom_price_without_template(self):
+        custom_price = 12.34
+        pricelist = self._create_pricelist_with_fixed_price(999.0)
+        order = self._create_sale_order(pricelist_id=pricelist.id)
+        order.order_line.price_unit = custom_price
+
+        order.action_confirm()
+
+        self.assertEqual(order.state, "sale")
+        self.assertEqual(
+            order.order_line.price_unit,
+            custom_price,
+            "Una venta normal debe conservar el precio personalizado al confirmar.",
+        )
+
+    def test_create_keeps_custom_price_without_template(self):
+        custom_price = 7.89
+        pricelist = self._create_pricelist_with_fixed_price(999.0)
+        order = self.env["sale.order"].create(
+            {
+                "partner_id": self.partner.id,
+                "pricelist_id": pricelist.id,
+                "order_line": [
+                    (
+                        0,
+                        0,
+                        {
+                            "product_id": self.product.id,
+                            "name": "Linea test",
+                            "product_uom_qty": 1.0,
+                            "price_unit": custom_price,
+                        },
+                    )
+                ],
+            }
+        )
+
+        self.assertEqual(
+            order.order_line.price_unit,
+            custom_price,
+            "Una venta normal debe conservar el precio personalizado al crearse.",
+        )
+
     def test_write_auto_confirms_regular_sale_order(self):
         order = self._create_sale_order(expedient_type="none")
 
