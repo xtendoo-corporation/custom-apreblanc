@@ -70,6 +70,83 @@ class TestServiceProjectControl(ServiceProjectControlBaseCase):
         self.assertEqual(tasks.name, "Servicio marcado")
         self.assertEqual(project.allocated_hours, 5.0)
 
+    def test_confirm_creates_one_task_per_marked_line(self):
+        order = self._create_sale_order(
+            [
+                self._line_vals(self.service_product, qty=1, name="Fase inicial"),
+                self._line_vals(self.service_product, qty=1, name="Fase intermedia"),
+                self._line_vals(self.service_product, qty=1, name="Fase final"),
+            ]
+        )
+
+        order.action_confirm()
+
+        project = order.apreblanc_service_project_id
+        self.assertTrue(project)
+        tasks = self.env["project.task"].search([("project_id", "=", project.id)])
+        self.assertEqual(len(tasks), 3, "Debe crearse una tarea por cada línea marcada.")
+        self.assertEqual(
+            tasks.mapped("apreblanc_sale_line_id"),
+            order.order_line,
+            "Cada tarea debe quedar vinculada a su línea de venta de origen.",
+        )
+        self.assertEqual(
+            set(tasks.mapped("name")),
+            {"Fase inicial", "Fase intermedia", "Fase final"},
+        )
+
+    def test_confirm_creates_tasks_even_without_target_hours(self):
+        zero_hours_product = self.env["product.product"].create(
+            {
+                "name": "Servicio marcado sin horas",
+                "detailed_type": "service",
+                "list_price": 90.0,
+                "uom_id": self.product_uom_hour.id,
+                "uom_po_id": self.product_uom_hour.id,
+                "apreblanc_target_hours": 0.0,
+                "apreblanc_create_service_project": True,
+            }
+        )
+        order = self._create_sale_order(
+            [self._line_vals(zero_hours_product, qty=2, name="Servicio sin horas")]
+        )
+
+        order.action_confirm()
+
+        project = order.apreblanc_service_project_id
+        self.assertTrue(project, "Debe crearse el proyecto aunque no haya horas objetivo.")
+        tasks = self.env["project.task"].search([("project_id", "=", project.id)])
+        self.assertEqual(
+            len(tasks),
+            1,
+            "La tarea debe crearse aunque las horas objetivo sean cero.",
+        )
+        self.assertEqual(tasks.allocated_hours, 0.0)
+
+    def test_reconfirm_keeps_project_and_tasks(self):
+        order = self._create_sale_order(
+            [self._line_vals(self.service_product, qty=1, name="Servicio idempotente")]
+        )
+
+        order.action_confirm()
+        project = order.apreblanc_service_project_id
+        tasks_before = self.env["project.task"].search(
+            [("project_id", "=", project.id)]
+        )
+        self.assertEqual(len(tasks_before), 1)
+
+        order._apreblanc_create_service_project()
+
+        self.assertEqual(order.apreblanc_service_project_id, project)
+        tasks_after = self.env["project.task"].search(
+            [("project_id", "=", project.id)]
+        )
+        self.assertEqual(
+            tasks_after,
+            tasks_before,
+            "Volver a lanzar la creación no debe duplicar ni perder tareas.",
+        )
+
     def test_confirm_creates_sequential_task_dependencies(self):
         order = self._create_sale_order(
             [

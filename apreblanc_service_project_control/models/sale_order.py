@@ -174,6 +174,8 @@ class SaleOrder(models.Model):
 
     def _apreblanc_create_service_project(self):
         self.ensure_one()
+        if self.apreblanc_service_project_id:
+            return self.apreblanc_service_project_id
         service_lines = self._apreblanc_get_service_lines().sorted(lambda line: (line.sequence, line.id))
         if not service_lines:
             return False

@@ -11,6 +11,9 @@ class SaleOrderLine(models.Model):
     )
     apreblanc_target_hours = fields.Float(
         string="Horas objetivo",
+        compute="_compute_apreblanc_target_hours",
+        store=True,
+        readonly=False,
         help="Horas objetivo a usar para crear proyecto y tareas al confirmar el pedido.",
     )
 
@@ -32,10 +35,17 @@ class SaleOrderLine(models.Model):
                     )
                 )
 
-    @api.onchange("product_id")
-    def _onchange_apreblanc_target_hours(self):
+    @api.depends(
+        "product_uom_qty",
+        "product_id",
+        "display_type",
+        "product_template_id.apreblanc_target_hours",
+    )
+    def _compute_apreblanc_target_hours(self):
         for line in self:
             if line.display_type or line.product_template_id.detailed_type != "service":
                 line.apreblanc_target_hours = 0.0
                 continue
-            line.apreblanc_target_hours = line.product_template_id.apreblanc_target_hours
+            line.apreblanc_target_hours = (
+                line.product_uom_qty * line.product_template_id.apreblanc_target_hours
+            )
