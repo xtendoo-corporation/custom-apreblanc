@@ -18,6 +18,7 @@ class ServiceProjectControlBaseCase(TransactionCase):
                 "uom_id": cls.product_uom_hour.id,
                 "uom_po_id": cls.product_uom_hour.id,
                 "apreblanc_target_hours": 2.5,
+                "apreblanc_create_service_project": True,
             }
         )
         cls.material_product = cls.env["product.product"].create(
@@ -25,6 +26,17 @@ class ServiceProjectControlBaseCase(TransactionCase):
                 "name": "Material auxiliar",
                 "detailed_type": "consu",
                 "list_price": 25.0,
+            }
+        )
+        cls.service_product_no_project = cls.env["product.product"].create(
+            {
+                "name": "Servicio sin proyecto",
+                "detailed_type": "service",
+                "list_price": 120.0,
+                "uom_id": cls.product_uom_hour.id,
+                "uom_po_id": cls.product_uom_hour.id,
+                "apreblanc_target_hours": 3.0,
+                "apreblanc_create_service_project": False,
             }
         )
         cls.env.user.action_create_employee()

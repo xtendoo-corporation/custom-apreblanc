@@ -121,7 +121,9 @@ class SaleOrder(models.Model):
     def _apreblanc_get_service_lines(self):
         self.ensure_one()
         return self.order_line.filtered(
-            lambda line: not line.display_type and line.product_template_id.detailed_type == "service"
+            lambda line: not line.display_type
+            and line.product_template_id.detailed_type == "service"
+            and line.product_template_id.apreblanc_create_service_project
         )
 
     def _apreblanc_prepare_project_vals(self, service_lines):

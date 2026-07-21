@@ -34,6 +34,42 @@ class TestServiceProjectControl(ServiceProjectControlBaseCase):
         self.assertEqual(tasks.apreblanc_sale_line_id.order_id, order)
         self.assertEqual(tasks.apreblanc_audit_phase, "preparation")
 
+    def test_confirm_without_marked_lines_creates_no_project(self):
+        order = self._create_sale_order(
+            [
+                self._line_vals(self.service_product_no_project, qty=4),
+                self._line_vals(self.material_product, qty=2),
+            ]
+        )
+
+        order.action_confirm()
+
+        self.assertFalse(order.apreblanc_service_project_id)
+        self.assertFalse(
+            self.env["project.project"].search(
+                [("apreblanc_sale_order_id", "=", order.id)]
+            )
+        )
+
+    def test_confirm_only_includes_marked_service_lines(self):
+        order = self._create_sale_order(
+            [
+                self._line_vals(self.service_product, qty=2, name="Servicio marcado"),
+                self._line_vals(
+                    self.service_product_no_project, qty=5, name="Servicio no marcado"
+                ),
+            ]
+        )
+
+        order.action_confirm()
+
+        project = order.apreblanc_service_project_id
+        self.assertTrue(project)
+        tasks = self.env["project.task"].search([("project_id", "=", project.id)])
+        self.assertEqual(len(tasks), 1)
+        self.assertEqual(tasks.name, "Servicio marcado")
+        self.assertEqual(project.allocated_hours, 5.0)
+
     def test_confirm_creates_sequential_task_dependencies(self):
         order = self._create_sale_order(
             [
