@@ -180,34 +180,49 @@ class SaleOrder(models.Model):
         if not service_lines:
             return False
 
-        project = self.env["project.project"].create(
-            self._apreblanc_prepare_project_vals(service_lines)
-        )
-        stages = self._apreblanc_get_or_create_project_stages()
-        project.write({"type_ids": [(6, 0, [stage.id for stage in stages.values()])]})
-        pending_stage = stages["Pendiente de asignar"]
-        task_vals = [
-            self._apreblanc_prepare_task_vals(
-                project,
-                line,
-                pending_stage,
-                task_sequence=index * 10,
+        # El proyecto y sus tareas se crean de forma atómica: si falla la
+        # creación de las tareas se revierte también el proyecto, evitando dejar
+        # un proyecto operativo sin tareas.
+        with self.env.cr.savepoint():
+            project = self.env["project.project"].create(
+                self._apreblanc_prepare_project_vals(service_lines)
             )
-            for index, line in enumerate(service_lines, start=1)
-        ]
-        tasks = self.env["project.task"].create(task_vals)
-        task_by_sale_line = {
-            task.apreblanc_sale_line_id.id: task
-            for task in tasks.filtered("apreblanc_sale_line_id")
-        }
-        ordered_tasks = [
-            task_by_sale_line[line.id]
-            for line in service_lines
-            if line.id in task_by_sale_line
-        ]
-        for previous_task, current_task in zip(ordered_tasks, ordered_tasks[1:]):
-            current_task.write({"depend_on_ids": [(4, previous_task.id)]})
-        self.apreblanc_service_project_id = project.id
+            stages = self._apreblanc_get_or_create_project_stages()
+            project.write({"type_ids": [(6, 0, [stage.id for stage in stages.values()])]})
+            pending_stage = stages["Pendiente de asignar"]
+            task_vals = [
+                self._apreblanc_prepare_task_vals(
+                    project,
+                    line,
+                    pending_stage,
+                    task_sequence=index * 10,
+                )
+                for index, line in enumerate(service_lines, start=1)
+            ]
+            tasks = self.env["project.task"].create(task_vals)
+            if len(tasks) != len(service_lines):
+                raise UserError(
+                    _(
+                        "No se pudieron crear todas las tareas del proyecto operativo "
+                        "para el pedido %(order)s (esperadas %(expected)s, creadas "
+                        "%(created)s).",
+                        order=self.name,
+                        expected=len(service_lines),
+                        created=len(tasks),
+                    )
+                )
+            task_by_sale_line = {
+                task.apreblanc_sale_line_id.id: task
+                for task in tasks.filtered("apreblanc_sale_line_id")
+            }
+            ordered_tasks = [
+                task_by_sale_line[line.id]
+                for line in service_lines
+                if line.id in task_by_sale_line
+            ]
+            for previous_task, current_task in zip(ordered_tasks, ordered_tasks[1:]):
+                current_task.write({"depend_on_ids": [(4, previous_task.id)]})
+            self.apreblanc_service_project_id = project.id
 
         body = _("Proyecto operativo creado automáticamente desde el pedido confirmado.")
         self.message_post(body=body)
