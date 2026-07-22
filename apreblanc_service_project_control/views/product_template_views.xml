@@ -6,8 +6,8 @@
         <field name="inherit_id" ref="product.product_template_only_form_view"/>
         <field name="arch" type="xml">
             <field name="categ_id" position="after">
-                <field name="apreblanc_create_service_project" invisible="detailed_type != 'service'"/>
-                <field name="apreblanc_target_hours" invisible="detailed_type != 'service' or not apreblanc_create_service_project"/>
+                <field name="apreblanc_create_service_project"/>
+                <field name="apreblanc_target_hours" invisible="not apreblanc_create_service_project"/>
             </field>
         </field>
     </record>

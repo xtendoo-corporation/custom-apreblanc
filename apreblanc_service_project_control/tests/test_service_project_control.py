@@ -72,6 +72,23 @@ class TestServiceProjectControl(ServiceProjectControlBaseCase):
         self.assertEqual(tasks.name, "Servicio marcado")
         self.assertEqual(project.allocated_hours, 5.0)
 
+    def test_confirm_marked_non_service_product_creates_project_and_tasks(self):
+        order = self._create_sale_order(
+            [self._line_vals(self.consu_product_with_project, qty=2, name="Consumible marcado")]
+        )
+
+        order.action_confirm()
+
+        project = order.apreblanc_service_project_id
+        self.assertTrue(
+            project,
+            "Un producto marcado debe crear proyecto aunque no sea de tipo servicio.",
+        )
+        tasks = self.env["project.task"].search([("project_id", "=", project.id)])
+        self.assertEqual(len(tasks), 1)
+        self.assertEqual(tasks.name, "Consumible marcado")
+        self.assertEqual(project.allocated_hours, 8.0)
+
     def test_confirm_creates_one_task_per_marked_line(self):
         order = self._create_sale_order(
             [

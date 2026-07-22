@@ -40,10 +40,11 @@ class SaleOrderLine(models.Model):
         "product_id",
         "display_type",
         "product_template_id.apreblanc_target_hours",
+        "product_template_id.apreblanc_create_service_project",
     )
     def _compute_apreblanc_target_hours(self):
         for line in self:
-            if line.display_type or line.product_template_id.detailed_type != "service":
+            if line.display_type or not line.product_template_id.apreblanc_create_service_project:
                 line.apreblanc_target_hours = 0.0
                 continue
             line.apreblanc_target_hours = (

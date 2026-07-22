@@ -39,6 +39,15 @@ class ServiceProjectControlBaseCase(TransactionCase):
                 "apreblanc_create_service_project": False,
             }
         )
+        cls.consu_product_with_project = cls.env["product.product"].create(
+            {
+                "name": "Consumible con proyecto",
+                "detailed_type": "consu",
+                "list_price": 80.0,
+                "apreblanc_target_hours": 4.0,
+                "apreblanc_create_service_project": True,
+            }
+        )
         cls.env.user.action_create_employee()
 
     @classmethod

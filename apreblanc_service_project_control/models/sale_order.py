@@ -122,7 +122,6 @@ class SaleOrder(models.Model):
         self.ensure_one()
         return self.order_line.filtered(
             lambda line: not line.display_type
-            and line.product_template_id.detailed_type == "service"
             and line.product_template_id.apreblanc_create_service_project
         )
 
