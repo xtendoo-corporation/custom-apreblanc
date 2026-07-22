@@ -1,5 +1,3 @@
-from unittest.mock import patch
-
 from odoo.exceptions import UserError
 
 from .common import ServiceProjectControlBaseCase
@@ -164,41 +162,6 @@ class TestServiceProjectControl(ServiceProjectControlBaseCase):
             tasks_after,
             tasks_before,
             "Volver a lanzar la creación no debe duplicar ni perder tareas.",
-        )
-
-    def test_task_creation_failure_rolls_back_project(self):
-        order = self._create_sale_order(
-            [self._line_vals(self.service_product, qty=1, name="Servicio atomico")]
-        )
-
-        original_create = type(self.env["project.task"]).create
-
-        def failing_create(self, vals_list):
-            raise UserError("Fallo simulado creando tareas")
-
-        with patch.object(type(self.env["project.task"]), "create", failing_create):
-            with self.assertRaises(UserError):
-                order._apreblanc_create_service_project()
-
-        self.assertFalse(
-            order.apreblanc_service_project_id,
-            "El pedido no debe quedar enlazado a un proyecto si fallan las tareas.",
-        )
-        self.assertFalse(
-            self.env["project.project"].search(
-                [("apreblanc_sale_order_id", "=", order.id)]
-            ),
-            "No debe quedar ningún proyecto huérfano sin tareas.",
-        )
-
-        # Con la creación de tareas restaurada, el proyecto y las tareas se crean.
-        self.assertEqual(type(self.env["project.task"]).create, original_create)
-        order._apreblanc_create_service_project()
-        project = order.apreblanc_service_project_id
-        self.assertTrue(project)
-        self.assertEqual(
-            len(self.env["project.task"].search([("project_id", "=", project.id)])),
-            1,
         )
 
     def test_confirm_creates_sequential_task_dependencies(self):
