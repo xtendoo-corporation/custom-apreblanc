@@ -7,10 +7,11 @@ Resumen funcional
 Este módulo añade un control operativo para servicios vendidos desde pedidos de
 venta estándar en Odoo.
 
-Cuando se confirma un pedido con líneas de servicio:
+Cuando se confirma un pedido con líneas cuyo producto tiene marcada la casilla
+``Crear proyecto operativo``:
 
 * se crea un proyecto operativo asociado al pedido,
-* se genera una tarea por cada línea de servicio,
+* se genera una tarea por cada línea marcada,
 * se encadenan las tareas en el mismo orden del presupuesto cuando hay varias anualidades o hitos,
 * se calcula una bolsa de horas objetivo en función del producto y la cantidad,
 * se monitoriza el consumo horario real mediante partes de horas,
@@ -30,7 +31,8 @@ Configuración previa
 
 Antes de usar el módulo conviene revisar estos puntos:
 
-* El producto debe ser de tipo servicio.
+* En la ficha del producto debe marcarse la casilla ``Crear proyecto operativo``.
+  Esta casilla es visible en cualquier tipo de producto, no solo en servicios.
 * En la ficha del producto debe informarse el campo ``Horas objetivo servicio``.
 * El usuario que vaya a imputar horas debe poder usar partes de horas en
   proyecto.
@@ -40,12 +42,15 @@ Campos que añade el módulo
 --------------------------
 
 ``product.template``
+    Casilla ``Crear proyecto operativo`` que, al estar marcada, hace que las
+    líneas de ese producto generen proyecto y tareas al confirmar el pedido.
+    Es independiente del tipo de producto.
     Campo ``Horas objetivo servicio`` para definir las horas previstas por cada
     unidad vendida.
 
 ``sale.order.line``
     Campo calculado ``Horas objetivo`` en función de cantidad por horas objetivo
-    del producto.
+    del producto, solo para líneas cuyo producto tiene la casilla marcada.
 
 ``sale.order``
     Enlace al ``Proyecto operativo`` y métricas agregadas de control horario.
@@ -65,21 +70,22 @@ Campos que añade el módulo
 Manual de uso
 -------------
 
-1. Crear o revisar el producto de servicio.
+1. Crear o revisar el producto.
 
    * Abrir el producto.
+   * Marcar la casilla ``Crear proyecto operativo``.
    * Indicar el valor de ``Horas objetivo servicio``.
    * Guardar el producto.
 
 2. Crear el pedido de venta.
 
-   * Añadir una o varias líneas de servicio.
+   * Añadir una o varias líneas con productos marcados.
    * La métrica de horas previstas se calculará automáticamente en cada línea.
 
 3. Confirmar el pedido.
 
    * Al confirmar, el módulo crea un único proyecto operativo para el pedido.
-   * También crea una tarea por cada línea de servicio.
+   * También crea una tarea por cada línea cuyo producto está marcado.
    * En el pedido aparece el botón ``Proyecto operativo``.
 
 4. Gestionar el proyecto.
@@ -146,7 +152,9 @@ Cobertura de test añadida
 La cobertura funcional mínima del módulo valida:
 
 * la creación automática del proyecto al confirmar el pedido,
-* la generación de tareas desde líneas de servicio,
+* la generación de tareas desde las líneas cuyo producto está marcado,
+* que un producto marcado genera proyecto y tareas aunque no sea de tipo servicio,
+* que las líneas no marcadas no generan proyecto ni tareas,
 * el encadenado de dependencias entre tareas sucesivas,
 * el cálculo de horas objetivo trasladado al proyecto,
 * la inclusión de la fase operativa en la imputación de horas,
@@ -157,7 +165,9 @@ Límites actuales
 ----------------
 
 * El módulo crea un único proyecto por pedido confirmado.
-* Solo las líneas de servicio participan en el cálculo de horas objetivo.
+* Solo las líneas cuyo producto tiene marcada la casilla ``Crear proyecto
+  operativo`` participan en la creación de tareas y en el cálculo de horas
+  objetivo.
 * La facturación no se recalcula en función de las horas reales imputadas.
 
 Evolución prevista
