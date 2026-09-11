@@ -49,5 +49,5 @@
         parent="sale.sale_order_menu"
         action="action_sale_order_expedient_simple"
         sequence="20"
-        groups="group_expedient_postpago,group_expedient_admin" />
+        groups="group_expedient_postpago,-group_expedient_admin" />
 </odoo>

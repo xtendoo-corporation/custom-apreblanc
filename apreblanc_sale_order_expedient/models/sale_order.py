@@ -493,18 +493,9 @@ class SaleOrder(models.Model):
         return self
 
     def _recompute_template_prices(self):
-        """Recalcula precios de líneas con la tarifa de la plantilla.
-
-        Solo afecta a expedientes (expedient_type 'pre_paid' o 'post_paid')
-        generados desde una plantilla; las ventas normales y los pedidos sin
-        expediente conservan los precios personalizados manualmente y no se
-        recalculan al crear o confirmar.
-        """
+        """Recalcula precios de líneas con la tarifa actual del pedido."""
         orders = self.filtered(
-            lambda o: o.expedient_type in ("pre_paid", "post_paid")
-            and o.sale_order_template_id
-            and o.pricelist_id
-            and o.order_line.filtered(lambda l: l.product_id and not l.display_type)
+            lambda o: o.pricelist_id and o.order_line.filtered(lambda l: l.product_id and not l.display_type)
         )
         if orders:
             orders._recompute_prices()

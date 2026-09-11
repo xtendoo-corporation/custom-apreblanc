@@ -402,7 +402,7 @@
         parent="sale.sale_order_menu"
         action="action_sale_order_expedient"
         sequence="25"
-        groups="group_expedient_postpago,group_expedient_admin" />
+        groups="group_expedient_postpago,-group_expedient_admin" />
 
     <!-- Vista Tree para Expedientes Pre-pagados (siempre son pedidos de venta) -->
     <record id="view_sale_order_prepaid_tree" model="ir.ui.view">
@@ -473,7 +473,56 @@
         parent="sale.sale_order_menu"
         action="action_sale_order_prepaid"
         sequence="25"
-        groups="group_expedient_prepago,group_expedient_admin" />
+        groups="group_expedient_prepago,-group_expedient_admin" />
+
+    <!-- Acción de Expedientes Postpago para administradores: mismo listado que la acción normal,
+         pero con la vista tree estándar de pedidos (no la de expedientes) y sin 'show_as_expedient'
+         en el contexto, para que el formulario se comporte como en Pedidos -->
+    <record id="action_sale_order_expedient_admin" model="ir.actions.act_window">
+        <field name="name">Expedientes Postpago</field>
+        <field name="type">ir.actions.act_window</field>
+        <field name="res_model">sale.order</field>
+        <field name="view_mode">tree,form,pivot</field>
+        <field name="view_id" ref="sale.view_order_tree" />
+        <field name="domain">[('expedient_type', '=', 'post_paid')]</field>
+        <field name="context">{
+            'default_expedient_type': 'post_paid',
+            'search_default_expedient_state_active': 1
+            }
+        </field>
+    </record>
+
+    <!-- Menú para Expedientes Postpago (Administradores) -->
+    <menuitem id="menu_sale_order_expedient_admin"
+        name="Expedientes Postpago"
+        parent="sale.sale_order_menu"
+        action="action_sale_order_expedient_admin"
+        sequence="26"
+        groups="group_expedient_admin" />
+
+    <!-- Acción de Expedientes Pre-pagados para administradores: todos los expedientes prepago
+         (no solo los del gestor actual), con la vista tree estándar de pedidos y sin
+         'show_as_expedient' en el contexto -->
+    <record id="action_sale_order_prepaid_admin" model="ir.actions.act_window">
+        <field name="name">Expedientes Pre-pagados</field>
+        <field name="res_model">sale.order</field>
+        <field name="view_mode">tree,form</field>
+        <field name="view_id" ref="sale.view_order_tree" />
+        <field name="domain">[('expedient_type', '=', 'pre_paid')]</field>
+        <field name="context">{
+            'default_expedient_type': 'pre_paid',
+            'search_default_expedient_state_active': 1
+            }
+        </field>
+    </record>
+
+    <!-- Menú para Expedientes Pre-pagados (Administradores) -->
+    <menuitem id="menu_sale_order_prepaid_admin"
+        name="Expedientes Pre-pagados"
+        parent="sale.sale_order_menu"
+        action="action_sale_order_prepaid_admin"
+        sequence="27"
+        groups="group_expedient_admin" />
 
     <!-- Nueva vista y acción para documentos OneDrive -->
     <record id="view_onedrive_document_tree" model="ir.ui.view">
@@ -505,5 +554,15 @@
     <!-- Restringir menú de Pedidos solo a administradores de expedientes -->
     <record id="sale.menu_sale_order" model="ir.ui.menu">
         <field name="groups_id" eval="[(6, 0, [ref('group_expedient_admin')])]" />
+    </record>
+
+    <!-- Presupuestos: solo pedidos normales (sin expediente ni tipo Post/Pre pagado), los expedientes tienen sus propios menús -->
+    <record id="sale.action_quotations_with_onboarding" model="ir.actions.act_window">
+        <field name="domain" eval="['&amp;', ('expedient_type', '=', 'none'), '|', ('type_id', '=', False), ('type_id', '=', ref('sale_order_type.normal_sale_type'))]" />
+    </record>
+
+    <!-- Pedidos: solo pedidos normales (sin expediente ni tipo Post/Pre pagado), los expedientes tienen sus propios menús -->
+    <record id="sale.action_orders" model="ir.actions.act_window">
+        <field name="domain" eval="['&amp;', '&amp;', ('state', 'not in', ('draft', 'sent', 'cancel')), ('expedient_type', '=', 'none'), '|', ('type_id', '=', False), ('type_id', '=', ref('sale_order_type.normal_sale_type'))]" />
     </record>
 </odoo>
