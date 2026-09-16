@@ -1,3 +1,5 @@
+from collections import Counter
+
 from odoo import api, fields, models, _, exceptions
 from odoo.exceptions import ValidationError
 from datetime import datetime
@@ -539,13 +541,19 @@ class SaleOrder(models.Model):
 
     @api.model
     def _get_template_line_signature(self, values):
+        """Devuelve una firma estable para detectar líneas ya aplicadas.
+
+        Odoo puede alterar la secuencia de líneas cargadas desde plantilla en
+        el ``onchange`` del presupuesto (por ejemplo, la primera línea pasa a
+        ``-99``). La secuencia no identifica una línea distinta, así que se
+        excluye de la firma para no duplicarla al confirmar.
+        """
         return (
             values.get("display_type") or False,
             values.get("product_id") or False,
             values.get("name") or "",
             values.get("product_uom_qty") or 0.0,
             values.get("product_uom") or False,
-            values.get("sequence") or 0,
         )
 
     def _create_applicable_template_lines(self):
@@ -554,7 +562,7 @@ class SaleOrder(models.Model):
 
         for order in self.filtered("sale_order_template_id"):
             template = order.sale_order_template_id
-            existing_signatures = {
+            existing_signatures = Counter(
                 order._get_template_line_signature(
                     {
                         "display_type": line.display_type,
@@ -562,11 +570,10 @@ class SaleOrder(models.Model):
                         "name": line.name,
                         "product_uom_qty": line.product_uom_qty,
                         "product_uom": line.product_uom.id,
-                        "sequence": line.sequence,
                     }
                 )
                 for line in order.order_line
-            }
+            )
 
             lines_to_create = []
             for template_line in template.sale_order_template_line_ids:
@@ -581,7 +588,8 @@ class SaleOrder(models.Model):
 
                 line_vals = template_line._prepare_order_line_values()
                 signature = order._get_template_line_signature(line_vals)
-                if signature in existing_signatures:
+                if existing_signatures[signature]:
+                    existing_signatures[signature] -= 1
                     continue
 
                 if hasattr(template_line, "discount"):
@@ -589,7 +597,6 @@ class SaleOrder(models.Model):
 
                 line_vals["order_id"] = order.id
                 lines_to_create.append(line_vals)
-                existing_signatures.add(signature)
 
             if lines_to_create:
                 sale_order_line_model.create(lines_to_create)

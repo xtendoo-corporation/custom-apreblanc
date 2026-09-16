@@ -5,6 +5,19 @@ from .common import ExpedientBaseCase
 
 
 class TestSaleOrder(ExpedientBaseCase):
+    def _create_sale_order_from_template_form(self, template, **extra_vals):
+        order_form = self.env["sale.order"].new(
+            {
+                "partner_id": self.partner.id,
+                "sale_order_template_id": template.id,
+                **extra_vals,
+            }
+        )
+        order_form._onchange_partner_id()
+        order_form._onchange_sale_order_template_id()
+        order_vals = order_form._convert_to_write(order_form._cache)
+        return self.env["sale.order"].create(order_vals)
+
     def _create_pricelist_with_fixed_price(self, fixed_price):
         pricelist = self.env["product.pricelist"].create(
             {
@@ -478,5 +491,88 @@ class TestSaleOrder(ExpedientBaseCase):
             target_line.price_unit,
             42.0,
             "La línea creada al confirmar debe respetar la tarifa del pedido.",
+        )
+
+    def test_write_auto_confirm_does_not_duplicate_template_lines_loaded_by_onchange(self):
+        template = self._create_template_with_line()
+        order = self._create_sale_order_from_template_form(
+            template,
+            expedient_type="post_paid",
+        )
+
+        self.assertEqual(
+            len(order.order_line.filtered(lambda l: l.product_id == self.product)),
+            1,
+            "La plantilla debe cargar una única línea antes de guardar.",
+        )
+
+        order.write(
+            {
+                "person_under_study_id": self.study_partner.id,
+                "person_type": "fisica",
+                "expedient_difficulty": "simple",
+                "deadline": "24",
+            }
+        )
+
+        self.assertEqual(order.state, "sale")
+        self.assertEqual(
+            len(order.order_line.filtered(lambda l: l.product_id == self.product)),
+            1,
+            "Guardar un expediente con líneas ya cargadas desde la plantilla no debe duplicarlas.",
+        )
+
+    def test_write_auto_confirm_keeps_repeated_template_lines_without_duplication(self):
+        template = self._create_template(
+            sale_order_template_line_ids=[
+                (
+                    0,
+                    0,
+                    {
+                        "product_id": self.product.id,
+                        "name": "Linea duplicada",
+                        "product_uom_qty": 1.0,
+                        "product_uom_id": self.product.uom_id.id,
+                        "sequence": 10,
+                    },
+                ),
+                (
+                    0,
+                    0,
+                    {
+                        "product_id": self.product.id,
+                        "name": "Linea duplicada",
+                        "product_uom_qty": 1.0,
+                        "product_uom_id": self.product.uom_id.id,
+                        "sequence": 20,
+                    },
+                ),
+            ]
+        )
+        order = self._create_sale_order_from_template_form(
+            template,
+            expedient_type="post_paid",
+        )
+
+        self.assertEqual(
+            len(order.order_line.filtered(lambda l: l.product_id == self.product)),
+            2,
+            "La plantilla debe conservar las dos líneas repetidas cargadas en el formulario.",
+        )
+
+        order.write(
+            {
+                "person_under_study_id": self.study_partner.id,
+                "person_type": "fisica",
+                "expedient_difficulty": "simple",
+                "deadline": "24",
+            }
+        )
+
+        self.assertEqual(order.state, "sale")
+        self.assertEqual(
+            len(order.order_line.filtered(lambda l: l.product_id == self.product)),
+            2,
+            "La deduplicación debe evitar duplicados espurios sin eliminar líneas repetidas válidas de la plantilla.",
         )
 
