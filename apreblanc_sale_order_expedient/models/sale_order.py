@@ -543,18 +543,23 @@ class SaleOrder(models.Model):
     def _get_template_line_signature(self, values):
         """Devuelve una firma estable para detectar líneas ya aplicadas.
 
-        Odoo puede alterar la secuencia de líneas cargadas desde plantilla en
-        el ``onchange`` del presupuesto (por ejemplo, la primera línea pasa a
-        ``-99``). La secuencia no identifica una línea distinta, así que se
-        excluye de la firma para no duplicarla al confirmar.
+        La identidad de una línea de plantilla dentro del pedido es su producto
+        (para líneas de producto) o su texto (para secciones/notas sin
+        producto), en coherencia con el emparejamiento por ``product_id`` que se
+        usa al filtrar líneas por reglas de aplicación en ``action_confirm``.
+
+        Ni la cantidad (``product_uom_qty``) ni la descripción (``name``) de una
+        línea de producto forman parte de la identidad: el usuario puede
+        editarlas en el presupuesto y, si se incluyeran en la firma, la línea no
+        coincidiría con la de la plantilla y se volvería a crear al confirmar,
+        provocando líneas duplicadas. La secuencia se excluye por el mismo
+        motivo (Odoo la altera en el ``onchange``).
         """
-        return (
-            values.get("display_type") or False,
-            values.get("product_id") or False,
-            values.get("name") or "",
-            values.get("product_uom_qty") or 0.0,
-            values.get("product_uom") or False,
-        )
+        display_type = values.get("display_type") or False
+        product_id = values.get("product_id") or False
+        # Para secciones/notas no hay producto: su texto es la única identidad.
+        text_identity = "" if product_id else (values.get("name") or "")
+        return (display_type, product_id, text_identity)
 
     def _create_applicable_template_lines(self):
         """Crea al confirmar solo las líneas de plantilla que aplican y aún no existen."""

@@ -576,3 +576,53 @@ class TestSaleOrder(ExpedientBaseCase):
             "La deduplicación debe evitar duplicados espurios sin eliminar líneas repetidas válidas de la plantilla.",
         )
 
+    def test_write_auto_confirm_does_not_duplicate_template_lines_when_quantity_edited(self):
+        """Editar la cantidad de una línea cargada desde plantilla no debe duplicarla.
+
+        Reproduce el caso reportado: la línea se carga desde la plantilla con
+        cantidad 1, el usuario la cambia (p. ej. a 6) y, al guardar, la
+        deduplicación no debe recrear la línea de plantilla con la cantidad
+        original.
+        """
+        template = self._create_template_with_line()
+        order = self._create_sale_order_from_template_form(
+            template,
+            expedient_type="post_paid",
+        )
+
+        template_lines = order.order_line.filtered(
+            lambda l: l.product_id == self.product
+        )
+        self.assertEqual(
+            len(template_lines),
+            1,
+            "La plantilla debe cargar una única línea antes de editar la cantidad.",
+        )
+
+        template_lines.product_uom_qty = 6.0
+
+        order.write(
+            {
+                "person_under_study_id": self.study_partner.id,
+                "person_type": "fisica",
+                "expedient_difficulty": "simple",
+                "deadline": "24",
+            }
+        )
+
+        remaining_lines = order.order_line.filtered(
+            lambda l: l.product_id == self.product
+        )
+        self.assertEqual(order.state, "sale")
+        self.assertEqual(
+            len(remaining_lines),
+            1,
+            "Cambiar la cantidad de una línea de plantilla no debe duplicarla al confirmar.",
+        )
+        self.assertEqual(
+            remaining_lines.product_uom_qty,
+            6.0,
+            "La cantidad editada por el usuario debe conservarse tras confirmar.",
+        )
+
+
