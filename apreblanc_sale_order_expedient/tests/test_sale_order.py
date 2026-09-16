@@ -625,4 +625,51 @@ class TestSaleOrder(ExpedientBaseCase):
             "La cantidad editada por el usuario debe conservarse tras confirmar.",
         )
 
+    def test_sale_order_type_from_template_takes_precedence_over_customer(self):
+        customer_type = self.env["sale.order.type"].create({"name": "Tipo Cliente"})
+        template_type = self.env["sale.order.type"].create({"name": "Tipo Plantilla"})
+        self.partner.sale_type = customer_type
+        template = self._create_template(type_id=template_type.id)
+
+        order = self._create_sale_order_from_template_form(template)
+
+        self.assertEqual(
+            order.type_id,
+            template_type,
+            "El tipo de pedido debe venir de la plantilla, no del cliente.",
+        )
+
+    def test_sale_order_type_falls_back_to_customer_when_template_has_none(self):
+        customer_type = self.env["sale.order.type"].create(
+            {"name": "Tipo Cliente Fallback"}
+        )
+        self.partner.sale_type = customer_type
+        template = self._create_template()
+
+        order = self._create_sale_order_from_template_form(template)
+
+        self.assertEqual(
+            order.type_id,
+            customer_type,
+            "Si la plantilla no define tipo, debe usarse el tipo por defecto del cliente.",
+        )
+
+    def test_expedient_uses_template_type_over_named_resolution(self):
+        template_type = self.env["sale.order.type"].create(
+            {"name": "Tipo Plantilla Expediente"}
+        )
+        template = self._create_template_with_line(type_id=template_type.id)
+
+        order = self._create_sale_order(
+            expedient_type="post_paid",
+            sale_order_template_id=template.id,
+        )
+
+        self.assertEqual(
+            order.type_id,
+            template_type,
+            "Un expediente creado con plantilla debe tomar el tipo de la plantilla.",
+        )
+
+
 

@@ -332,6 +332,22 @@ class SaleOrder(models.Model):
             elif order.sub_cartera_id and order.sub_cartera_id.property_product_pricelist:
                 order.pricelist_id = order.sub_cartera_id.property_product_pricelist
 
+    @api.depends("partner_id", "company_id", "sale_order_template_id")
+    def _compute_sale_type_id(self):
+        """Da prioridad al tipo de pedido definido en la plantilla sobre el del cliente.
+
+        El módulo ``sale_order_type`` (OCA) resuelve ``type_id`` a partir del
+        ``sale_type`` del cliente. Aquí, si la plantilla del presupuesto define un
+        ``type_id``, este prevalece, en coherencia con el comportamiento de la
+        tarifa (``_compute_pricelist_id``).
+        """
+        super()._compute_sale_type_id()
+        for order in self:
+            template_type = order.sale_order_template_id.type_id
+            if template_type:
+                order.type_id = template_type
+
+
     # Si es necesario, también podemos actualizar la fecha de fin automáticamente
     # cuando cambia el estado del expediente
     @api.onchange("expedient_state")
@@ -636,6 +652,14 @@ class SaleOrder(models.Model):
                         )
                     except KeyError:
                         sale_order_type = False
+                if not sale_order_type and vals.get("sale_order_template_id"):
+                    template = (
+                        self.env["sale.order.template"]
+                        .browse(vals["sale_order_template_id"])
+                        .exists()
+                    )
+                    if template.type_id:
+                        sale_order_type = template.type_id
                 if not sale_order_type:
                     sale_order_type = self._get_expedient_sale_order_type(
                         vals["expedient_type"]
@@ -688,8 +712,9 @@ class SaleOrder(models.Model):
         # FORZAR CONFIRMACIÓN INMEDIATA para expedientes prepagados
         for order in orders:
             if order.expedient_type in ["post_paid", "pre_paid"]:
-                expected_sale_type = order._get_expedient_sale_order_type(
-                    order.expedient_type
+                expected_sale_type = (
+                    order.sale_order_template_id.type_id
+                    or order._get_expedient_sale_order_type(order.expedient_type)
                 )
                 if expected_sale_type and order.type_id != expected_sale_type:
                     order.write({"type_id": expected_sale_type.id})

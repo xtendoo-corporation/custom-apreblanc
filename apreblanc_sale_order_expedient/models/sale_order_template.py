@@ -38,6 +38,12 @@ class SaleOrderTemplate(models.Model):
         required=True,
         help="Default customer for this quotation template",
     )
+    type_id = fields.Many2one(
+        "sale.order.type",
+        string="Tipo de pedido",
+        help="Si se indica, los pedidos creados con esta plantilla usarán este "
+             "tipo de pedido, con prioridad sobre el tipo por defecto del cliente.",
+    )
     sub_cartera_id = fields.Many2one(
         "res.partner",
         string="Sub cartera",
