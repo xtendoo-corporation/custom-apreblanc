@@ -13,9 +13,6 @@
                         <field name="partner_id"
                             options="{'no_create': True}"
                             string="Cliente del Expediente" />
-                        <field name="type_id"
-                            options="{'no_create': True}"
-                            string="Tipo de pedido" />
                         <field name="sub_cartera_id"
                             options="{'no_create': True}"
                             string="Sub cartera" />

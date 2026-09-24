@@ -479,7 +479,7 @@
          pero con la vista tree estándar de pedidos (no la de expedientes) y sin 'show_as_expedient'
          en el contexto, para que el formulario se comporte como en Pedidos -->
     <record id="action_sale_order_expedient_admin" model="ir.actions.act_window">
-        <field name="name">Expedientes Postpago</field>
+        <field name="name">Pedidos Postpago</field>
         <field name="type">ir.actions.act_window</field>
         <field name="res_model">sale.order</field>
         <field name="view_mode">tree,form,pivot</field>
@@ -494,17 +494,17 @@
 
     <!-- Menú para Expedientes Postpago (Administradores) -->
     <menuitem id="menu_sale_order_expedient_admin"
-        name="Expedientes Postpago"
+        name="Pedidos Postpago"
         parent="sale.sale_order_menu"
         action="action_sale_order_expedient_admin"
-        sequence="26"
+        sequence="21"
         groups="group_expedient_admin" />
 
     <!-- Acción de Expedientes Pre-pagados para administradores: todos los expedientes prepago
          (no solo los del gestor actual), con la vista tree estándar de pedidos y sin
          'show_as_expedient' en el contexto -->
     <record id="action_sale_order_prepaid_admin" model="ir.actions.act_window">
-        <field name="name">Expedientes Pre-pagados</field>
+        <field name="name">Pedidos Pre-pagados</field>
         <field name="res_model">sale.order</field>
         <field name="view_mode">tree,form</field>
         <field name="view_id" ref="sale.view_order_tree" />
@@ -518,10 +518,10 @@
 
     <!-- Menú para Expedientes Pre-pagados (Administradores) -->
     <menuitem id="menu_sale_order_prepaid_admin"
-        name="Expedientes Pre-pagados"
+        name="Pedidos Pre-pagados"
         parent="sale.sale_order_menu"
         action="action_sale_order_prepaid_admin"
-        sequence="27"
+        sequence="22"
         groups="group_expedient_admin" />
 
     <!-- Nueva vista y acción para documentos OneDrive -->

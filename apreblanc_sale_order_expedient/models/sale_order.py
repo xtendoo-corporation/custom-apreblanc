@@ -1,5 +1,3 @@
-from collections import Counter
-
 from odoo import api, fields, models, _, exceptions
 from odoo.exceptions import ValidationError
 from datetime import datetime
@@ -332,22 +330,6 @@ class SaleOrder(models.Model):
             elif order.sub_cartera_id and order.sub_cartera_id.property_product_pricelist:
                 order.pricelist_id = order.sub_cartera_id.property_product_pricelist
 
-    @api.depends("partner_id", "company_id", "sale_order_template_id")
-    def _compute_sale_type_id(self):
-        """Da prioridad al tipo de pedido definido en la plantilla sobre el del cliente.
-
-        El módulo ``sale_order_type`` (OCA) resuelve ``type_id`` a partir del
-        ``sale_type`` del cliente. Aquí, si la plantilla del presupuesto define un
-        ``type_id``, este prevalece, en coherencia con el comportamiento de la
-        tarifa (``_compute_pricelist_id``).
-        """
-        super()._compute_sale_type_id()
-        for order in self:
-            template_type = order.sale_order_template_id.type_id
-            if template_type:
-                order.type_id = template_type
-
-
     # Si es necesario, también podemos actualizar la fecha de fin automáticamente
     # cuando cambia el estado del expediente
     @api.onchange("expedient_state")
@@ -557,25 +539,14 @@ class SaleOrder(models.Model):
 
     @api.model
     def _get_template_line_signature(self, values):
-        """Devuelve una firma estable para detectar líneas ya aplicadas.
-
-        La identidad de una línea de plantilla dentro del pedido es su producto
-        (para líneas de producto) o su texto (para secciones/notas sin
-        producto), en coherencia con el emparejamiento por ``product_id`` que se
-        usa al filtrar líneas por reglas de aplicación en ``action_confirm``.
-
-        Ni la cantidad (``product_uom_qty``) ni la descripción (``name``) de una
-        línea de producto forman parte de la identidad: el usuario puede
-        editarlas en el presupuesto y, si se incluyeran en la firma, la línea no
-        coincidiría con la de la plantilla y se volvería a crear al confirmar,
-        provocando líneas duplicadas. La secuencia se excluye por el mismo
-        motivo (Odoo la altera en el ``onchange``).
-        """
-        display_type = values.get("display_type") or False
-        product_id = values.get("product_id") or False
-        # Para secciones/notas no hay producto: su texto es la única identidad.
-        text_identity = "" if product_id else (values.get("name") or "")
-        return (display_type, product_id, text_identity)
+        return (
+            values.get("display_type") or False,
+            values.get("product_id") or False,
+            values.get("name") or "",
+            values.get("product_uom_qty") or 0.0,
+            values.get("product_uom") or False,
+            values.get("sequence") or 0,
+        )
 
     def _create_applicable_template_lines(self):
         """Crea al confirmar solo las líneas de plantilla que aplican y aún no existen."""
@@ -583,7 +554,7 @@ class SaleOrder(models.Model):
 
         for order in self.filtered("sale_order_template_id"):
             template = order.sale_order_template_id
-            existing_signatures = Counter(
+            existing_signatures = {
                 order._get_template_line_signature(
                     {
                         "display_type": line.display_type,
@@ -591,10 +562,11 @@ class SaleOrder(models.Model):
                         "name": line.name,
                         "product_uom_qty": line.product_uom_qty,
                         "product_uom": line.product_uom.id,
+                        "sequence": line.sequence,
                     }
                 )
                 for line in order.order_line
-            )
+            }
 
             lines_to_create = []
             for template_line in template.sale_order_template_line_ids:
@@ -609,8 +581,7 @@ class SaleOrder(models.Model):
 
                 line_vals = template_line._prepare_order_line_values()
                 signature = order._get_template_line_signature(line_vals)
-                if existing_signatures[signature]:
-                    existing_signatures[signature] -= 1
+                if signature in existing_signatures:
                     continue
 
                 if hasattr(template_line, "discount"):
@@ -618,6 +589,7 @@ class SaleOrder(models.Model):
 
                 line_vals["order_id"] = order.id
                 lines_to_create.append(line_vals)
+                existing_signatures.add(signature)
 
             if lines_to_create:
                 sale_order_line_model.create(lines_to_create)
@@ -652,14 +624,6 @@ class SaleOrder(models.Model):
                         )
                     except KeyError:
                         sale_order_type = False
-                if not sale_order_type and vals.get("sale_order_template_id"):
-                    template = (
-                        self.env["sale.order.template"]
-                        .browse(vals["sale_order_template_id"])
-                        .exists()
-                    )
-                    if template.type_id:
-                        sale_order_type = template.type_id
                 if not sale_order_type:
                     sale_order_type = self._get_expedient_sale_order_type(
                         vals["expedient_type"]
@@ -712,9 +676,8 @@ class SaleOrder(models.Model):
         # FORZAR CONFIRMACIÓN INMEDIATA para expedientes prepagados
         for order in orders:
             if order.expedient_type in ["post_paid", "pre_paid"]:
-                expected_sale_type = (
-                    order.sale_order_template_id.type_id
-                    or order._get_expedient_sale_order_type(order.expedient_type)
+                expected_sale_type = order._get_expedient_sale_order_type(
+                    order.expedient_type
                 )
                 if expected_sale_type and order.type_id != expected_sale_type:
                     order.write({"type_id": expected_sale_type.id})
