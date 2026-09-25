@@ -266,9 +266,17 @@
 
             </xpath>
 
-            <!-- Make order lines editable regardless of expedient state -->
-            <xpath expr="//field[@name='order_line']" position="attributes">
-                <attribute name="readonly">0</attribute>
+            <!-- Incluir template_line_id en el spec del onchange de order_line: si no
+            aparece (aunque sea oculto) en las subvistas tree/form, el cliente web lo
+            descarta al guardar y la línea creada desde el formulario nunca queda
+            enlazada con su línea de plantilla origen (ver sale_order_line.py). -->
+            <xpath expr="//field[@name='order_line']/tree/field[@name='is_downpayment']"
+                position="after">
+                <field name="template_line_id" column_invisible="True" />
+            </xpath>
+            <xpath expr="//field[@name='order_line']/form/field[@name='display_type']"
+                position="after">
+                <field name="template_line_id" invisible="1" />
             </xpath>
 
             <!-- Hide the Order Lines tab when expedient_type is not 'none' AND show_as_expedient is

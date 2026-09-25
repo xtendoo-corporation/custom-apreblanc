@@ -21,6 +21,17 @@ class SaleOrder(models.Model):
         string="Post-incidencias",
     )
 
+    excluded_template_line_ids = fields.Many2many(
+        "sale.order.template.line",
+        "sale_order_excluded_template_line_rel",
+        "order_id",
+        "template_line_id",
+        string="Líneas de plantilla excluidas",
+        copy=False,
+        help="Líneas de la plantilla que el usuario eliminó manualmente del pedido; "
+        "no deben volver a crearse automáticamente al confirmar.",
+    )
+
     _sql_constraints = [
         # Remove any constraints that enforce uniqueness on expedient_number alone
         # Keep only the composite constraint for both fields
@@ -202,7 +213,7 @@ class SaleOrder(models.Model):
         """Determina si el usuario actual es administrador y puede modificar expedientes finalizados"""
         # Usar el nuevo grupo definido en security.xml
         is_admin = self.env.user.has_group(
-            "sale_order_expedient.group_expedient_admin"
+            "apreblanc_sale_order_expedient.group_expedient_admin"
         ) or self.env.user.has_group("base.group_system")
         for record in self:
             record.is_expedient_admin = is_admin
@@ -519,8 +530,15 @@ class SaleOrder(models.Model):
         return missing
 
     def _is_ready_for_auto_confirm(self):
-        """Indica si el pedido está en condiciones mínimas para intentar confirmarse."""
+        """Indica si el pedido está en condiciones mínimas para intentar confirmarse.
+
+        Restringido a expedientes reales: un pedido de venta normal
+        (expedient_type == 'none') nunca debe confirmarse solo, sino mediante la
+        confirmación manual explícita del usuario.
+        """
         self.ensure_one()
+        if self.expedient_type == "none":
+            return False
         if self.state not in ("draft", "sent"):
             return False
         if self._get_expedient_missing_required_fields():
@@ -539,21 +557,37 @@ class SaleOrder(models.Model):
 
     @api.model
     def _get_template_line_signature(self, values):
+        """No incluye `sequence`: Odoo fuerza sequence=-99 en la primera línea que
+        inserta el onchange de plantilla (para no mezclarla con otras filas al
+        paginar), por lo que comparar por secuencia hacía que esa primera línea
+        nunca coincidiera con la línea de plantilla y se duplicara al confirmar."""
         return (
             values.get("display_type") or False,
             values.get("product_id") or False,
             values.get("name") or "",
             values.get("product_uom_qty") or 0.0,
             values.get("product_uom") or False,
-            values.get("sequence") or 0,
         )
 
     def _create_applicable_template_lines(self):
-        """Crea al confirmar solo las líneas de plantilla que aplican y aún no existen."""
+        """Crea al confirmar solo las líneas de plantilla que aplican y aún no existen.
+
+        Se compara primero por `template_line_id` (identidad estable con la línea de
+        plantilla de origen) para no recrear una línea que el usuario borró
+        manualmente, ni duplicarla si en vez de borrarla puso su cantidad a 0. Las
+        líneas anteriores a esta trazabilidad (sin template_line_id) siguen
+        protegidas por la firma de valores, como antes.
+        """
         sale_order_line_model = self.env["sale.order.line"]
 
         for order in self.filtered("sale_order_template_id"):
             template = order.sale_order_template_id
+            existing_template_line_ids = set(
+                order.order_line.filtered("template_line_id").mapped(
+                    "template_line_id.id"
+                )
+            )
+            excluded_template_line_ids = set(order.excluded_template_line_ids.ids)
             existing_signatures = {
                 order._get_template_line_signature(
                     {
@@ -570,6 +604,11 @@ class SaleOrder(models.Model):
 
             lines_to_create = []
             for template_line in template.sale_order_template_line_ids:
+                if template_line.id in existing_template_line_ids:
+                    continue
+                if template_line.id in excluded_template_line_ids:
+                    continue
+
                 should_apply = True
                 if getattr(template_line, "application_rule", False) and hasattr(
                     template_line, "_should_apply"
@@ -589,6 +628,7 @@ class SaleOrder(models.Model):
 
                 line_vals["order_id"] = order.id
                 lines_to_create.append(line_vals)
+                existing_template_line_ids.add(template_line.id)
                 existing_signatures.add(signature)
 
             if lines_to_create:
@@ -1201,7 +1241,7 @@ class SaleOrder(models.Model):
                     )
                     % ", ".join(lines_to_remove.mapped("name"))
                 )
-                lines_to_remove.unlink()
+                lines_to_remove.with_context(skip_template_exclusion=True).unlink()
 
         orders_to_confirm._create_applicable_template_lines()
         orders_to_confirm._recompute_template_prices()

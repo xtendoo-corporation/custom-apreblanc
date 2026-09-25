@@ -1,5 +1,6 @@
 from . import res_partner
 from . import sale_order
+from . import sale_order_line
 from . import sale_order_expedient_return_history
 from . import expedient_return_reason
 from . import pre_paid_expedient

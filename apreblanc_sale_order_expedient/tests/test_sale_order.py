@@ -1,4 +1,5 @@
 from odoo.exceptions import ValidationError
+from odoo.tests.common import Form
 from unittest import skip
 
 from .common import ExpedientBaseCase
@@ -98,15 +99,16 @@ class TestSaleOrder(ExpedientBaseCase):
         with self.assertRaises(ValidationError):
             order.action_confirm()
 
-    def test_write_auto_confirms_regular_sale_order(self):
+    def test_write_does_not_auto_confirm_regular_sale_order(self):
         order = self._create_sale_order(expedient_type="none")
 
         order.write({"client_order_ref": "AUTO-CONFIRM-NONE"})
 
         self.assertEqual(
             order.state,
-            "sale",
-            "Los pedidos normales también deben confirmarse automáticamente al hacer write si aún no están confirmados.",
+            "draft",
+            "Los pedidos normales NO deben confirmarse automáticamente al hacer write; "
+            "solo los expedientes usan la auto-confirmación.",
         )
 
     def test_write_auto_confirms_post_paid_when_required_fields_are_completed(self):
@@ -478,5 +480,136 @@ class TestSaleOrder(ExpedientBaseCase):
             target_line.price_unit,
             42.0,
             "La línea creada al confirmar debe respetar la tarifa del pedido.",
+        )
+
+    def _create_draft_expedient_with_template_line(self, template, **extra_vals):
+        """Simula el onchange estándar de sale_management: el pedido queda en
+        borrador con la línea de la plantilla ya insertada (template_line_id
+        incluido), tal como la ve el usuario en el formulario antes de guardar.
+
+        No se completan aún los campos obligatorios del expediente (persona a
+        estudiar, dificultad, etc.) para que la auto-confirmación no se dispare
+        todavía y el pedido siga editable en borrador, igual que en el flujo real.
+        """
+        template_line = template.sale_order_template_line_ids[:1]
+        vals = {
+            "partner_id": self.partner.id,
+            "expedient_type": "post_paid",
+            "sale_order_template_id": template.id,
+            "order_line": [(0, 0, template_line._prepare_order_line_values())],
+        }
+        vals.update(extra_vals)
+        order = self.env["sale.order"].create(vals)
+        return order, template_line
+
+    def _complete_expedient_required_fields(self, order):
+        order.write(
+            {
+                "person_under_study_id": self.study_partner.id,
+                "person_type": "fisica",
+                "expedient_difficulty": "simple",
+                "deadline": "24",
+            }
+        )
+
+    def test_deleting_template_line_in_draft_does_not_recreate_it_on_confirm(self):
+        template = self._create_template_with_line()
+        order, template_line = self._create_draft_expedient_with_template_line(template)
+        self.assertEqual(order.state, "draft")
+
+        target_line = order.order_line.filtered(lambda l: l.product_id == self.product)
+        self.assertTrue(target_line, "La línea de plantilla debe insertarse en borrador.")
+        self.assertEqual(target_line.template_line_id, template_line)
+
+        target_line.unlink()
+        self.assertIn(
+            template_line.id,
+            order.excluded_template_line_ids.ids,
+            "Al borrar manualmente la línea, debe quedar excluida de futuras recreaciones.",
+        )
+
+        self._complete_expedient_required_fields(order)
+
+        self.assertEqual(
+            order.state,
+            "sale",
+            "El expediente debe auto-confirmarse al completar los datos obligatorios.",
+        )
+        self.assertFalse(
+            order.order_line.filtered(lambda l: l.product_id == self.product),
+            "La línea borrada manualmente en borrador no debe reaparecer al confirmar.",
+        )
+
+    def test_zero_quantity_template_line_in_draft_is_not_duplicated_on_confirm(self):
+        template = self._create_template_with_line()
+        order, _template_line = self._create_draft_expedient_with_template_line(template)
+
+        target_line = order.order_line.filtered(lambda l: l.product_id == self.product)
+        self.assertTrue(target_line)
+
+        target_line.product_uom_qty = 0.0
+        self._complete_expedient_required_fields(order)
+
+        self.assertEqual(order.state, "sale")
+        lines_for_product = order.order_line.filtered(lambda l: l.product_id == self.product)
+        self.assertEqual(
+            len(lines_for_product),
+            1,
+            "Poner la cantidad a 0 en borrador no debe crear una línea duplicada al confirmar.",
+        )
+
+    def test_legacy_line_with_reordered_sequence_is_not_duplicated(self):
+        """El onchange estándar de Odoo fuerza sequence=-99 en la primera línea que
+        inserta al aplicar una plantilla (para no mezclarla con otras filas al
+        paginar). Una línea así, creada antes de introducir template_line_id, no
+        debe duplicarse solo porque su secuencia no coincide con la de la plantilla.
+        Reproduce el caso real de un pedido normal (no expediente) con plantilla."""
+        template = self._create_template_with_line()
+
+        order = self._create_sale_order(
+            sale_order_template_id=template.id,
+            order_line=[
+                (
+                    0,
+                    0,
+                    {
+                        "product_id": self.product.id,
+                        "name": "Linea plantilla wizard",
+                        "product_uom_qty": 1.0,
+                        "product_uom": self.product.uom_id.id,
+                        "sequence": -99,
+                    },
+                )
+            ],
+        )
+
+        order._create_applicable_template_lines()
+
+        lines_for_product = order.order_line.filtered(lambda l: l.product_id == self.product)
+        self.assertEqual(
+            len(lines_for_product),
+            1,
+            "Una línea existente con distinta secuencia no debe duplicarse al confirmar.",
+        )
+
+    def test_template_line_id_survives_form_onchange_and_save(self):
+        """El onchange estándar solo conserva, al guardar, los campos que aparecen
+        (aunque sea ocultos) en la subvista de order_line. Usamos `Form`, que simula
+        fielmente el comportamiento del cliente web (a diferencia de crear la línea
+        directamente por ORM), para comprobar que template_line_id sobrevive."""
+        template = self._create_template_with_line()
+
+        order_form = Form(self.env["sale.order"])
+        order_form.partner_id = self.partner
+        order_form.sale_order_template_id = template
+        order = order_form.save()
+
+        target_line = order.order_line.filtered(lambda l: l.product_id == self.product)
+        self.assertTrue(target_line, "La línea de plantilla debe insertarse vía onchange.")
+        self.assertEqual(
+            target_line.template_line_id,
+            template.sale_order_template_line_ids[:1],
+            "template_line_id debe sobrevivir al onchange real del formulario y no "
+            "perderse al guardar (si no aparece en la subvista, el cliente lo descarta).",
         )
 

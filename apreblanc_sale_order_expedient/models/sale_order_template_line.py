@@ -17,6 +17,13 @@ class SaleOrderTemplateLine(models.Model):
         "Available variables: 'order' (sale.order), 'user' (res.users), 'datetime' (datetime module).",
     )
 
+    def _prepare_order_line_values(self):
+        """Añade template_line_id para poder identificar la línea de forma estable
+        y evitar recrearla si el usuario la elimina manualmente del pedido."""
+        values = super()._prepare_order_line_values()
+        values["template_line_id"] = self.id
+        return values
+
     def _should_apply(self, order):
         """Evaluate the application rule against the given order."""
         self.ensure_one()
