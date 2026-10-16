@@ -569,6 +569,40 @@ class SaleOrder(models.Model):
             values.get("product_uom") or False,
         )
 
+    def _mark_missing_template_lines_as_excluded(self):
+        """Detecta, justo al crear el pedido, las líneas de plantilla que el
+        usuario borró ANTES del primer guardado (p.ej. en el formulario: asigna
+        la plantilla, el onchange estándar inserta todas sus líneas con
+        `template_line_id`, el usuario borra una o todas y guarda por primera
+        vez).
+
+        Esas líneas nunca llegan a persistirse, así que `unlink()` en
+        sale.order.line nunca se ejecuta sobre ellas y no hay forma de que
+        `_create_applicable_template_lines` sepa que fue una exclusión
+        deliberada del usuario.
+
+        Solo debe llamarse sobre pedidos cuyos vals de creación incluían la
+        clave "order_line" (ver create()): así se evita confundir esto con el
+        wizard de expedientes, que crea el pedido SIN esa clave a propósito,
+        difiriendo la creación de líneas hasta la confirmación (ver
+        `test_expedient_create_wizard_does_not_create_template_lines_before_confirm`).
+        Si se mirara solo si el pedido ya tiene alguna línea con
+        `template_line_id`, ambos casos serían indistinguibles cuando el
+        usuario borra la ÚNICA línea de la plantilla antes de guardar.
+        """
+        for order in self:
+            if not order.sale_order_template_id:
+                continue
+            present_template_lines = order.order_line.template_line_id
+            missing = (
+                order.sale_order_template_id.sale_order_template_line_ids
+                - present_template_lines
+            )
+            if missing:
+                order.excluded_template_line_ids = [
+                    fields.Command.link(template_line.id) for template_line in missing
+                ]
+
     def _create_applicable_template_lines(self):
         """Crea al confirmar solo las líneas de plantilla que aplican y aún no existen.
 
@@ -642,6 +676,13 @@ class SaleOrder(models.Model):
         # Mantener un registro de expedientes prepagados para procesar después
         prepaid_ids = []
 
+        # Se registra ANTES de tocar vals_list: distingue un pedido creado por el
+        # wizard de expedientes (sin clave "order_line", las líneas se generan
+        # recién al confirmar) de uno creado desde el formulario (sí trae la
+        # clave, aunque el usuario haya borrado todas las líneas de la plantilla
+        # antes de guardar). Ver _mark_missing_template_lines_as_excluded.
+        order_line_key_present = ["order_line" in vals for vals in vals_list]
+
         for vals in vals_list:
             template_pricelist_id = self._get_pricelist_from_template_vals(vals)
             if template_pricelist_id and not vals.get("pricelist_id"):
@@ -710,6 +751,14 @@ class SaleOrder(models.Model):
         # Crear las órdenes de venta
         orders = super().create(vals_list)
 
+        orders_from_form = self.browse(
+            [
+                order.id
+                for order, had_order_line_key in zip(orders, order_line_key_present)
+                if had_order_line_key
+            ]
+        )
+        orders_from_form._mark_missing_template_lines_as_excluded()
         orders._ensure_template_pricelist()
         orders._recompute_template_prices()
 

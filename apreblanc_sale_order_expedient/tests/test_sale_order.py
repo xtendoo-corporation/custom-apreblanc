@@ -613,3 +613,65 @@ class TestSaleOrder(ExpedientBaseCase):
             "perderse al guardar (si no aparece en la subvista, el cliente lo descarta).",
         )
 
+    def test_deleting_template_line_before_first_save_does_not_recreate_it(self):
+        """Caso límite: la plantilla se asigna y el onchange inserta su línea,
+        pero el usuario la borra ANTES de guardar por primera vez. Esa línea
+        nunca llega a persistirse, así que unlink() nunca se ejecuta sobre ella
+        y _mark_missing_template_lines_as_excluded (enganchado en create()) debe
+        encargarse de excluirla igualmente."""
+        template = self._create_template_with_line()
+
+        order_form = Form(self.env["sale.order"])
+        order_form.partner_id = self.partner
+        order_form.sale_order_template_id = template
+        order_form.order_line.remove(0)
+        order = order_form.save()
+
+        self.assertFalse(
+            order.order_line.filtered(lambda l: l.product_id == self.product),
+            "La línea borrada antes de guardar no debe persistirse al crear el pedido.",
+        )
+        self.assertIn(
+            template.sale_order_template_line_ids.id,
+            order.excluded_template_line_ids.ids,
+            "create() debe detectar y excluir la línea borrada antes del primer guardado.",
+        )
+
+        order.action_confirm()
+
+        self.assertFalse(
+            order.order_line.filtered(lambda l: l.product_id == self.product),
+            "La línea de plantilla borrada antes de guardar no debe reaparecer al confirmar.",
+        )
+
+    def test_wizard_created_order_without_lines_still_creates_them_on_confirm(self):
+        """_mark_missing_template_lines_as_excluded no debe interferir con el
+        flujo del wizard de expedientes, que crea el pedido sin líneas a
+        propósito y las genera recién al confirmar."""
+        template = self._create_template_with_line()
+        wizard = self.env["expedient.create.wizard"].create(
+            {
+                "expedient_type": "post_paid",
+                "partner_id": self.partner.id,
+                "client_id": "CLI-NO-EXCLUDE",
+                "expedient_number": "EXP-NO-EXCLUDE",
+                "sale_order_template_id": template.id,
+            }
+        )
+        action = wizard.action_create_expedient()
+        order = self.env["sale.order"].browse(action["res_id"])
+
+        self.assertFalse(order.order_line)
+        self.assertFalse(
+            order.excluded_template_line_ids,
+            "Sin líneas en la creación (flujo del wizard), no debe inferirse "
+            "ninguna exclusión: las líneas se generan recién al confirmar.",
+        )
+
+        self._complete_expedient_required_fields(order)
+
+        self.assertTrue(
+            order.order_line.filtered(lambda l: l.product_id == self.product),
+            "La línea de plantilla sí debe crearse al confirmar en el flujo del wizard.",
+        )
+
