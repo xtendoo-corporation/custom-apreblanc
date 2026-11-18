@@ -1,4 +1,5 @@
 from odoo import models, fields, api
+from odoo.exceptions import ValidationError
 import urllib.parse
 
 class OneDriveSettings(models.Model):
@@ -13,6 +14,17 @@ class OneDriveSettings(models.Model):
     onedrive_refresh_token = fields.Char('Refresh Token')
     onedrive_sync_folder = fields.Char('ID de Carpeta a Sincronizar', help='ID de la carpeta de OneDrive que quieres sincronizar. Déjalo en blanco para sincronizar la carpeta raíz.')
     onedrive_sync_folder_name = fields.Char('Nombre de Carpeta', help='Nombre legible de la carpeta de OneDrive configurada para sincronización.', readonly=True)
+
+    onedrive_max_depth = fields.Integer(
+        'Profundidad máxima', default=5,
+        help='Niveles de subcarpetas que explora la sincronización (1-20). '
+             'Más niveles = sincronización más larga.')
+
+    @api.constrains('onedrive_max_depth')
+    def _check_onedrive_max_depth(self):
+        for rec in self:
+            if not 1 <= rec.onedrive_max_depth <= 20:
+                raise ValidationError('La profundidad máxima debe estar entre 1 y 20.')
 
     def get_auth_url(self):
         # Usar tenant específico en lugar del endpoint común

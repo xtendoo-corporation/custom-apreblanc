@@ -31,6 +31,7 @@
                     <field name="onedrive_refresh_token"/>
                     <field name="onedrive_sync_folder" placeholder="Ej.: odoo"/>
                     <field name="onedrive_sync_folder_name" readonly="1" />
+                    <field name="onedrive_max_depth"/>
                 </group>
             </form>
         </field>

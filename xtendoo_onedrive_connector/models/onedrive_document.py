@@ -7,6 +7,11 @@ class OneDriveDocument(models.Model):
     _inherit = ['mail.thread', 'mail.activity.mixin']
 
 
+    _sql_constraints = [
+        ('onedrive_id_unique', 'unique(onedrive_id)',
+         'Ya existe un documento con ese ID de OneDrive.'),
+    ]
+
     name = fields.Char(string='Name', required=True)
     onedrive_id = fields.Char(string='OneDrive ID')
     file_url = fields.Char(string='File URL')

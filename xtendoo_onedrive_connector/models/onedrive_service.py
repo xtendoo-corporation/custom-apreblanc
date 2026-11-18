@@ -7,6 +7,14 @@ from datetime import datetime
 
 _logger = logging.getLogger(__name__)
 
+# Profundidad maxima por defecto si no hay valor en la configuracion.
+DEFAULT_MAX_DEPTH = 5
+# Cada cuantos elementos procesados se hace commit e invalida la cache del ORM
+# (evita que el proceso crezca en memoria en sincronizaciones largas).
+SYNC_COMMIT_EVERY = 200
+# Clave del advisory lock de Postgres que impide dos sincronizaciones a la vez.
+SYNC_ADVISORY_LOCK_KEY = 702417001
+
 class OneDriveService(models.AbstractModel):
     _name = 'onedrive.service'
     _description = 'Servicio de conexión con OneDrive'
@@ -22,6 +30,7 @@ class OneDriveService(models.AbstractModel):
                 'redirect_uri': None,
                 'refresh_token': None,
                 'sync_folder': None,
+                'max_depth': DEFAULT_MAX_DEPTH,
             }
 
         return {
@@ -31,6 +40,7 @@ class OneDriveService(models.AbstractModel):
             'redirect_uri': settings.onedrive_redirect_uri,
             'refresh_token': settings.onedrive_refresh_token,
             'sync_folder': settings.onedrive_sync_folder,
+            'max_depth': settings.onedrive_max_depth or DEFAULT_MAX_DEPTH,
         }
 
     def _get_token(self):
@@ -90,7 +100,7 @@ class OneDriveService(models.AbstractModel):
             token = token_data.get('access_token')
             # Guardar también el tipo de autenticación en la sesión para usarlo después
             self.env.context = dict(self.env.context, onedrive_auth_type=grant_type)
-            _logger.info('Token obtenido exitosamente (tipo: %s): %s', grant_type, token)
+            _logger.info('Token obtenido exitosamente (tipo: %s)', grant_type)
             return token
         else:
             _logger.error('Error obteniendo token de OneDrive: %s - %s', response.status_code, response.text)
@@ -338,13 +348,43 @@ class OneDriveService(models.AbstractModel):
             raise UserError(_('No se pudo subir el archivo a OneDrive.'))
         return resp.json()
 
-    def sync_onedrive_files(self, folder_id=None, recursive=True, parent_doc_id=None, max_depth=3, current_depth=0):
+    def sync_onedrive_files(self, folder_id=None, recursive=True, parent_doc_id=None, max_depth=None, current_depth=0):
+        """
+        Punto de entrada de la sincronizacion. Impide dos sincronizaciones simultaneas
+        (advisory lock de Postgres a nivel de sesion) y resuelve la profundidad maxima
+        desde la configuracion si no se indica.
+        """
+        cr = self.env.cr
+        cr.execute("SELECT pg_try_advisory_lock(%s)", (SYNC_ADVISORY_LOCK_KEY,))
+        if not cr.fetchone()[0]:
+            _logger.warning('Sincronizacion OneDrive rechazada: ya hay otra en curso')
+            return {
+                'success': False,
+                'error': 'Ya hay una sincronización de OneDrive en curso. Espera a que termine.',
+                'message': _('Ya hay una sincronización de OneDrive en curso. Espera a que termine.'),
+            }
+        try:
+            if max_depth is None:
+                max_depth = self._get_config()['max_depth']
+            return self._sync_level(
+                folder_id=folder_id, recursive=recursive, parent_doc_id=parent_doc_id,
+                max_depth=max_depth, current_depth=current_depth, state={'processed': 0},
+            )
+        finally:
+            # Si la transaccion esta abortada el unlock falla; al cerrar la conexion
+            # Postgres libera igualmente el lock de sesion.
+            try:
+                cr.execute("SELECT pg_advisory_unlock(%s)", (SYNC_ADVISORY_LOCK_KEY,))
+            except Exception:
+                _logger.warning('No se pudo liberar el lock de sincronizacion (se liberara al cerrar la conexion)')
+
+    def _sync_level(self, folder_id=None, recursive=True, parent_doc_id=None, max_depth=DEFAULT_MAX_DEPTH, current_depth=0, state=None):
         """
         Sincroniza los archivos de OneDrive con el modelo onedrive.document en Odoo.
         Si folder_id es None, sincroniza la raíz o la carpeta configurada en ajustes.
         Si recursive es True, explora carpetas recursivamente.
         Si parent_doc_id se proporciona, asigna como padre a los elementos encontrados.
-        max_depth controla la profundidad máxima de exploración (por defecto 3 niveles).
+        max_depth controla la profundidad máxima de exploración.
         current_depth es el nivel actual de profundidad.
         """
         try:
@@ -367,7 +407,7 @@ class OneDriveService(models.AbstractModel):
                 folder_id = config['sync_folder']
 
             token = self._get_token()
-            _logger.info('Token obtenido correctamente para la sincronización: %s', token)
+            _logger.info('Token obtenido correctamente para la sincronización')
 
             _logger.info('Iniciando sincronización de OneDrive. Folder ID: %s, Recursivo: %s, Parent Doc ID: %s, Profundidad: %d/%d',
                         folder_id or 'root', recursive, parent_doc_id, current_depth, max_depth)
@@ -454,10 +494,16 @@ class OneDriveService(models.AbstractModel):
                             continue
                         if was_created:
                             created_count += 1
-                            self.env.cr.commit()
                         else:
                             updated_count += 1
                         current_doc_id = doc.id
+
+                        # Commit periodico + invalidar cache del ORM: mantiene la memoria
+                        # acotada y conserva el progreso si la sincronizacion se corta.
+                        state['processed'] += 1
+                        if state['processed'] % SYNC_COMMIT_EVERY == 0:
+                            self.env.cr.commit()
+                            self.env.invalidate_all()
 
                         synced_count += 1
 
@@ -468,12 +514,13 @@ class OneDriveService(models.AbstractModel):
                             try:
                                 # Pasar current_doc_id como parent_doc_id para los elementos hijos
                                 # Incrementar current_depth para el siguiente nivel
-                                folder_result = self.sync_onedrive_files(
+                                folder_result = self._sync_level(
                                     folder_id=item.get('id'),
                                     recursive=True,  # Mantener recursivo=True
                                     parent_doc_id=current_doc_id,
                                     max_depth=max_depth,
-                                    current_depth=current_depth + 1
+                                    current_depth=current_depth + 1,
+                                    state=state,
                                 )
                                 if folder_result['success']:
                                     synced_count += folder_result['synced_count']
