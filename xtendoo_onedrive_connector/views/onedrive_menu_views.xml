@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <!-- Menú principal de OneDrive en el menú superior -->
-    <menuitem id="menu_onedrive_root" name="OneDrive" sequence="100"/>
+    <menuitem id="menu_onedrive_root" name="OneDrive" sequence="10"/>
 
     <!-- Acción para abrir la ventana de documentos de OneDrive -->
     <record id="action_onedrive_document_window" model="ir.actions.act_window">
@@ -13,8 +13,8 @@
     </record>
 
     <!-- Menú para acceder a los documentos de OneDrive -->
-    <menuitem id="menu_onedrive_documents" name="Documentos" parent="menu_onedrive_root" action="action_onedrive_document_window" sequence="10"/>
+    <menuitem id="menu_onedrive_documents" name="Documentos" parent="menu_onedrive_root" action="action_onedrive_document" sequence="10"/>
 
-    <!-- Menú para lanzar la sincronización manual (sin acción hasta que exista el wizard) -->
-    <menuitem id="menu_onedrive_sync" name="Sincronizar" parent="menu_onedrive_root" sequence="20"/>
+    <!-- Menú para lanzar la sincronización manual (acción de servidor definida en data/server_actions.xml) -->
+    <menuitem id="menu_onedrive_sync" name="Sincronizar" parent="menu_onedrive_root" action="action_server_onedrive_sync" sequence="20"/>
 </odoo>

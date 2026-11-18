@@ -35,8 +35,8 @@
                         </group>
                     </group>
 
-                    <!-- Mensaje de error para sincronización fallida -->
-                    <group invisible="success">
+                    <!-- Errores de sincronización (global o por elemento) -->
+                    <group invisible="not error_message">
                         <field name="error_message" readonly="1" nolabel="1"/>
                     </group>
                 </sheet>

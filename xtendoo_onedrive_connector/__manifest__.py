@@ -14,8 +14,7 @@
         "views/onedrive_menu_views.xml",
         "views/res_config_settings_views.xml",
         "views/settings_menu_views.xml",
-        "views/onedrive_sync_summary_views.xml",
-        "menu.xml"
+        "views/onedrive_sync_summary_views.xml"
     ],
     "assets": {
         "web.assets_backend": [

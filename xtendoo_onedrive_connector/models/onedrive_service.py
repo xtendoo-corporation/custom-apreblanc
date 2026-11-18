@@ -380,6 +380,7 @@ class OneDriveService(models.AbstractModel):
                     'synced_count': 0,
                     'created_count': 0,
                     'updated_count': 0,
+                    'error_items': [],
                     'message': _('Profundidad máxima alcanzada')
                 }
 
@@ -395,6 +396,7 @@ class OneDriveService(models.AbstractModel):
             synced_count = 0
             updated_count = 0
             created_count = 0
+            error_items = []
 
             for item in files:
                 # Detectar si es archivo o carpeta
@@ -435,30 +437,27 @@ class OneDriveService(models.AbstractModel):
                         _logger.info('Datos del elemento %s (parent_id=%s, profundidad=%d): %s',
                                    item.get('name'), parent_doc_id, current_depth, vals)
 
-                        doc = OneDriveDocument.search([('onedrive_id', '=', item.get('id'))], limit=1)
-                        if doc:
-                            doc.write(vals)
-                            updated_count += 1
-                            _logger.info('Elemento actualizado: %s (ID: %s, Parent ID: %s)', item.get('name'), doc.id, parent_doc_id)
-                            current_doc_id = doc.id
-                        else:
-                            try:
-                                new_doc = OneDriveDocument.create(vals)
-                                # FORZAR COMMIT para asegurar que se guarda
-                                self.env.cr.commit()
-                                created_count += 1
-                                _logger.info('Elemento creado y confirmado: %s (ID: %s, Parent ID: %s)', item.get('name'), new_doc.id, parent_doc_id)
-                                current_doc_id = new_doc.id
-
-                                # Verificar que realmente se creó
-                                verification = OneDriveDocument.search([('id', '=', new_doc.id)], limit=1)
-                                if not verification:
-                                    _logger.error('❌ ERROR: El documento %s no se pudo verificar después de crear!', item.get('name'))
+                        # Savepoint por elemento: un fallo SQL (p. ej. valor fuera de rango)
+                        # solo revierte este elemento y no aborta toda la transaccion.
+                        try:
+                            with self.env.cr.savepoint():
+                                doc = OneDriveDocument.search([('onedrive_id', '=', item.get('id'))], limit=1)
+                                if doc:
+                                    doc.write(vals)
+                                    was_created = False
                                 else:
-                                    _logger.info('✅ VERIFICADO: Documento %s existe en BD con ID %s', item.get('name'), new_doc.id)
-                            except Exception as create_error:
-                                _logger.error('❌ ERROR creando documento %s: %s', item.get('name'), str(create_error))
-                                continue
+                                    doc = OneDriveDocument.create(vals)
+                                    was_created = True
+                        except Exception as item_error:
+                            _logger.error('Error guardando elemento %s: %s', item.get('name'), item_error)
+                            error_items.append('%s: %s' % (item.get('name'), item_error))
+                            continue
+                        if was_created:
+                            created_count += 1
+                            self.env.cr.commit()
+                        else:
+                            updated_count += 1
+                        current_doc_id = doc.id
 
                         synced_count += 1
 
@@ -480,6 +479,7 @@ class OneDriveService(models.AbstractModel):
                                     synced_count += folder_result['synced_count']
                                     created_count += folder_result['created_count']
                                     updated_count += folder_result['updated_count']
+                                    error_items.extend(folder_result.get('error_items', []))
                                     _logger.info('Carpeta %s procesada: +%d elementos hijos (profundidad %d)',
                                                item.get('name'), folder_result['synced_count'], current_depth + 1)
                                 else:
@@ -505,6 +505,7 @@ class OneDriveService(models.AbstractModel):
                 'synced_count': synced_count,
                 'created_count': created_count,
                 'updated_count': updated_count,
+                'error_items': error_items,
                 'message': _('Sincronización completada exitosamente. %s elementos procesados (%s creados, %s actualizados).') % (synced_count, created_count, updated_count)
             }
 

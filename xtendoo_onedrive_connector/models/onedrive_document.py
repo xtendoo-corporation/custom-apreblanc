@@ -11,7 +11,7 @@ class OneDriveDocument(models.Model):
     onedrive_id = fields.Char(string='OneDrive ID')
     file_url = fields.Char(string='File URL')
     preview_url = fields.Char(string='Preview URL', compute='_compute_preview_url')
-    file_size = fields.Integer(string='File Size')
+    file_size = fields.Float(string='File Size', digits=(16, 0))
     file_type = fields.Char(string='File Type')
     owner = fields.Char(string='Owner')
     last_modified = fields.Datetime(string='Last Modified')

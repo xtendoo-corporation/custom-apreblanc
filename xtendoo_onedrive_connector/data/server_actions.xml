@@ -49,6 +49,7 @@ if result['success']:
         'synced_count': result.get('synced_count', 0),
         'created_count': result.get('created_count', 0),
         'updated_count': result.get('updated_count', 0),
+        'error_message': '\n'.join(result.get('error_items', [])[:50]) or False,
     }
 else:
     # Crear el wizard con información de error
@@ -79,10 +80,4 @@ action = {
               parent="base.menu_administration"
               action="action_server_onedrive_diagnose"
               sequence="101"/>
-
-    <menuitem id="menu_onedrive_sync"
-              name="Sincronizar OneDrive"
-              parent="base.menu_administration"
-              action="action_server_onedrive_sync"
-              sequence="102"/>
 </odoo>
