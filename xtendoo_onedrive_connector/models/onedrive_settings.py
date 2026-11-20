@@ -20,6 +20,34 @@ class OneDriveSettings(models.Model):
         help='Niveles de subcarpetas que explora la sincronización (1-20). '
              'Más niveles = sincronización más larga.')
 
+    attachment_sync_enabled = fields.Boolean(
+        'Subir adjuntos del chatter a OneDrive', default=False,
+        help='Si está activo, los adjuntos de los modelos indicados se copian a OneDrive '
+             'en segundo plano. Odoo conserva siempre el archivo original.')
+    attachment_sync_models = fields.Char(
+        'Modelos a sincronizar', default='sale.order',
+        help='Nombres técnicos de modelo separados por comas (por ejemplo: sale.order).')
+    attachment_sync_max_mb = fields.Integer(
+        'Tamaño máximo por adjunto (MB)', default=50,
+        help='Los adjuntos mayores se omiten (consumen memoria al subirse).')
+
+    def _get_attachment_sync_models(self):
+        self.ensure_one()
+        return {m.strip() for m in (self.attachment_sync_models or '').split(',') if m.strip()}
+
+    def action_process_attachment_sync(self):
+        """Procesa ahora la cola de adjuntos pendientes (sin esperar al cron)."""
+        stats = self.env['onedrive.attachment.sync']._cron_process_pending()
+        return {
+            'type': 'ir.actions.client',
+            'tag': 'display_notification',
+            'params': {
+                'title': 'Adjuntos OneDrive',
+                'message': 'Procesados: %(processed)s · subidos: %(done)s · con error: %(failed)s' % stats,
+                'type': 'success' if not stats['failed'] else 'warning',
+            },
+        }
+
     @api.constrains('onedrive_max_depth')
     def _check_onedrive_max_depth(self):
         for rec in self:

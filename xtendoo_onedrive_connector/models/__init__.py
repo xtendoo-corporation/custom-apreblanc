@@ -5,3 +5,5 @@ from . import onedrive_settings
 from . import onedrive_document
 from . import res_config_settings
 from . import onedrive_sync_summary
+from . import onedrive_attachment_sync
+from . import ir_attachment

@@ -1,6 +1,6 @@
 {
     "name": "xtendoo_onedrive_connector",
-    "version": "17.0.1.1.0",
+    "version": "17.0.1.2.0",
     "category": "Tools",
     "summary": "Conector Odoo con OneDrive para ver, subir y descargar documentos.",
     "author": "Tu Empresa / Xtendoo",
@@ -14,7 +14,9 @@
         "views/onedrive_menu_views.xml",
         "views/res_config_settings_views.xml",
         "views/settings_menu_views.xml",
-        "views/onedrive_sync_summary_views.xml"
+        "views/onedrive_sync_summary_views.xml",
+        "views/onedrive_attachment_sync_views.xml",
+        "data/cron.xml"
     ],
     "assets": {
         "web.assets_backend": [

@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_onedrive_attachment_sync_tree" model="ir.ui.view">
+        <field name="name">onedrive.attachment.sync.tree</field>
+        <field name="model">onedrive.attachment.sync</field>
+        <field name="arch" type="xml">
+            <tree string="Adjuntos sincronizados" decoration-danger="state == 'error'"
+                  decoration-warning="state == 'skipped'" decoration-success="state == 'done'">
+                <field name="create_date" string="Fecha"/>
+                <field name="name"/>
+                <field name="res_model"/>
+                <field name="record_name"/>
+                <field name="file_size"/>
+                <field name="state"/>
+                <field name="attempts"/>
+                <field name="onedrive_path" optional="show"/>
+                <field name="last_error" optional="hide"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="view_onedrive_attachment_sync_form" model="ir.ui.view">
+        <field name="name">onedrive.attachment.sync.form</field>
+        <field name="model">onedrive.attachment.sync</field>
+        <field name="arch" type="xml">
+            <form string="Adjunto sincronizado" create="0">
+                <header>
+                    <button name="action_retry" string="Reintentar" type="object"
+                            invisible="state not in ('error', 'skipped')"/>
+                    <field name="state" widget="statusbar" statusbar_visible="pending,done"/>
+                </header>
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="attachment_id"/>
+                            <field name="name"/>
+                            <field name="res_model"/>
+                            <field name="res_id"/>
+                            <field name="record_name"/>
+                            <field name="file_size"/>
+                        </group>
+                        <group>
+                            <field name="attempts"/>
+                            <field name="date_synced"/>
+                            <field name="onedrive_path"/>
+                            <field name="web_url" widget="url"/>
+                            <field name="onedrive_item_id"/>
+                        </group>
+                    </group>
+                    <group string="Último error" invisible="not last_error">
+                        <field name="last_error" nolabel="1"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_onedrive_attachment_sync_search" model="ir.ui.view">
+        <field name="name">onedrive.attachment.sync.search</field>
+        <field name="model">onedrive.attachment.sync</field>
+        <field name="arch" type="xml">
+            <search string="Adjuntos sincronizados">
+                <field name="name"/>
+                <field name="record_name"/>
+                <field name="res_model"/>
+                <filter string="Pendientes" name="pending" domain="[('state', '=', 'pending')]"/>
+                <filter string="Con error" name="error" domain="[('state', '=', 'error')]"/>
+                <filter string="Omitidos" name="skipped" domain="[('state', '=', 'skipped')]"/>
+                <filter string="Subidos" name="done" domain="[('state', '=', 'done')]"/>
+                <group expand="0" string="Agrupar por">
+                    <filter string="Estado" name="group_state" context="{'group_by': 'state'}"/>
+                    <filter string="Modelo" name="group_model" context="{'group_by': 'res_model'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_onedrive_attachment_sync" model="ir.actions.act_window">
+        <field name="name">Adjuntos sincronizados</field>
+        <field name="res_model">onedrive.attachment.sync</field>
+        <field name="view_mode">tree,form</field>
+        <field name="context">{'search_default_pending': 1}</field>
+    </record>
+
+    <menuitem id="menu_onedrive_attachment_sync" name="Adjuntos sincronizados"
+              parent="menu_onedrive_root" action="action_onedrive_attachment_sync"
+              sequence="30" groups="base.group_system"/>
+</odoo>
