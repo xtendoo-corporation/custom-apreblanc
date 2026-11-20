@@ -228,10 +228,32 @@ class OneDriveAttachmentSync(models.Model):
     # ------------------------------------------------------------------
     # Carpetas
     # ------------------------------------------------------------------
+    # Carpeta de modelo (nivel intermedio) para los modelos que no son ventas.
+    MODEL_FOLDER_LABELS = {
+        'account.payment': 'Pagos',
+        'purchase.order': 'Compras',
+        'stock.picking': 'Albaranes',
+    }
+    MOVE_TYPE_FOLDER_LABELS = {
+        'out_invoice': 'Facturas de cliente',
+        'out_refund': 'Facturas de cliente',
+        'out_receipt': 'Facturas de cliente',
+        'in_invoice': 'Facturas de proveedor',
+        'in_refund': 'Facturas de proveedor',
+        'in_receipt': 'Facturas de proveedor',
+        'entry': 'Asientos',
+    }
+
     @api.model
-    def _get_record_folder_name(self, record):
-        name = None
-        if record._name == 'sale.order':
+    def _get_record_folder_segments(self, record):
+        """Ruta de carpetas bajo la raiz: [..., carpeta del registro].
+
+        - sale.order: <persona>-<client_id>-<expediente> (o el nombre del pedido).
+        - account.move: <Facturas de cliente|Facturas de proveedor|Asientos>/<numero>
+        - resto: <etiqueta del modelo>/<nombre del registro>
+        """
+        model = record._name
+        if model == 'sale.order':
             person = getattr(record, 'person_under_study_id', False)
             parts = [
                 person.name if person else '',
@@ -239,25 +261,51 @@ class OneDriveAttachmentSync(models.Model):
                 getattr(record, 'expedient_number', '') or '',
             ]
             name = '-'.join(str(p).strip() for p in parts if p and str(p).strip())
-        return _sanitize_name(name or record.display_name, default='%s_%s' % (record._name, record.id))
+            return [_sanitize_name(name or record.display_name, default='sale_order_%s' % record.id)]
+        if model == 'account.move':
+            label = self.MOVE_TYPE_FOLDER_LABELS.get(record.move_type, 'Asientos')
+            number = record.name if record.name and record.name != '/' else 'Borrador-%s' % record.id
+            return [label, _sanitize_name(number, default='asiento_%s' % record.id)]
+        label = self.MODEL_FOLDER_LABELS.get(model) or record._description or model
+        return [_sanitize_name(label), _sanitize_name(record.display_name, default='%s_%s' % (model, record.id))]
 
     def _get_record_folder(self, token, settings, record):
-        """Devuelve (id_carpeta, desde_cache)."""
+        """Devuelve (id_carpeta, desde_cache). Renombra la carpeta si el registro cambio de nombre."""
         FolderMap = self.env['onedrive.folder.map'].sudo()
+        segments = self._get_record_folder_segments(record)
+        root_name = _sanitize_name(settings.onedrive_sync_folder_name or 'odoo')
+        expected_path = '/'.join([root_name] + segments)
         mapped = FolderMap.search([('res_model', '=', record._name), ('res_id', '=', record.id)], limit=1)
         if mapped:
+            current_name = (mapped.folder_path or '').rsplit('/', 1)[-1]
+            if current_name != segments[-1]:
+                self._rename_folder(token, mapped, segments[-1])
             return mapped.folder_item_id, True
-        root_name = _sanitize_name(settings.onedrive_sync_folder_name or 'odoo')
-        root_id = self._ensure_folder(token, root_name, None)
-        folder_name = self._get_record_folder_name(record)
-        folder_id = self._ensure_folder(token, folder_name, root_id)
+        parent_id = self._ensure_folder(token, root_name, None)
+        for segment in segments:
+            parent_id = self._ensure_folder(token, segment, parent_id)
         FolderMap.create({
             'res_model': record._name,
             'res_id': record.id,
-            'folder_item_id': folder_id,
-            'folder_path': '%s/%s' % (root_name, folder_name),
+            'folder_item_id': parent_id,
+            'folder_path': expected_path,
         })
-        return folder_id, False
+        return parent_id, False
+
+    def _rename_folder(self, token, mapped, new_name):
+        """Renombra la carpeta de un registro (p. ej. factura: Borrador-12 -> INV/2026/0001).
+        Si falla (nombre ya usado, permisos...) se deja el nombre antiguo y se sigue."""
+        try:
+            resp = self._graph('PATCH', '%s/me/drive/items/%s' % (GRAPH, mapped.folder_item_id), token, json={
+                'name': new_name, '@microsoft.graph.conflictBehavior': 'fail'})
+            if resp.status_code == 200:
+                parent_path = (mapped.folder_path or '').rsplit('/', 1)[0]
+                mapped.folder_path = '%s/%s' % (parent_path, new_name) if parent_path else new_name
+            else:
+                _logger.warning('[OneDrive adjuntos] no se pudo renombrar la carpeta a "%s": %s %s',
+                                new_name, resp.status_code, resp.text[:200])
+        except Exception as e:  # noqa: BLE001
+            _logger.warning('[OneDrive adjuntos] error renombrando carpeta a "%s": %s', new_name, e)
 
     # ------------------------------------------------------------------
     # Llamadas a Microsoft Graph

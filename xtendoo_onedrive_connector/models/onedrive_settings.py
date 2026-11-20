@@ -25,15 +25,16 @@ class OneDriveSettings(models.Model):
         help='Si está activo, los adjuntos de los modelos indicados se copian a OneDrive '
              'en segundo plano. Odoo conserva siempre el archivo original.')
     attachment_sync_models = fields.Char(
-        'Modelos a sincronizar', default='sale.order',
-        help='Nombres técnicos de modelo separados por comas (por ejemplo: sale.order).')
+        'Modelos a sincronizar', default='sale.order,account.move,account.payment,purchase.order,stock.picking',
+        help='Nombres técnicos de modelo separados por comas (por ejemplo: sale.order,account.move).')
     attachment_sync_max_mb = fields.Integer(
         'Tamaño máximo por adjunto (MB)', default=50,
         help='Los adjuntos mayores se omiten (consumen memoria al subirse).')
 
     def _get_attachment_sync_models(self):
         self.ensure_one()
-        return {m.strip() for m in (self.attachment_sync_models or '').split(',') if m.strip()}
+        models_ = {m.strip() for m in (self.attachment_sync_models or '').split(',') if m.strip()}
+        return {m for m in models_ if m in self.env.registry}  # ignora nombres que no existen
 
     def action_process_attachment_sync(self):
         """Procesa ahora la cola de adjuntos pendientes (sin esperar al cron)."""
