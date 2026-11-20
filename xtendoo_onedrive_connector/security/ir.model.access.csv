@@ -4,3 +4,4 @@ access_onedrive_settings,onedrive.settings,model_onedrive_settings,,1,1,1,1
 access_onedrive_sync_summary,onedrive.sync.summary,model_onedrive_sync_summary,,1,1,1,1
 access_onedrive_attachment_sync_admin,onedrive.attachment.sync admin,model_onedrive_attachment_sync,base.group_system,1,1,1,1
 access_onedrive_folder_map_admin,onedrive.folder.map admin,model_onedrive_folder_map,base.group_system,1,1,1,1
+access_onedrive_attachment_preview_admin,onedrive.attachment.preview admin,model_onedrive_attachment_preview,base.group_system,1,1,1,1

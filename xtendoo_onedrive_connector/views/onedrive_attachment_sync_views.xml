@@ -15,6 +15,10 @@
                 <field name="attempts"/>
                 <field name="onedrive_path" optional="show"/>
                 <field name="last_error" optional="hide"/>
+                <button name="action_preview" type="object" icon="fa-eye" title="Vista previa"
+                        invisible="state != 'done'"/>
+                <button name="action_open_onedrive" type="object" icon="fa-external-link" title="Abrir en OneDrive"
+                        invisible="state != 'done'"/>
             </tree>
         </field>
     </record>
@@ -25,6 +29,10 @@
         <field name="arch" type="xml">
             <form string="Adjunto sincronizado" create="0">
                 <header>
+                    <button name="action_preview" string="Vista previa" type="object" class="btn-primary"
+                            invisible="state != 'done'"/>
+                    <button name="action_open_onedrive" string="Abrir en OneDrive" type="object"
+                            invisible="state != 'done'"/>
                     <button name="action_retry" string="Reintentar" type="object"
                             invisible="state not in ('error', 'skipped')"/>
                     <field name="state" widget="statusbar" statusbar_visible="pending,done"/>
@@ -50,6 +58,22 @@
                     <group string="Último error" invisible="not last_error">
                         <field name="last_error" nolabel="1"/>
                     </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_onedrive_attachment_preview_form" model="ir.ui.view">
+        <field name="name">onedrive.attachment.preview.form</field>
+        <field name="model">onedrive.attachment.preview</field>
+        <field name="arch" type="xml">
+            <form string="Vista previa" create="0" edit="0">
+                <sheet>
+                    <div class="alert alert-warning" role="alert" invisible="not message">
+                        <div><field name="message" nolabel="1"/></div>
+                        <div invisible="not web_url">Puedes abrirlo directamente: <field name="web_url" widget="url" nolabel="1"/></div>
+                    </div>
+                    <field name="preview_html" nolabel="1" options="{'sanitize': false}" invisible="not preview_html"/>
                 </sheet>
             </form>
         </field>

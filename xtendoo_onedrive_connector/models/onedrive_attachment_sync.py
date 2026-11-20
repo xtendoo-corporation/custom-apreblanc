@@ -18,6 +18,7 @@ buscar por nombre (OneDrive permite renombrar y la busqueda seria fragil).
 import logging
 import re
 import urllib.parse
+from html import escape
 
 import requests
 
@@ -174,6 +175,72 @@ class OneDriveAttachmentSync(models.Model):
             'last_error': str(error)[:2000],
             'state': 'error' if attempts >= MAX_ATTEMPTS else 'pending',
         })
+
+    def action_open_onedrive(self):
+        self.ensure_one()
+        if not self.web_url:
+            raise UserError(_('Este adjunto todavía no está en OneDrive.'))
+        return {'type': 'ir.actions.act_url', 'url': self.web_url, 'target': 'new'}
+
+    def action_preview(self):
+        """Abre una ventana con la vista previa incrustada de OneDrive (Graph /preview)."""
+        self.ensure_one()
+        if self.state != 'done' or not self.onedrive_item_id:
+            raise UserError(_('La vista previa solo está disponible para adjuntos ya subidos a OneDrive.'))
+        token = self.env['onedrive.service']._get_token()
+        message = False
+        html = False
+        try:
+            resp = self._graph('POST', '%s/me/drive/items/%s/preview' % (GRAPH, self.onedrive_item_id), token, json={})
+            if resp.status_code == 200:
+                html = self._build_preview_html(resp.json())
+                if not html:
+                    message = _('OneDrive no devolvió una dirección de vista previa para este archivo.')
+            elif resp.status_code in (404, 415, 400):
+                message = _('OneDrive no puede previsualizar este tipo de archivo (o ya no existe).')
+            else:
+                message = _('Error de OneDrive al generar la vista previa: %s %s') % (resp.status_code, resp.text[:200])
+        except requests.RequestException as e:
+            message = _('No se pudo conectar con OneDrive: %s') % e
+        wizard = self.env['onedrive.attachment.preview'].create({
+            'sync_id': self.id,
+            'name': self.name,
+            'web_url': self.web_url,
+            'message': message,
+            'preview_html': html,
+        })
+        return {
+            'type': 'ir.actions.act_window',
+            'name': _('Vista previa: %s') % self.name,
+            'res_model': 'onedrive.attachment.preview',
+            'res_id': wizard.id,
+            'view_mode': 'form',
+            'target': 'new',
+            'context': {'dialog_size': 'extra-large'},
+        }
+
+    @staticmethod
+    def _build_preview_html(data):
+        """HTML con un iframe a partir de la respuesta de Graph /preview.
+
+        Graph devuelve ``getUrl`` (se usa como src) o, si no, ``postUrl`` +
+        ``postParameters`` (hay que enviarlos por POST dentro del iframe)."""
+        style = 'width:100%;height:72vh;border:1px solid #ccc;border-radius:4px;'
+        get_url = data.get('getUrl')
+        if get_url:
+            return ('<div class="o_onedrive_preview"><iframe src="%s" style="%s" allowfullscreen="true"></iframe></div>'
+                    % (escape(get_url, quote=True), style))
+        post_url = data.get('postUrl')
+        if not post_url:
+            return False
+        params = data.get('postParameters') or ''
+        pairs = urllib.parse.parse_qsl(params, keep_blank_values=True) if isinstance(params, str) else list(params.items())
+        inputs = ''.join('<input type="hidden" name="%s" value="%s"/>' % (escape(k, quote=True), escape(v, quote=True))
+                         for k, v in pairs)
+        doc = ('<html><body><form method="post" action="%s">%s</form>'
+               '<script>document.forms[0].submit()</script></body></html>' % (escape(post_url, quote=True), inputs))
+        return ('<div class="o_onedrive_preview"><iframe srcdoc="%s" style="%s" allowfullscreen="true"></iframe></div>'
+                % (escape(doc, quote=True), style))
 
     def action_retry(self):
         self.filtered(lambda r: r.state in ('error', 'skipped')).write(
@@ -411,6 +478,17 @@ class OneDriveAttachmentSync(models.Model):
                                 % (file_name, start, end, resp.status_code, resp.text[:300]))
             start = end + 1
         raise UserError(_('La subida de "%s" terminó sin confirmación de OneDrive') % file_name)
+
+
+class OneDriveAttachmentPreview(models.TransientModel):
+    _name = 'onedrive.attachment.preview'
+    _description = 'Vista previa de un adjunto en OneDrive'
+
+    sync_id = fields.Many2one('onedrive.attachment.sync', ondelete='cascade')
+    name = fields.Char('Archivo', readonly=True)
+    web_url = fields.Char('Enlace OneDrive', readonly=True)
+    message = fields.Char('Aviso', readonly=True)
+    preview_html = fields.Html('Vista previa', readonly=True, sanitize=False)
 
 
 class _FolderMissing(Exception):
