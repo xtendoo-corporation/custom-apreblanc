@@ -26,15 +26,39 @@ class OneDriveSettings(models.Model):
              'en segundo plano. Odoo conserva siempre el archivo original.')
     attachment_sync_models = fields.Char(
         'Modelos a sincronizar', default='sale.order,account.move,account.payment,purchase.order,stock.picking,res.partner',
-        help='Nombres técnicos de modelo separados por comas (por ejemplo: sale.order,account.move).')
+        help='Nombres técnicos de modelo separados por comas (por ejemplo: sale.order,account.move). '
+             'Usa * para sincronizar los adjuntos de todos los modelos de negocio '
+             '(se excluyen los técnicos: ir.*, mail.*, discuss.*, website.*, etc.).')
     attachment_sync_max_mb = fields.Integer(
         'Tamaño máximo por adjunto (MB)', default=50,
         help='Los adjuntos mayores se omiten (consumen memoria al subirse).')
 
+    # Modelos tecnicos que nunca se sincronizan en modo "todos" (*).
+    ATTACHMENT_SYNC_EXCLUDED_PREFIXES = (
+        'ir.', 'mail.', 'discuss.', 'bus.', 'base.', 'web.', 'web_editor.', 'website.',
+        'queue.', 'onedrive.', 'res.users.log', 'res.config', 'base_import.',
+    )
+
     def _get_attachment_sync_models(self):
+        """Nombres de modelo configurados (sin '*'), solo los que existen."""
         self.ensure_one()
         models_ = {m.strip() for m in (self.attachment_sync_models or '').split(',') if m.strip()}
-        return {m for m in models_ if m in self.env.registry}  # ignora nombres que no existen
+        return {m for m in models_ if m == '*' or m in self.env.registry}
+
+    def _attachment_model_allowed(self, res_model):
+        """True si los adjuntos de ``res_model`` deben subirse a OneDrive."""
+        self.ensure_one()
+        if not res_model or res_model not in self.env.registry:
+            return False
+        configured = self._get_attachment_sync_models()
+        if res_model in configured:
+            return True
+        if '*' not in configured:
+            return False
+        model = self.env.registry[res_model]
+        if model._transient or model._abstract:
+            return False
+        return not res_model.startswith(self.ATTACHMENT_SYNC_EXCLUDED_PREFIXES)
 
     def action_process_attachment_sync(self):
         """Procesa ahora la cola de adjuntos pendientes (sin esperar al cron)."""

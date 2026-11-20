@@ -106,10 +106,9 @@ class OneDriveAttachmentSync(models.Model):
         settings = self._get_sync_settings()
         if not settings:
             return
-        sync_models = settings._get_attachment_sync_models()
         todo = attachments.sudo().filtered(
-            lambda a: a.res_model in sync_models and a.res_id
-            and not a.res_field and a.type == 'binary')
+            lambda a: a.res_id and not a.res_field and a.type == 'binary'
+            and settings._attachment_model_allowed(a.res_model))
         if not todo:
             return
         existing = self.sudo().search([('attachment_id', 'in', todo.ids)]).attachment_id
@@ -272,8 +271,18 @@ class OneDriveAttachmentSync(models.Model):
             # Los contactos repiten nombre con frecuencia: el id evita que dos compartan carpeta.
             name = '%s (%s)' % (record.display_name or record.name or 'contacto', record.id)
             return [self.MODEL_FOLDER_LABELS[model], _sanitize_name(name, default='contacto_%s' % record.id)]
-        label = self.MODEL_FOLDER_LABELS.get(model) or record._description or model
-        return [_sanitize_name(label), _sanitize_name(record.display_name, default='%s_%s' % (model, record.id))]
+        label = self.MODEL_FOLDER_LABELS.get(model) or self._get_model_label(model) or record._description or model
+        name = record.display_name or '%s_%s' % (model, record.id)
+        if model not in self.MODEL_FOLDER_LABELS:
+            # Modelo generico: el nombre puede repetirse (tareas, proyectos...), se anade el id.
+            name = '%s (%s)' % (name, record.id)
+        return [_sanitize_name(label), _sanitize_name(name, default='%s_%s' % (model, record.id))]
+
+    @api.model
+    def _get_model_label(self, model):
+        """Nombre del modelo en español, fijo (no depende del idioma del usuario)."""
+        ir_model = self.env['ir.model'].sudo().with_context(lang='es_ES')._get(model)
+        return ir_model.name if ir_model else None
 
     def _get_record_folder(self, token, settings, record):
         """Devuelve (id_carpeta, desde_cache). Renombra la carpeta si el registro cambio de nombre."""
