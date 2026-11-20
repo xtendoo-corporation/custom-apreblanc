@@ -25,7 +25,7 @@ class OneDriveSettings(models.Model):
         help='Si está activo, los adjuntos de los modelos indicados se copian a OneDrive '
              'en segundo plano. Odoo conserva siempre el archivo original.')
     attachment_sync_models = fields.Char(
-        'Modelos a sincronizar', default='sale.order,account.move,account.payment,purchase.order,stock.picking',
+        'Modelos a sincronizar', default='sale.order,account.move,account.payment,purchase.order,stock.picking,res.partner',
         help='Nombres técnicos de modelo separados por comas (por ejemplo: sale.order,account.move).')
     attachment_sync_max_mb = fields.Integer(
         'Tamaño máximo por adjunto (MB)', default=50,

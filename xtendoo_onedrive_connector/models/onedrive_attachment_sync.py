@@ -230,6 +230,7 @@ class OneDriveAttachmentSync(models.Model):
     # ------------------------------------------------------------------
     # Carpeta de modelo (nivel intermedio) para los modelos que no son ventas.
     MODEL_FOLDER_LABELS = {
+        'res.partner': 'Contactos',
         'account.payment': 'Pagos',
         'purchase.order': 'Compras',
         'stock.picking': 'Albaranes',
@@ -250,6 +251,7 @@ class OneDriveAttachmentSync(models.Model):
 
         - sale.order: <persona>-<client_id>-<expediente> (o el nombre del pedido).
         - account.move: <Facturas de cliente|Facturas de proveedor|Asientos>/<numero>
+        - res.partner: Contactos/<nombre> (<id>)
         - resto: <etiqueta del modelo>/<nombre del registro>
         """
         model = record._name
@@ -266,6 +268,10 @@ class OneDriveAttachmentSync(models.Model):
             label = self.MOVE_TYPE_FOLDER_LABELS.get(record.move_type, 'Asientos')
             number = record.name if record.name and record.name != '/' else 'Borrador-%s' % record.id
             return [label, _sanitize_name(number, default='asiento_%s' % record.id)]
+        if model == 'res.partner':
+            # Los contactos repiten nombre con frecuencia: el id evita que dos compartan carpeta.
+            name = '%s (%s)' % (record.display_name or record.name or 'contacto', record.id)
+            return [self.MODEL_FOLDER_LABELS[model], _sanitize_name(name, default='contacto_%s' % record.id)]
         label = self.MODEL_FOLDER_LABELS.get(model) or record._description or model
         return [_sanitize_name(label), _sanitize_name(record.display_name, default='%s_%s' % (model, record.id))]
 
