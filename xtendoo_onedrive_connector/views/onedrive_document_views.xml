@@ -36,6 +36,16 @@
                                 string="Descargar Archivo"
                                 class="btn-primary"
                                 icon="fa-download"/>
+                        <button name="action_preview"
+                                type="object"
+                                string="Vista previa"
+                                icon="fa-eye"
+                                invisible="not onedrive_id or is_folder"/>
+                        <button name="action_open_onedrive"
+                                type="object"
+                                string="Ver en OneDrive"
+                                icon="fa-external-link"
+                                invisible="not onedrive_id"/>
                     </div>
 
                     <!-- Campos técnicos ocultos -->
@@ -74,6 +84,11 @@
                         string="Descargar"
                         class="btn-primary"
                         invisible="not file_url or is_folder"/>
+                <button name="action_preview" type="object" icon="fa-eye" title="Vista previa"
+                        invisible="not onedrive_id or is_folder"/>
+                <button name="action_open_onedrive" type="object" icon="fa-external-link" title="Ver en OneDrive"
+                        invisible="not onedrive_id"/>
+                <field name="onedrive_id" column_invisible="1"/>
             </tree>
         </field>
     </record>

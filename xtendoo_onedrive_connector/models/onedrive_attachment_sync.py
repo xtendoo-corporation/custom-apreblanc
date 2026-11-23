@@ -187,11 +187,17 @@ class OneDriveAttachmentSync(models.Model):
         self.ensure_one()
         if self.state != 'done' or not self.onedrive_item_id:
             raise UserError(_('La vista previa solo está disponible para adjuntos ya subidos a OneDrive.'))
+        return self._preview_action(self.onedrive_item_id, self.name, self.web_url, sync_id=self.id)
+
+    @api.model
+    def _preview_action(self, item_id, name, web_url=False, sync_id=False):
+        """Pide a Graph la vista previa de un elemento de OneDrive y devuelve la accion
+        que abre el dialogo. Reutilizable (adjuntos sincronizados y documentos OneDrive)."""
         token = self.env['onedrive.service']._get_token()
         message = False
         html = False
         try:
-            resp = self._graph('POST', '%s/me/drive/items/%s/preview' % (GRAPH, self.onedrive_item_id), token, json={})
+            resp = self._graph('POST', '%s/me/drive/items/%s/preview' % (GRAPH, item_id), token, json={})
             if resp.status_code == 200:
                 html = self._build_preview_html(resp.json())
                 if not html:
@@ -202,16 +208,16 @@ class OneDriveAttachmentSync(models.Model):
                 message = _('Error de OneDrive al generar la vista previa: %s %s') % (resp.status_code, resp.text[:200])
         except requests.RequestException as e:
             message = _('No se pudo conectar con OneDrive: %s') % e
-        wizard = self.env['onedrive.attachment.preview'].create({
-            'sync_id': self.id,
-            'name': self.name,
-            'web_url': self.web_url,
+        wizard = self.env['onedrive.attachment.preview'].sudo().create({
+            'sync_id': sync_id or False,
+            'name': name,
+            'web_url': web_url,
             'message': message,
             'preview_html': html,
         })
         return {
             'type': 'ir.actions.act_window',
-            'name': _('Vista previa: %s') % self.name,
+            'name': _('Vista previa: %s') % name,
             'res_model': 'onedrive.attachment.preview',
             'res_id': wizard.id,
             'view_mode': 'form',

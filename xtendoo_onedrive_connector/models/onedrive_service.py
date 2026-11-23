@@ -466,6 +466,7 @@ class OneDriveService(models.AbstractModel):
                             'name': item.get('name'),
                             'onedrive_id': item.get('id'),
                             'file_url': item.get('@microsoft.graph.downloadUrl') if is_file else item.get('webUrl'),
+                            'web_url': item.get('webUrl') or False,
                             'file_size': item.get('size', 0),
                             'file_type': item.get('file', {}).get('mimeType') if is_file else 'folder',
                             'owner': item.get('createdBy', {}).get('user', {}).get('displayName'),

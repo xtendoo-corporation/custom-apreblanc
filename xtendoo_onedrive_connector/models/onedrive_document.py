@@ -1,4 +1,5 @@
-from odoo import models, fields, api
+from odoo import models, fields, api, _
+from odoo.exceptions import UserError
 import requests
 
 class OneDriveDocument(models.Model):
@@ -15,6 +16,7 @@ class OneDriveDocument(models.Model):
     name = fields.Char(string='Name', required=True)
     onedrive_id = fields.Char(string='OneDrive ID')
     file_url = fields.Char(string='File URL')
+    web_url = fields.Char(string='OneDrive URL', help='Enlace para abrir el elemento en OneDrive (navegador).')
     preview_url = fields.Char(string='Preview URL', compute='_compute_preview_url')
     file_size = fields.Float(string='File Size', digits=(16, 0))
     file_type = fields.Char(string='File Type')
@@ -79,6 +81,29 @@ class OneDriveDocument(models.Model):
                 'type': 'ir.actions.client',
                 'tag': 'reload',
             }
+
+    def action_open_onedrive(self):
+        """Abre el archivo/carpeta en OneDrive (navegador). Si aun no se conoce su enlace
+        (documentos sincronizados antes de existir este campo) se consulta a Graph y se guarda."""
+        self.ensure_one()
+        if not self.onedrive_id:
+            raise UserError(_('Este documento todavía no está en OneDrive.'))
+        if not self.web_url:
+            token = self.env['onedrive.service']._get_token()
+            resp = requests.get('https://graph.microsoft.com/v1.0/me/drive/items/%s?$select=webUrl' % self.onedrive_id,
+                                headers={'Authorization': 'Bearer %s' % token}, timeout=30)
+            if resp.status_code != 200 or not resp.json().get('webUrl'):
+                raise UserError(_('No se pudo obtener el enlace de OneDrive (%s). Prueba a sincronizar de nuevo.') % resp.status_code)
+            self.sudo().web_url = resp.json()['webUrl']
+        return {'type': 'ir.actions.act_url', 'url': self.web_url, 'target': 'new'}
+
+    def action_preview(self):
+        """Vista previa incrustada del archivo (Graph /preview)."""
+        self.ensure_one()
+        if not self.onedrive_id or self.is_folder:
+            raise UserError(_('La vista previa solo está disponible para archivos que están en OneDrive.'))
+        return self.env['onedrive.attachment.sync'].sudo()._preview_action(
+            self.onedrive_id, self.name, self.web_url)
 
     def action_download_file(self):
         """Descargar archivo directamente desde OneDrive usando la URL almacenada y registrar en el chatter"""
@@ -583,6 +608,7 @@ class OneDriveDocument(models.Model):
                 'name': file_data.get('name', self.upload_filename),
                 'onedrive_id': file_data.get('id', ''),
                 'file_url': download_url,
+                'web_url': file_data.get('webUrl') or False,
                 'file_size': file_data.get('size', 0),
                 'file_type': file_data.get('file', {}).get('mimeType', ''),
                 'owner': file_data.get('createdBy', {}).get('user', {}).get('displayName', ''),
