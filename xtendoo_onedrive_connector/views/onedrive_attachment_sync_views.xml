@@ -16,7 +16,8 @@
                 <field name="onedrive_path" optional="show"/>
                 <field name="last_error" optional="hide"/>
                 <button name="action_preview" type="object" icon="fa-eye" title="Vista previa"
-                        invisible="state != 'done'"/>
+                        invisible="not can_preview"/>
+                <field name="can_preview" column_invisible="1"/>
                 <button name="action_open_onedrive" type="object" icon="fa-external-link" title="Abrir en OneDrive"
                         invisible="state != 'done'"/>
             </tree>
@@ -30,11 +31,12 @@
             <form string="Adjunto sincronizado" create="0">
                 <header>
                     <button name="action_preview" string="Vista previa" type="object" class="btn-primary"
-                            invisible="state != 'done'"/>
+                            invisible="not can_preview"/>
                     <button name="action_open_onedrive" string="Abrir en OneDrive" type="object"
                             invisible="state != 'done'"/>
                     <button name="action_retry" string="Reintentar" type="object"
                             invisible="state not in ('error', 'skipped')"/>
+                    <field name="can_preview" invisible="1"/>
                     <field name="state" widget="statusbar" statusbar_visible="pending,done"/>
                 </header>
                 <sheet>

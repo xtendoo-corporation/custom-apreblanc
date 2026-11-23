@@ -1,5 +1,7 @@
 from odoo import models, fields, api, _
 from odoo.exceptions import UserError
+
+from .onedrive_attachment_sync import can_preview_name
 import requests
 
 class OneDriveDocument(models.Model):
@@ -17,6 +19,12 @@ class OneDriveDocument(models.Model):
     onedrive_id = fields.Char(string='OneDrive ID')
     file_url = fields.Char(string='File URL')
     web_url = fields.Char(string='OneDrive URL', help='Enlace para abrir el elemento en OneDrive (navegador).')
+    can_preview = fields.Boolean(string='Admite vista previa', compute='_compute_can_preview')
+
+    @api.depends('name', 'file_type', 'is_folder', 'onedrive_id')
+    def _compute_can_preview(self):
+        for rec in self:
+            rec.can_preview = bool(rec.onedrive_id) and not rec.is_folder and can_preview_name(rec.name, rec.file_type)
     preview_url = fields.Char(string='Preview URL', compute='_compute_preview_url')
     file_size = fields.Float(string='File Size', digits=(16, 0))
     file_type = fields.Char(string='File Type')

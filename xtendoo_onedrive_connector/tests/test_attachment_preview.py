@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from unittest.mock import patch
 
-from odoo.tests import HttpCase, tagged
+from odoo.tests import HttpCase, TransactionCase, tagged
 
 from odoo.addons.xtendoo_onedrive_connector.models import onedrive_attachment_sync as mod
 from odoo.addons.xtendoo_onedrive_connector.models.onedrive_service import OneDriveService
@@ -127,6 +127,7 @@ class TestDocumentPreview(HttpCase):
                                'file_url': 'https://download.example/x', 'is_folder': False})
         self.folder = Doc.create({'name': 'carpeta_prueba', 'onedrive_id': 'ITEM-FOLDER', 'is_folder': True})
         self.nofile = Doc.create({'name': 'manual_prueba.docx'})
+        self.noext = Doc.create({'name': 'sinext_prueba', 'onedrive_id': 'ITEM-NOEXT', 'file_type': 'application/octet-stream', 'is_folder': False})
 
     def test_open_onedrive_fetches_and_stores_web_url(self):
         calls = []
@@ -185,6 +186,10 @@ class TestDocumentPreview(HttpCase):
                 if (!file.querySelector("button[name='action_preview']")) throw new Error("archivo sin boton de vista previa");
                 if (!file.querySelector("button[name='action_open_onedrive']")) throw new Error("archivo sin boton ver en OneDrive");
                 if (folder.querySelector("button[name='action_preview']")) throw new Error("la carpeta no deberia tener vista previa");
+                const noext = rowOf("sinext_prueba");
+                if (!noext) throw new Error("falta la fila sin extension");
+                if (noext.querySelector("button[name='action_preview']")) throw new Error("sin extension no deberia tener ojo");
+                if (!noext.querySelector("button[name='action_open_onedrive']")) throw new Error("sin extension si deberia poder verse en OneDrive");
                 if (!folder.querySelector("button[name='action_open_onedrive']")) throw new Error("la carpeta deberia poder verse en OneDrive");
                 if (local.querySelector("button[name='action_preview']") || local.querySelector("button[name='action_open_onedrive']")) {
                     throw new Error("un documento local no deberia tener botones de OneDrive");
@@ -199,3 +204,55 @@ class TestDocumentPreview(HttpCase):
         with patch.object(mod.requests, 'request', fake_request), patch.object(OneDriveService, '_get_token', lambda s: 'tok'):
             self.browser_js('/web#action=xtendoo_onedrive_connector.action_onedrive_document', code,
                             ready="odoo.isReady", login='onedrive_tester2', timeout=120)
+
+
+@tagged('post_install', '-at_install')
+class TestPreviewNaming(TransactionCase):
+    """Nombre con extension al subir y cuando se ofrece el boton de vista previa."""
+
+    def test_ensure_extension(self):
+        ensure = mod._ensure_extension
+        uuid = '9722dc94-a618-4a81-bbed-6ca2b7449e25'
+        self.assertEqual(ensure(uuid, 'image/png'), uuid + '.png')
+        self.assertEqual(ensure(uuid, 'image/jpeg'), uuid + '.jpg')
+        self.assertEqual(ensure(uuid, 'application/pdf'), uuid + '.pdf')
+        self.assertEqual(ensure('foto.png', 'image/png'), 'foto.png')          # ya tiene extension
+        self.assertEqual(ensure('informe.PDF', 'application/pdf'), 'informe.PDF')
+        self.assertEqual(ensure(uuid, 'application/octet-stream'), uuid)       # tipo desconocido
+        self.assertEqual(ensure(uuid, False), uuid)
+
+    def test_can_preview_name(self):
+        can = mod.can_preview_name
+        for name in ('a.docx', 'a.PDF', 'foto.png', 'hoja.xlsx', 'v.mp4'):
+            self.assertTrue(can(name), name)
+        for name in ('datos.rar', 'backup.zip', '9722dc94-a618-4a81-bbed-6ca2b7449e25', 'x.exe'):
+            self.assertFalse(can(name, 'application/octet-stream'), name)
+        self.assertTrue(can('sin_extension', 'image/png'))                      # el tipo lo permite
+        self.assertFalse(can('', None))
+
+    def test_document_and_sync_flags(self):
+        Doc = self.env['onedrive.document']
+        ok = Doc.create({'name': 'a.docx', 'onedrive_id': 'X1'})
+        nofile = Doc.create({'name': 'a.docx'})
+        folder = Doc.create({'name': 'carpeta', 'onedrive_id': 'X2', 'is_folder': True})
+        noext = Doc.create({'name': '9722dc94-a618', 'onedrive_id': 'X3', 'file_type': 'application/octet-stream'})
+        rar = Doc.create({'name': 'a.rar', 'onedrive_id': 'X4', 'file_type': 'application/octet-stream'})
+        self.assertEqual([d.can_preview for d in (ok, nofile, folder, noext, rar)], [True, False, False, False, False])
+
+    def test_upload_adds_extension(self):
+        """Un adjunto sin extension (nombre UUID) se sube a OneDrive con la extension de su tipo."""
+        uploaded = {}
+
+        def fake_request(method, url, **kw):
+            if method == 'GET':
+                return _Resp(404)
+            if method == 'PUT' and url.split('?')[0].endswith(':/content'):
+                uploaded['url'] = url
+                return _Resp(201, {'id': 'F1', 'name': 'x', 'webUrl': 'https://o/F1', 'size': 3, 'file': {}})
+            return _Resp(404)
+        uuid = '9722dc94-a618-4a81-bbed-6ca2b7449e25'
+        att = self.env['ir.attachment'].create({'name': uuid, 'raw': b'\x89PNG', 'mimetype': 'image/png', 'type': 'binary'})
+        Sync = self.env['onedrive.attachment.sync']
+        with patch.object(mod.requests, 'request', fake_request):
+            Sync._upload('tok', 'FOLDER1', mod._sanitize_name(mod._ensure_extension(att.name, att.mimetype)), att.raw)
+        self.assertIn(':/%s.png:/content' % uuid, uploaded['url'])

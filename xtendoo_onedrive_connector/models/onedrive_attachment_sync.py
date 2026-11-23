@@ -16,6 +16,8 @@ El ID de la carpeta de cada registro se guarda en ``onedrive.folder.map`` para n
 buscar por nombre (OneDrive permite renombrar y la busqueda seria fragil).
 """
 import logging
+import mimetypes
+import os
 import re
 import urllib.parse
 from html import escape
@@ -45,6 +47,45 @@ def _sanitize_name(name, default='SIN_NOMBRE', max_len=150):
         else:
             safe = safe[:max_len]
     return safe or default
+
+
+# Extensiones para las que el visor de OneDrive suele ofrecer vista previa.
+PREVIEWABLE_EXTENSIONS = {
+    'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'odt', 'ods', 'odp', 'rtf', 'csv', 'txt',
+    'pdf', 'png', 'jpg', 'jpeg', 'gif', 'bmp', 'tif', 'tiff', 'webp', 'heic', 'svg',
+    'mp4', 'mov', 'mp3', 'wav',
+}
+# Extension preferida por tipo MIME (mimetypes.guess_extension varia entre versiones).
+MIME_EXTENSIONS = {
+    'image/jpeg': '.jpg', 'image/png': '.png', 'image/gif': '.gif', 'image/webp': '.webp',
+    'application/pdf': '.pdf', 'text/plain': '.txt', 'text/csv': '.csv',
+}
+UNKNOWN_MIMETYPES = ('application/octet-stream', 'binary/octet-stream', False, None, '')
+
+
+def _has_extension(name):
+    ext = os.path.splitext(name or '')[1]
+    return bool(ext) and 1 < len(ext) <= 6 and ext[1:].isalnum()
+
+
+def _ensure_extension(name, mimetype):
+    """Anade la extension segun el tipo MIME si el nombre no tiene (p. ej. un UUID).
+
+    OneDrive deduce el tipo del archivo por la extension: sin ella lo trata como
+    octet-stream y no ofrece vista previa."""
+    name = name or ''
+    if _has_extension(name) or mimetype in UNKNOWN_MIMETYPES:
+        return name
+    ext = MIME_EXTENSIONS.get(mimetype) or mimetypes.guess_extension(mimetype)
+    return name + ext if ext else name
+
+
+def can_preview_name(name, mimetype=None):
+    """True si es probable que OneDrive pueda previsualizar un archivo con ese nombre/tipo."""
+    ext = os.path.splitext(name or '')[1][1:].lower()
+    if ext:
+        return ext in PREVIEWABLE_EXTENSIONS
+    return bool(mimetype) and (mimetype.startswith(('image/', 'video/', 'audio/')) or mimetype == 'application/pdf')
 
 
 class OneDriveFolderMap(models.Model):
@@ -85,6 +126,13 @@ class OneDriveAttachmentSync(models.Model):
     web_url = fields.Char('Enlace OneDrive', readonly=True)
     onedrive_path = fields.Char('Ruta en OneDrive', readonly=True)
     date_synced = fields.Datetime('Fecha de subida', readonly=True)
+    can_preview = fields.Boolean('Admite vista previa', compute='_compute_can_preview')
+
+    @api.depends('onedrive_path', 'name', 'state')
+    def _compute_can_preview(self):
+        for rec in self:
+            name = (rec.onedrive_path or '').rsplit('/', 1)[-1] or rec.name
+            rec.can_preview = rec.state == 'done' and can_preview_name(name)
 
     _sql_constraints = [
         ('attachment_unique', 'unique(attachment_id)',
@@ -272,7 +320,7 @@ class OneDriveAttachmentSync(models.Model):
             self.write({'state': 'skipped', 'last_error': _('Adjunto vacío')})
             return
 
-        file_name = _sanitize_name(att.name, default='adjunto_%s' % att.id)
+        file_name = _sanitize_name(_ensure_extension(att.name, att.mimetype), default='adjunto_%s' % att.id)
         folder_id, cached = self._get_record_folder(token, settings, record)
         try:
             item = self._upload(token, folder_id, file_name, raw)
